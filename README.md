@@ -36,7 +36,7 @@ pip install -e .
 
 ```python
 from pyg_engine import Engine, GameObject, Size
-from pygame import Color
+from pygame import Color, Vector2
 
 # Create the engine
 engine = Engine(
@@ -45,13 +45,21 @@ engine = Engine(
     windowName="My Game"
 )
 
-# Create a game object
+# Create a game object (supports both tuple and Vector2 formats)
 player = GameObject(
     name="Player",
-    position=(400, 300),
-    size=(50, 50),
+    position=(400, 300),  # Can use tuple
+    size=(50, 50),        # Can use tuple
     color=Color(255, 0, 0)
 )
+
+# Alternative using Vector2 objects:
+# player = GameObject(
+#     name="Player",
+#     position=Vector2(400, 300),
+#     size=Vector2(50, 50),
+#     color=Color(255, 0, 0)
+# )
 
 # Add to engine
 engine.addGameObject(player)

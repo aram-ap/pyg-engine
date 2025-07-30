@@ -18,6 +18,12 @@ class GameObject(pg.sprite.Sprite):
         # Initialize pygame sprite
         super().__init__()
         
+        # Convert tuples to Vector2 if needed
+        if isinstance(position, (tuple, list)):
+            position = Vector2(position[0], position[1])
+        if isinstance(size, (tuple, list)):
+            size = Vector2(size[0], size[1])
+        
         self.name = name
         self.id = id
         self.enabled = enabled
