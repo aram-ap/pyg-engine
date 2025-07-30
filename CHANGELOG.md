@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a3] - 2025-07-30
+
+### Fixed
+- Fixed scripting system's lack of start() and on_destroy() calls
+
+### Added
+- Added a new testing system in '''examples/test.py''' and '''examples/scripts/test_script.py'''
+  - This shows in better detail the component system and scripting system
+
+### Changed
+- Updated README to show updated filenames
+- Removed ScriptRunner as it was Depricated before first release, and I forgot to remove it.
+
 ## [1.0.0a2] - 2025-07-30
 
 ### Fixed
@@ -38,4 +51,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-**Pyg Engine** - Making 2D game development in Python easier and more flexible! :) 
+**Pyg Engine** - Making 2D game development in Python easier and more flexible! :)

@@ -86,6 +86,7 @@ python examples/simple_drag_test.py
 
 Available examples:
 - `basic_example.py` - Basic engine setup and object creation
+- `test.py` - An example script into basic gameobject creation, components, and scripts
 - `main.py` - Complete physics demo with collision detection, mouse and keyboard input, multiple game objects, and physics materials.
 - `enhanced_mouse_example.py` - Advanced mouse interactions with physics
 - `mouse_example.py` - Mouse input handling and interaction
@@ -117,7 +118,19 @@ pip install -e .
 ```
 
 ## TODO
+##### Known Bugs/QOL Issues:
+QOL:
+- Components should be separate objects that can be passed into the add_component() function
+- Discrepancies in sizing. Box colliders should accept Size() or Tuples.
+- Scripts and Components need better documentation
+- Needs better debug logs + distinguish between errors and console outputs
+- Need a texture system
+
+BUGS:
+- Theres definitely some, but idk yet. Need to search more.
+
 ##### In Development:
+- Sprite rendering and physics
 - State machine
 - Animation system
 - Sprite colliders
