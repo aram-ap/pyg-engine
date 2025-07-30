@@ -4,6 +4,8 @@ from pyg_engine import BasicShape, Engine, GameObject, PymunkBoxCollider, Pymunk
 from pygame import Color, Vector2
 
 examples_dir = Path(__file__).parent
+scripts_dir = examples_dir / "scripts"
+test_script_path = scripts_dir / "test_script.py"
 
 # Create the engine
 engine = Engine(
@@ -46,7 +48,7 @@ player.add_component(
         )
 
 # Example of adding scripts
-player.add_script("{}/scripts/test_script.py".format(examples_dir),
+player.add_script(test_script_path,
                   speed=4.2
                   )
 
