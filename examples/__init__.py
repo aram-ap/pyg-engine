@@ -28,6 +28,7 @@ def list_examples():
     """List all available examples with descriptions."""
     examples = {
         'basic_example.py': 'Basic engine setup and object creation',
+        'test.py': 'Basics of object creation and script usage',
         'main.py': 'Multi-player control demo with different configurations, physics, and mouse+keyboard support',
         'mouse_example.py': 'Mouse input handling and interaction',
         'enhanced_mouse_example.py': 'Advanced mouse interactions with physics',

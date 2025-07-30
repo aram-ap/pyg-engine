@@ -3,7 +3,7 @@ from pygame import Vector2, Color
 
 class Script:
     """Base class for game scripts that can be attached to GameObjects."""
-    
+
     def __init__(self, game_object, **kwargs):
         self.game_object = game_object  # Reference to the attached GameObject
         self._started = False
@@ -55,14 +55,16 @@ class Script:
 
     # ================ Lifecycle Methods ================
 
-    def start(self):
+    def start(self, engine):
         """Called once when the script is first initialized."""
-        pass
+        if self._started:
+            return
+        self.__started = True
 
     def update(self, engine):
         """Called every frame in the game loop. Engine reference provided for input access."""
         if not self._started:
-            self.start()
+            self.start(engine)
             self._started = True
 
     def on_destroy(self):

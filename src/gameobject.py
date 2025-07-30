@@ -10,20 +10,20 @@ from .component import Component
 
 class GameObject(pg.sprite.Sprite):
     """Game object with component and script attachment capabilities."""
-    
+
     def __init__(self, name: str, id: int = time.time_ns(), enabled: bool = True, position: Vector2 = Vector2(),
                  size: Vector2 = Vector2(), rotation: float = 0.0, color: Color = Color(255, 255, 255, 255),
                  tag: Tag = Tag.Other, basicShape: BasicShape = BasicShape.Rectangle, script_configs=None,
                  show_rotation_line: bool = False):
         # Initialize pygame sprite
         super().__init__()
-        
+
         # Convert tuples to Vector2 if needed
         if isinstance(position, (tuple, list)):
             position = Vector2(position[0], position[1])
         if isinstance(size, (tuple, list)):
             size = Vector2(size[0], size[1])
-        
+
         self.name = name
         self.id = id
         self.enabled = enabled
@@ -45,7 +45,7 @@ class GameObject(pg.sprite.Sprite):
 
         # Create the sprite image and rect
         self._create_sprite_surface()
-        
+
         if script_configs:
             self.add_script_configs(script_configs)
 
@@ -62,11 +62,11 @@ class GameObject(pg.sprite.Sprite):
             height = max(1, int(self.size.y)) if self.size.y > 0 else 40
             self.image = pg.Surface((width, height), pg.SRCALPHA)
             self.image.fill(self.color)
-        
+
         # Create rect and set position
         self.rect = self.image.get_rect()
         self.rect.center = (int(self.position.x), int(self.position.y))
-        
+
         # Apply rotation if needed
         if abs(self.rotation) > 0.1:
             self._apply_rotation()
@@ -79,7 +79,7 @@ class GameObject(pg.sprite.Sprite):
                 self._original_image = self.image.copy()
             else:
                 self.image = self._original_image.copy()
-            
+
             # Rotate the image
             rotated_image = pg.transform.rotate(self.image, self.rotation)
             self.image = rotated_image
@@ -220,6 +220,9 @@ class GameObject(pg.sprite.Sprite):
         """Get all script instances of a specific type."""
         return [script for script in self.scripts if isinstance(script, script_class_type)]
 
+    def get_all_scripts(self) -> list:
+        return [script for script in self.scripts]
+
     def configure_script(self, script_class_type, **kwargs):
         """Configure a script at runtime."""
         script = self.get_script(script_class_type)
@@ -261,6 +264,32 @@ class GameObject(pg.sprite.Sprite):
             except Exception as e:
                 print(f"Error updating script on {self.name}: {e}")
 
+    # ================ Start Methods ================
+
+    def start(self, engine):
+        """Start all scripts and components."""
+        if not self.enabled:
+            return
+
+        # Start components on first update
+        if not self._components_started:
+            for component in self.components.values():
+                if component.enabled:
+                    try:
+                        component.start()
+                    except Exception as e:
+                        print(f"Error starting component {component.__class__.__name__} on {self.name}: {e}")
+            self._components_started = True
+
+        # Start all scripts
+        for script in self.scripts:
+            try:
+                script.start(engine)
+            except Exception as e:
+                print(f"Error starting script on {self.name}: {e}")
+
+
+
     # ================ Debug and Utility Methods ================
 
     def list_components(self):
@@ -275,9 +304,9 @@ class GameObject(pg.sprite.Sprite):
         for i, script in enumerate(self.scripts):
             print(f"  - {i}: {script.__class__.__name__}")
 
-    def kill(self):
+    def kill(self, engine):
         """Pygame sprite kill method - calls destroy and removes from groups."""
-        self.destroy()
+        self.destroy(self)
         super().kill()
 
     def destroy(self):

@@ -78,9 +78,9 @@ python examples/__init__.py
 
 # Run a specific example
 python examples/basic_example.py
+python examples/test.py
 python examples/mouse_example.py
 python examples/enhanced_mouse_example.py
-python examples/main_physics_test.py
 python examples/simple_drag_test.py
 ```
 

@@ -8,9 +8,9 @@ from .mouse_input import MouseInputSystem
 
 class Engine:
     """Core game engine that handles the main loop, rendering, and system coordination."""
-    
+
     log_debug = False
-    
+
     def __init__(self, size: Size = Size(w=800, h=600),
                  backgroundColor: Color = Color(0,0,0),
                  running = False, paused = False,
@@ -84,6 +84,14 @@ class Engine:
     def stop(self):
         """Stop the game engine."""
         self.isRunning = False
+
+        # Stop all gameobjects
+        for obj in self.__gameobjects:
+            if type(obj) is not GameObject:
+                continue
+
+            obj.destroy
+
         Engine.__debug_log("Engine Stopped")
 
     def setRunning(self, running:bool):
@@ -109,7 +117,7 @@ class Engine:
         if gameobj in self.__gameobjects:
             self.__gameobjects.remove(gameobj)
             self.__all_sprites.remove(gameobj)
-            gameobj.destroy()
+            gameobj.destroy(self)
             Engine.__debug_log("Removed gameobject '{}'".format(gameobj.name if gameobj.name != "" else gameobj.id))
 
     def getGameObjects(self):
@@ -144,6 +152,19 @@ class Engine:
         self.isRunning = True
         self.isPaused = False
 
+
+        # Process all gameobjects
+        for gmo in self.__gameobjects:
+
+            if(type(gmo) is not GameObject):
+                continue
+
+            # Start all gameobjects and their scripts
+            gmo.start(self)
+
+
+        # Start Update Loop.
+        # TODO: Make this async and add notification system
         while(self.isRunning):
             self.__update()
 
@@ -161,7 +182,7 @@ class Engine:
                 # Handle window resize
                 self.__handleResize(event)
                 self.setWindowTitle(self.__windowName)
-            
+
             # Handle mouse wheel events
             if event.type == pg.MOUSEWHEEL:
                 self.mouse_input.current_state.wheel_delta = event.y
@@ -189,12 +210,12 @@ class Engine:
 
         # Convert world position to screen position
         screen_pos = self.camera.world_to_screen(gameobj.position)
-        
+
         # Check for NaN values
         if (isinstance(screen_pos.x, float) and (screen_pos.x != screen_pos.x or screen_pos.x == float('inf') or screen_pos.x == float('-inf'))) or \
            (isinstance(screen_pos.y, float) and (screen_pos.y != screen_pos.y or screen_pos.y == float('inf') or screen_pos.y == float('-inf'))):
             return  # Skip rendering if position is invalid
-        
+
         pos = (int(screen_pos.x), int(screen_pos.y))
 
         # Apply zoom to size
@@ -207,21 +228,21 @@ class Engine:
         if gameobj.basicShape == BasicShape.Circle:
             radius = 40 if gameobj.size.x == 0 else int(max(gameobj.size.x, gameobj.size.y) / 2)
             pg.draw.circle(self.screen, gameobj.color, pos, int(radius * zoom))
-            
+
             # Draw rotation line only if configured to show it
             if hasattr(gameobj, 'show_rotation_line') and gameobj.show_rotation_line:
                 import math
                 angle_rad = math.radians(gameobj.rotation)
                 end_x = pos[0] + radius * zoom * math.cos(angle_rad)
                 end_y = pos[1] + radius * zoom * math.sin(angle_rad)
-                
+
                 # Check for NaN values
                 if (isinstance(end_x, float) and (end_x != end_x or end_x == float('inf') or end_x == float('-inf'))) or \
                    (isinstance(end_y, float) and (end_y != end_y or end_y == float('inf') or end_y == float('-inf'))):
                     pass  # Skip drawing rotation line if invalid
                 else:
                     pg.draw.line(self.screen, Color(255, 255, 255), pos, (int(end_x), int(end_y)), 2)
-                
+
         elif gameobj.basicShape == BasicShape.Rectangle:
             if abs(gameobj.rotation) < 0.1:
                 # Non-rotated rectangle

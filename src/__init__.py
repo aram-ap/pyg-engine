@@ -29,7 +29,6 @@ from .mouse_input import MouseInputSystem, MouseHoverComponent, MouseClickCompon
 # Component system
 from .component import Component
 from .script import Script
-from .scriptrunner import ScriptRunner
 
 # Utilities
 from .object_types import Size, BasicShape, Tag
@@ -38,7 +37,7 @@ from .material import PhysicsMaterial, Materials
 # Main exports - these are the primary classes users will interact with
 __all__ = [
     'Engine',
-    'GameObject', 
+    'GameObject',
     'Camera',
     'PhysicsSystem',
     'PymunkPhysicsSystem',
@@ -56,10 +55,9 @@ __all__ = [
     'MouseButton',
     'Component',
     'Script',
-    'ScriptRunner',
     'Size',
     'BasicShape',
     'Tag',
     'PhysicsMaterial',
     'Materials'
-] 
+]
