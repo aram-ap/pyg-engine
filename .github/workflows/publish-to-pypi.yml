@@ -46,14 +46,10 @@ jobs:
     needs:
       - release-build
     permissions:
-      # IMPORTANT: this permission is mandatory for trusted publishing
-      id-token: write
+      contents: read
 
-    # Dedicated environments with protections for publishing are strongly recommended.
-    # For more information, see: https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment#deployment-protection-rules
     environment:
       name: pypi
-      # PyPI project URL for deployment status
       url: https://pypi.org/p/pyg-engine
 
     steps:
@@ -66,4 +62,5 @@ jobs:
       - name: Publish release distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: dist/ 
+          packages-dir: dist/
+          password: ${{ secrets.PYPI_API_TOKEN }} 
