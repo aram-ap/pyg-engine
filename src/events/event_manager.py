@@ -1,7 +1,7 @@
 from collections import defaultdict, deque
 import weakref
 import threading
-from .runnable import Priority
+from ..core.runnable import Priority
 from .event import Event
 
 class WeakMethod:

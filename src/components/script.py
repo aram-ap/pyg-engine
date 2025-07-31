@@ -45,12 +45,12 @@ class Script:
     # Convenience methods for common physics components
     def get_rigidbody(self):
         """Get the RigidBody component."""
-        from .rigidbody import RigidBody
+        from ..physics.rigidbody import RigidBody
         return self.get_component(RigidBody)
 
     def get_collider(self):
         """Get any Collider component."""
-        from .collider import Collider
+        from ..physics.collider import Collider
         return self.get_component(Collider)
 
     # ================ Lifecycle Methods ================

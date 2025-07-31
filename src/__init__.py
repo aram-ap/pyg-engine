@@ -10,32 +10,31 @@ __author__ = "Pyg Engine Team"
 __description__ = "A Python game engine with physics, rendering, and input systems"
 
 # Core engine components
-from .engine import Engine
-from .engine import GlobalDictionary
-from .gameobject import GameObject
-from .camera import Camera
-from .event_manager import EventManager
-from .event import Event
+from .core.engine import Engine
+from .core.engine import GlobalDictionary
+from .core.gameobject import GameObject
+from .rendering.camera import Camera
+from .events.event_manager import EventManager
+from .events.event import Event
 
 # Runnable system
-from .runnable import RunnableSystem, Priority, Runnable
+from .core.runnable import RunnableSystem, Priority, Runnable
 
 # Physics system
-from .physics_system import PhysicsSystem
-from .rigidbody import RigidBody
-from .collider import Collider
-from .collider import Collider, BoxCollider, CircleCollider
+from .physics.physics_system import PhysicsSystem
+from .physics.rigidbody import RigidBody
+from .physics.collider import Collider, BoxCollider, CircleCollider
 
 # Input systems
-from .input import Input
+from .input.input import Input
 
 # Component system
-from .component import Component
-from .script import Script
+from .components.component import Component
+from .components.script import Script
 
 # Utilities
-from .object_types import Size, BasicShape, Tag
-from .material import PhysicsMaterial, Materials
+from .utilities.object_types import Size, BasicShape, Tag
+from .physics.material import PhysicsMaterial, Materials
 
 # Main exports - these are the primary classes users will interact with
 __all__ = [
@@ -50,7 +49,6 @@ __all__ = [
     'Runnable',
     'PhysicsSystem',
     'RigidBody',
-    'Collider',
     'Collider',
     'BoxCollider',
     'CircleCollider',

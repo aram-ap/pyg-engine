@@ -1,7 +1,7 @@
 import pygame as pg
 from pygame import Vector2
 import pymunk
-from .component import Component
+from ..components.component import Component
 
 class RigidBody(Component):
     """Physics component using Pymunk for realistic physics simulation."""

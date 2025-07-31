@@ -4,9 +4,9 @@ import time
 import importlib.util
 import sys
 
-from .object_types import BasicShape, Tag
-from .script import Script
-from .component import Component
+from ..utilities.object_types import BasicShape, Tag
+from ..components.script import Script
+from ..components.component import Component
 from .runnable import Priority  # NEW: Import for priority in subscriptions (adjust path if needed)
 
 class GameObject(pg.sprite.Sprite):

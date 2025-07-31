@@ -5,14 +5,14 @@ import weakref
 import threading
 from dataclasses import dataclass, field
 import time
-from .object_types import Size, BasicShape, Tag
+from ..utilities.object_types import Size, BasicShape, Tag
 from .gameobject import GameObject
-from .physics_system import PhysicsSystem
-from .camera import Camera
+from ..physics.physics_system import PhysicsSystem
+from ..rendering.camera import Camera
 from .runnable import RunnableSystem, Priority
-from .input import Input
-from .rigidbody import RigidBody
-from .event_manager import EventManager
+from ..input.input import Input
+from ..physics.rigidbody import RigidBody
+from ..events.event_manager import EventManager
 
 class Engine:
     """Core game engine that handles the main loop, rendering, and system coordination."""

@@ -2,7 +2,7 @@ import pygame as pg
 from pygame import Vector2, Rect
 import pymunk
 from enum import Enum, auto
-from .component import Component
+from ..components.component import Component
 from .material import PhysicsMaterial, Materials
 
 class CollisionEvent(Enum):

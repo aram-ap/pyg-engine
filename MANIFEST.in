@@ -1,7 +1,7 @@
 include README.md
 include requirements.txt
 include LICENSE
-recursive-include pyg_engine *.py
+recursive-include src *.py
 recursive-include examples *.py
 recursive-include docs *.md
 recursive-include tests *.py
