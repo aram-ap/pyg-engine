@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="pyg-engine",
-    version="1.0.0a3",
+    version="1.0.0a4",
     author="Aram Aprahamian",
     author_email="",
     description="A Python game engine with physics, rendering, and input systems",
