@@ -7,9 +7,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from object_types import Size, BasicShape, Tag
 from gameobject import GameObject
 from engine import Engine
-from pymunk_rigidbody import PymunkRigidBody
-from pymunk_collider import PymunkBoxCollider, PymunkCircleCollider
+from rigidbody import RigidBody
+from collider import BoxCollider, CircleCollider
 from material import Materials
+from input import Input
 
 def main():
     print("=== Comprehensive Rotation Test ===")
@@ -25,9 +26,9 @@ def main():
         "NoCollision": []
     }
 
-    print("Creating test objects...")
+    print("Creating test objects and floor...")
 
-    # ================ ROLLING BALL ================
+    # ================ ROLLING BALL (RED) ================
     rolling_ball = GameObject(
         name="rolling_ball",
         basicShape=BasicShape.Circle,
@@ -37,19 +38,20 @@ def main():
         tag=Tag.Player
     )
 
-    rolling_ball.add_component(PymunkRigidBody,
+    # Natural physics - can roll due to friction
+    rolling_ball.add_component(RigidBody,
                               mass=1.0,
                               gravity_scale=1.0,
                               drag=0.05,
                               use_gravity=True,
-                              lock_rotation=False)
+                              lock_rotation=False)  # Allow natural rolling
 
-    rolling_ball.add_component(PymunkCircleCollider,
+    rolling_ball.add_component(CircleCollider,
                               radius=25,
-                              material=Materials.METAL,
+                              material=Materials.METAL,  # High friction for rolling
                               collision_layer="Player")
 
-    # ================ ROTATING RECTANGLE ================
+    # ================ ROTATING RECTANGLE (GREEN) ================
     rotating_rect = GameObject(
         name="rotating_rect",
         basicShape=BasicShape.Rectangle,
@@ -59,20 +61,20 @@ def main():
         tag=Tag.Player
     )
 
-    rotating_rect.add_component(PymunkRigidBody,
+    rotating_rect.add_component(RigidBody,
                                mass=1.0,
                                gravity_scale=1.0,
                                drag=0.05,
                                use_gravity=True,
-                               lock_rotation=False)
+                               lock_rotation=False)  # Allow natural rotation
 
-    rotating_rect.add_component(PymunkBoxCollider,
+    rotating_rect.add_component(BoxCollider,
                                width=60,
                                height=40,
                                material=Materials.METAL,
                                collision_layer="Player")
 
-    # ================ TALL RECTANGLE ================
+    # ================ TALL RECTANGLE (BLUE) ================
     tall_rect = GameObject(
         name="tall_rect",
         basicShape=BasicShape.Rectangle,
@@ -82,20 +84,20 @@ def main():
         tag=Tag.Player
     )
 
-    tall_rect.add_component(PymunkRigidBody,
+    tall_rect.add_component(RigidBody,
                            mass=1.0,
                            gravity_scale=1.0,
                            drag=0.05,
                            use_gravity=True,
-                           lock_rotation=False)
+                           lock_rotation=False)  # Allow natural rotation
 
-    tall_rect.add_component(PymunkBoxCollider,
+    tall_rect.add_component(BoxCollider,
                            width=40,
                            height=80,
                            material=Materials.METAL,
                            collision_layer="Player")
 
-    # ================ LOCKED OBJECTS ================
+    # ================ LOCKED BALL (YELLOW) ================
     locked_ball = GameObject(
         name="locked_ball",
         basicShape=BasicShape.Circle,
@@ -105,18 +107,19 @@ def main():
         tag=Tag.Player
     )
 
-    locked_ball.add_component(PymunkRigidBody,
+    locked_ball.add_component(RigidBody,
                              mass=1.0,
                              gravity_scale=1.0,
                              drag=0.05,
                              use_gravity=True,
-                             lock_rotation=True)
+                             lock_rotation=True)  # Lock rotation
 
-    locked_ball.add_component(PymunkCircleCollider,
+    locked_ball.add_component(CircleCollider,
                              radius=25,
                              material=Materials.METAL,
                              collision_layer="Player")
 
+    # ================ LOCKED RECTANGLE (MAGENTA) ================
     locked_rect = GameObject(
         name="locked_rect",
         basicShape=BasicShape.Rectangle,
@@ -126,14 +129,14 @@ def main():
         tag=Tag.Player
     )
 
-    locked_rect.add_component(PymunkRigidBody,
+    locked_rect.add_component(RigidBody,
                              mass=1.0,
                              gravity_scale=1.0,
                              drag=0.05,
                              use_gravity=True,
                              lock_rotation=True)
 
-    locked_rect.add_component(PymunkBoxCollider,
+    locked_rect.add_component(BoxCollider,
                              width=60,
                              height=40,
                              material=Materials.METAL,
@@ -146,15 +149,15 @@ def main():
             self.push_force = 600
             
         def update(self, engine):
-            keys = pg.key.get_pressed()
-            rb = self.game_object.get_component(PymunkRigidBody)
+            input = engine.input
+            rb = self.game_object.get_component(RigidBody)
             
             if rb:
                 # Push left/right to test rotation direction
-                if keys[pg.K_LEFT] or keys[pg.K_a]:
+                if input.get(Input.Keybind.K_LEFT) or input.get(Input.Keybind.A):
                     world_force = Vector2(-self.push_force, 0)
                     rb.add_force_at_point(world_force, self.game_object.position)
-                elif keys[pg.K_RIGHT] or keys[pg.K_d]:
+                elif input.get(Input.Keybind.K_RIGHT) or input.get(Input.Keybind.D):
                     world_force = Vector2(self.push_force, 0)
                     rb.add_force_at_point(world_force, self.game_object.position)
 
@@ -172,12 +175,12 @@ def main():
         tag=Tag.Environment
     )
 
-    floor.add_component(PymunkRigidBody,
+    floor.add_component(RigidBody,
                        mass=100.0,
                        is_kinematic=True,
                        use_gravity=False)
 
-    floor.add_component(PymunkBoxCollider,
+    floor.add_component(BoxCollider,
                        width=1200,
                        height=100,
                        material=Materials.WOOD,

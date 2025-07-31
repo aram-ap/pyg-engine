@@ -7,9 +7,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from object_types import Size, BasicShape, Tag
 from gameobject import GameObject
 from engine import Engine
-from pymunk_rigidbody import PymunkRigidBody
-from pymunk_collider import PymunkBoxCollider, PymunkCircleCollider
+from rigidbody import RigidBody
+from collider import BoxCollider, CircleCollider
 from material import Materials
+from input import Input
 
 def main():
     print("=== Rotation Fix Test ===")
@@ -32,19 +33,19 @@ def main():
         name="test_player",
         basicShape=BasicShape.Circle,
         color=Color(255, 100, 100),  # Red
-        position=Vector2(400, 100),  # Start above floor
+        position=Vector2(400, 100),
         size=Vector2(50, 50),
         tag=Tag.Player
     )
 
     # Add physics components with rotation prevention
-    test_player.add_component(PymunkRigidBody,
+    test_player.add_component(RigidBody,
                              mass=1.0,
                              gravity_scale=1.0,
                              drag=0.05,
                              use_gravity=True)
 
-    test_player.add_component(PymunkCircleCollider,
+    test_player.add_component(CircleCollider,
                              radius=25,
                              material=Materials.METAL,  # High friction to prevent sliding
                              collision_layer="Player")
@@ -58,24 +59,24 @@ def main():
             self.jump_impulse = 300
             
         def update(self, engine):
-            keys = pg.key.get_pressed()
-            rb = self.game_object.get_component(PymunkRigidBody)
+            input = engine.input
+            rb = self.game_object.get_component(RigidBody)
             
             if rb:
                 current_vel = rb.velocity
                 
                 # Horizontal movement - ALWAYS in world coordinates
-                if keys[pg.K_LEFT] or keys[pg.K_a]:
+                if input.get(Input.Keybind.K_LEFT) or input.get(Input.Keybind.A):
                     if current_vel.x > -self.max_speed:
                         world_force = Vector2(-self.move_force, 0)
                         rb.add_force_at_point(world_force, self.game_object.position)
-                elif keys[pg.K_RIGHT] or keys[pg.K_d]:
+                elif input.get(Input.Keybind.K_RIGHT) or input.get(Input.Keybind.D):
                     if current_vel.x < self.max_speed:
                         world_force = Vector2(self.move_force, 0)
                         rb.add_force_at_point(world_force, self.game_object.position)
                 
                 # Jumping
-                if keys[pg.K_UP] or keys[pg.K_w]:
+                if input.get(Input.Keybind.K_UP) or input.get(Input.Keybind.W):
                     if current_vel.y > -50:  # Simple ground check
                         world_impulse = Vector2(0, -self.jump_impulse)
                         rb.add_impulse_at_point(world_impulse, self.game_object.position)
@@ -94,12 +95,12 @@ def main():
         tag=Tag.Environment
     )
 
-    floor.add_component(PymunkRigidBody,
+    floor.add_component(RigidBody,
                        mass=100.0,
                        is_kinematic=True,
                        use_gravity=False)
 
-    floor.add_component(PymunkBoxCollider,
+    floor.add_component(BoxCollider,
                        width=800,
                        height=100,
                        material=Materials.WOOD,  # Medium friction

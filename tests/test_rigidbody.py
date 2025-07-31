@@ -2,6 +2,7 @@ from script import Script
 from rigidbody import RigidBody
 import pygame as pg
 from pygame import Vector2
+from input import Input
 
 class RigidBodyTestScript(Script):
     def start(self):
@@ -21,23 +22,23 @@ class RigidBodyTestScript(Script):
         if not self.rb:
             return
 
-        # Handle input
-        keys = pg.key.get_pressed()
+        # Handle input using the new input system
+        input = engine.input
 
         # Movement forces (like thrusters)
         force_strength = 2000  # Newtons
 
-        if keys[pg.K_a] or keys[pg.K_LEFT]:
+        if input.get(Input.Keybind.A) or input.get(Input.Keybind.K_LEFT):
             self.rb.add_force(Vector2(-force_strength, 0))
-        if keys[pg.K_d] or keys[pg.K_RIGHT]:
+        if input.get(Input.Keybind.D) or input.get(Input.Keybind.K_RIGHT):
             self.rb.add_force(Vector2(force_strength, 0))
-        if keys[pg.K_w] or keys[pg.K_UP]:
+        if input.get(Input.Keybind.W) or input.get(Input.Keybind.K_UP):
             self.rb.add_force(Vector2(0, -force_strength))
-        if keys[pg.K_s] or keys[pg.K_DOWN]:
+        if input.get(Input.Keybind.S) or input.get(Input.Keybind.K_DOWN):
             self.rb.add_force(Vector2(0, force_strength))
 
         # Jump (impulse)
-        if keys[pg.K_SPACE]:
+        if input.get(Input.Keybind.K_SPACE):
             # Only jump if not moving up too fast already
             if self.rb.velocity.y > -200:
                 self.rb.add_impulse(Vector2(0, -300))  # Upward impulse

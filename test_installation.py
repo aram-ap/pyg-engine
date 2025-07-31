@@ -13,9 +13,9 @@ def test_imports():
     try:
         from pyg_engine import (
             Engine, GameObject, Camera, 
-            PhysicsSystem, PymunkPhysicsSystem,
-            RigidBody, PymunkRigidBody,
-            Collider, PymunkCollider,
+            PhysicsSystem, PhysicsSystem,
+            RigidBody, RigidBody,
+            Collider, Collider,
             MouseInputSystem, Component, Script,
             Size, BasicShape, Tag, PhysicsMaterial
         )

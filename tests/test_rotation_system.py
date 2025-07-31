@@ -7,8 +7,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from object_types import Size, BasicShape, Tag
 from gameobject import GameObject
 from engine import Engine
-from pymunk_rigidbody import PymunkRigidBody
-from pymunk_collider import PymunkBoxCollider, PymunkCircleCollider
+from rigidbody import RigidBody
+from collider import BoxCollider, CircleCollider
 from material import Materials
 
 def main():
@@ -38,14 +38,14 @@ def main():
     )
 
     # Natural physics - can roll due to friction
-    rolling_ball.add_component(PymunkRigidBody,
+    rolling_ball.add_component(RigidBody,
                               mass=1.0,
                               gravity_scale=1.0,
                               drag=0.05,
                               use_gravity=True,
                               lock_rotation=False)  # Allow natural rolling
 
-    rolling_ball.add_component(PymunkCircleCollider,
+    rolling_ball.add_component(CircleCollider,
                               radius=25,
                               material=Materials.METAL,  # High friction for rolling
                               collision_layer="Player")
@@ -61,14 +61,14 @@ def main():
     )
 
     # Locked rotation - won't roll
-    locked_ball.add_component(PymunkRigidBody,
+    locked_ball.add_component(RigidBody,
                              mass=1.0,
                              gravity_scale=1.0,
                              drag=0.05,
                              use_gravity=True,
                              lock_rotation=True)  # Prevent rolling
 
-    locked_ball.add_component(PymunkCircleCollider,
+    locked_ball.add_component(CircleCollider,
                              radius=25,
                              material=Materials.METAL,
                              collision_layer="Player")
@@ -84,14 +84,14 @@ def main():
     )
 
     # Natural physics - can rotate
-    rolling_rect.add_component(PymunkRigidBody,
+    rolling_rect.add_component(RigidBody,
                               mass=1.0,
                               gravity_scale=1.0,
                               drag=0.05,
                               use_gravity=True,
                               lock_rotation=False)  # Allow natural rotation
 
-    rolling_rect.add_component(PymunkBoxCollider,
+    rolling_rect.add_component(BoxCollider,
                               width=60,
                               height=40,
                               material=Materials.METAL,
@@ -108,14 +108,14 @@ def main():
     )
 
     # Locked rotation - won't rotate
-    locked_rect.add_component(PymunkRigidBody,
+    locked_rect.add_component(RigidBody,
                              mass=1.0,
                              gravity_scale=1.0,
                              drag=0.05,
                              use_gravity=True,
                              lock_rotation=True)  # Prevent rotation
 
-    locked_rect.add_component(PymunkBoxCollider,
+    locked_rect.add_component(BoxCollider,
                              width=60,
                              height=40,
                              material=Materials.METAL,
@@ -131,12 +131,12 @@ def main():
         tag=Tag.Environment
     )
 
-    floor.add_component(PymunkRigidBody,
+    floor.add_component(RigidBody,
                        mass=100.0,
                        is_kinematic=True,
                        use_gravity=False)
 
-    floor.add_component(PymunkBoxCollider,
+    floor.add_component(BoxCollider,
                        width=1000,
                        height=100,
                        material=Materials.WOOD,

@@ -21,21 +21,19 @@ def test_camera_import():
 
 def test_physics_system_import():
     """Test that physics systems can be imported"""
-    from pyg_engine import PhysicsSystem, PymunkPhysicsSystem
+    from pyg_engine import PhysicsSystem
     assert PhysicsSystem is not None
-    assert PymunkPhysicsSystem is not None
 
 def test_rigidbody_import():
     """Test that rigidbody classes can be imported"""
-    from pyg_engine import Rigidbody, PymunkRigidbody
-    assert Rigidbody is not None
-    assert PymunkRigidbody is not None
+    from pyg_engine import RigidBody
+    assert RigidBody is not None
 
 def test_collider_import():
     """Test that collider classes can be imported"""
-    from pyg_engine import Collider, PymunkCollider
+    from pyg_engine import Collider, Collider
     assert Collider is not None
-    assert PymunkCollider is not None
+    assert Collider is not None
 
 def test_mouse_input_import():
     """Test that mouse input system can be imported"""

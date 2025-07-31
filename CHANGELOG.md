@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Added new `Mouse` class to input system for cleaner mouse input handling
+  - `get_pos()` returns mouse position as tuple (x, y)
+  - `get_rel()` returns relative mouse movement as tuple (x, y)
+  - `get_scroll()` returns scroll wheel movement as tuple (x, y)
+  - `get_button()`, `get_button_down()`, `get_button_up()` for button state checking
+  - `set_pos()` and `set_visible()` for mouse control
+  - Integrates with existing event system for button events
+- Fixed `get_raw_axis()` for relative mouse movement to return actual values instead of scaled values
+
+### Changed
+- Mouse class is now the main interface for mouse operations
+- Legacy mouse system remains available as alternative
+- Updated documentation to include Mouse class usage examples
+
 ## [1.0.0a3] - 2025-07-30
 
 ### Fixed

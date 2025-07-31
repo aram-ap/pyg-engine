@@ -5,7 +5,7 @@ Player script for Pyg Engine examples
 import pygame as pg
 import random
 from pygame import Vector2, Color
-from pyg_engine import Script, PymunkRigidBody, MouseHoverComponent, MouseClickComponent, MouseButton
+from pyg_engine import Script, RigidBody, Input
 
 class PlayerScript(Script):
     """A script that handles player input and movement."""
@@ -39,10 +39,10 @@ class PlayerScript(Script):
         
         # Default movement keys (WASD)
         self.movement_keys = movement_keys or {
-            'up': [pg.K_w, pg.K_UP],
-            'down': [pg.K_s, pg.K_DOWN],
-            'left': [pg.K_a, pg.K_LEFT],
-            'right': [pg.K_d, pg.K_RIGHT]
+            'up': [Input.Keybind.W, Input.Keybind.K_UP],
+            'down': [Input.Keybind.S, Input.Keybind.K_DOWN],
+            'left': [Input.Keybind.A, Input.Keybind.K_LEFT],
+            'right': [Input.Keybind.D, Input.Keybind.K_RIGHT]
         }
         
         # Additional configuration
@@ -50,31 +50,37 @@ class PlayerScript(Script):
             setattr(self, key, value)
         
         # Get rigidbody component
-        self.rigidbody = self.gameobject.get_component(PymunkRigidBody)
+        self.rigidbody = self.gameobject.get_component(RigidBody)
         
         print(f"Player script started on {self.gameobject.name} (ID: {self.player_id}) with speed: {self.speed}")
         print(f"Control mode: {self.control_mode}")
         if self.rigidbody:
             print(f"Rigidbody found: mass={self.rigidbody.mass}, kinematic={self.rigidbody.is_kinematic}")
         else:
-            print("Warning: No PymunkRigidBody found on", self.gameobject.name)
+            print("Warning: No RigidBody found on", self.gameobject.name)
     
     def update(self, engine):
         """Update player movement based on input."""
-        # Handle manual drag system first
+        # Check if game is paused
+        if engine.globals.get("paused"):
+            return  # Don't process input when paused
+        
+        # Handle mouse interactions using modern input system
         if self.use_drag_control:
+            self._handle_mouse_interactions(engine)
             self._handle_manual_drag(engine)
         
         # Only handle keyboard movement if not dragging
         if not self.is_dragging:
-            keys = pg.key.get_pressed()
+            # Use the new input system instead of direct pygame calls
+            input = engine.input
             
             # Calculate movement vector in world coordinates
             movement = Vector2(0, 0)
             
             # Keyboard input - PHYSICS coordinates (up = +Y, down = -Y, left = -X, right = +X)
             for direction, key_list in self.movement_keys.items():
-                if any(keys[key] for key in key_list):
+                if any(input.get(key) for key in key_list):
                     if direction == 'up':
                         movement.y += 1  # Physics up is positive Y (opposite of screen coordinates)
                     elif direction == 'down':
@@ -117,42 +123,45 @@ class PlayerScript(Script):
         self.movement_keys[direction] = keys
     
     def _setup_mouse_components(self):
-        """Set up mouse components for drag functionality."""
-        # Add mouse components to the gameobject
-        self.gameobject.add_component(MouseHoverComponent)
-        self.gameobject.add_component(MouseClickComponent)
-        
-        # Get the components and set up callbacks
-        hover_comp = self.gameobject.get_component(MouseHoverComponent)
-        click_comp = self.gameobject.get_component(MouseClickComponent)
-        
-        if hover_comp:
-            hover_comp.add_hover_callback(self._on_hover_event)
-            
-        if click_comp:
-            # Only use click callback - drag system will be manual
-            click_comp.add_click_callback(MouseButton.LEFT, self._on_left_click)
-            
-        # Additional drag state
+        """Set up mouse interaction state for drag functionality."""
+        # Initialize drag state variables
         self.click_in_bounds = False
         self.mouse_down_start_pos = Vector2(0, 0)
         self.last_mouse_pos = Vector2(0, 0)
         self.drag_velocity = Vector2(0, 0)
+        self.is_hovering = False
+        self.was_hovering = False
     
-    def _on_hover_event(self, event_type, mouse_pos, world_pos):
-        """Handle hover events."""
-        if event_type == 'enter' and not self.is_dragging:
-            # Change color slightly when hovering
+    def _handle_mouse_interactions(self, engine):
+        """Handle mouse interactions using the modern input system."""
+        # Get mouse position
+        mouse_pos = engine.input.mouse.get_pos()
+        world_pos = engine.camera.screen_to_world(mouse_pos)
+        
+        # Check if mouse is over this object
+        obj_rect = pg.Rect(
+            self.gameobject.position.x - self.gameobject.size.x/2,
+            self.gameobject.position.y - self.gameobject.size.y/2,
+            self.gameobject.size.x,
+            self.gameobject.size.y
+        )
+        
+        self.was_hovering = self.is_hovering
+        self.is_hovering = obj_rect.collidepoint(world_pos.x, world_pos.y)
+        
+        # Handle hover events
+        if self.is_hovering and not self.was_hovering and not self.is_dragging:
+            # Mouse entered - change color slightly
             self.gameobject.color = Color(min(255, self.original_color.r + 30), 
                                         min(255, self.original_color.g + 30), 
                                         min(255, self.original_color.b + 30))
-        elif event_type == 'exit' and not self.is_dragging:
+        elif not self.is_hovering and self.was_hovering and not self.is_dragging:
+            # Mouse exited - restore original color
             self.gameobject.color = self.original_color
-
-    def _on_left_click(self, button, mouse_pos, world_pos):
-        """Handle left mouse click - prepare for dragging."""
-        if not self.is_dragging:
-            # Mark that a click occurred in bounds
+        
+        # Handle click events
+        if engine.input.get_event_state('mouse_button_down', 0) and self.is_hovering and not self.is_dragging:
+            # Left mouse button clicked on this object
             self.click_in_bounds = True
             self.mouse_down_start_pos = world_pos.copy()
             self.last_mouse_pos = world_pos.copy()
@@ -169,19 +178,20 @@ class PlayerScript(Script):
     
     def _handle_manual_drag(self, engine):
         """Handle drag system using Pymunk constraints (based on pymunk examples)."""
-        # Get current mouse state
-        mouse_pressed = pg.mouse.get_pressed()[0]  # Left button
+        # Check if game is paused
+        if engine.globals.get("paused"):
+            return  # Don't process drag when paused
         
-        # Get world position from the engine's mouse input system
-        if hasattr(engine, 'mouse_input') and engine.mouse_input:
-            world_pos = engine.mouse_input.current_state.world_position
+        # Use the new input system for mouse input
+        input = engine.input
+        mouse_pressed = input.get(Input.Keybind.MOUSE_LEFT)
+        
+        # Get world position using the modern input system
+        mouse_pos = Vector2(input.mouse.get_pos())
+        if hasattr(engine, 'camera'):
+            world_pos = engine.camera.screen_to_world(mouse_pos)
         else:
-            # Fallback: manual conversion
-            mouse_pos = Vector2(pg.mouse.get_pos())
-            if hasattr(engine, 'camera'):
-                world_pos = (mouse_pos / engine.camera.zoom) + engine.camera.position - Vector2(engine.getWindowSize().w, engine.getWindowSize().h) / (2 * engine.camera.zoom)
-            else:
-                world_pos = mouse_pos
+            world_pos = mouse_pos
         
         # Initialize mouse body if needed
         if self.mouse_body is None and self.rigidbody and self.rigidbody.body:

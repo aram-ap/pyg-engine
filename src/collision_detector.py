@@ -1,8 +1,9 @@
 from .script import Script
-from .pymunk_collider import PymunkCollider
-from .pymunk_rigidbody import PymunkRigidBody
+from .collider import Collider
+from .rigidbody import RigidBody
 import pygame as pg
 from pygame import Color, Vector2
+from .input import Input
 
 class CollisionDetectorScript(Script):
     """Script that changes the GameObject's color when collisions are detected."""
@@ -30,7 +31,7 @@ class CollisionDetectorScript(Script):
         print(f"CollisionDetector started on {self.game_object.name}")
 
         # Get collider and set up collision callbacks
-        self.collider = self.get_component(PymunkCollider)
+        self.collider = self.get_component(Collider)
         if self.collider:
             self.collider.add_collision_callback('enter', self.on_collision_enter)
             self.collider.add_collision_callback('exit', self.on_collision_exit)
@@ -122,8 +123,8 @@ class CollisionDetectorScript(Script):
                 self.update_color()
 
         # Optional: Add some movement controls for testing
-        keys = pg.key.get_pressed()
-        rb = self.get_component(PymunkRigidBody)
+        input = engine.input
+        rb = self.get_component(RigidBody)
 
         if rb and self.game_object.name == "detector_player":
             # Proper Pymunk character controls using forces (not impulses with dt)
@@ -138,18 +139,18 @@ class CollisionDetectorScript(Script):
             # rb.set_rotation_lock(True)
 
             # Horizontal movement using forces (continuous) - ALWAYS in world coordinates
-            if keys[pg.K_LEFT] or keys[pg.K_a]:
+            if input.get(Input.Keybind.K_LEFT) or input.get(Input.Keybind.A):
                 if current_vel.x > -max_speed:  # Speed limiting
                     world_force = Vector2(-move_force, 0)
                     rb.add_force_at_point(world_force, self.game_object.position)
-            elif keys[pg.K_RIGHT] or keys[pg.K_d]:
+            elif input.get(Input.Keybind.K_RIGHT) or input.get(Input.Keybind.D):
                 if current_vel.x < max_speed:   # Speed limiting
                     world_force = Vector2(move_force, 0)
                     rb.add_force_at_point(world_force, self.game_object.position)
             # Let Pymunk's built-in friction handle stopping
 
             # Jumping using impulse (instantaneous, no dt scaling) - ALWAYS in world coordinates
-            if keys[pg.K_UP] or keys[pg.K_w]:
+            if input.get(Input.Keybind.K_UP) or input.get(Input.Keybind.W):
                 # Simple ground check - only jump if not moving up fast
                 if current_vel.y < 50:  # Flipped condition for new coordinate system
                     world_impulse = Vector2(0, jump_impulse)  # Positive Y is up

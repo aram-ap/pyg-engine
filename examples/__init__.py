@@ -32,6 +32,7 @@ def list_examples():
         'main.py': 'Multi-player control demo with different configurations, physics, and mouse+keyboard support',
         'mouse_example.py': 'Mouse input handling and interaction',
         'enhanced_mouse_example.py': 'Advanced mouse interactions with physics',
+        'snake_game.py': 'Complete Snake game implementation with scoring, collision detection, and UI',
     }
 
     print("Available Pyg Engine Examples:")

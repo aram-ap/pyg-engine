@@ -1,7 +1,7 @@
 import pygame as pg
 import random
 from pygame import Vector2, Color
-from pyg_engine import Script, PymunkRigidBody, MouseHoverComponent, MouseClickComponent, MouseButton
+from pyg_engine import Script, RigidBody, MouseHoverComponent, MouseClickComponent, MouseButton
 
 class PlayerScript(Script):
 

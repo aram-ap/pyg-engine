@@ -5,8 +5,8 @@ from object_types import Size, BasicShape
 from gameobject import BasicObject
 from engine import Engine
 from scripts.player import PlayerScript
-from pymunk_rigidbody import PymunkRigidBody
-from pymunk_collider import PymunkCircleCollider
+from rigidbody import RigidBody
+from collider import CircleCollider
 
 def main():
     print("Testing World-Axis Movement")
@@ -25,11 +25,11 @@ def main():
     )
 
     # Add physics components
-    player.add_component(PymunkRigidBody,
+    player.add_component(RigidBody,
                         mass=1.0,
                         gravity_scale=0.0,  # No gravity for this test
                         use_gravity=False)
-    player.add_component(PymunkCircleCollider,
+    player.add_component(CircleCollider,
                         radius=20,
                         material="Player")
 
@@ -53,7 +53,7 @@ def main():
             self.game_object.rotation += self.rotation_speed * engine.dt()
             
             # Also rotate the physics body if it exists
-            rb = self.game_object.get_component(PymunkRigidBody)
+            rb = self.game_object.get_component(RigidBody)
             if rb and rb.body:
                 rb.body.angle = -self.game_object.rotation * 3.14159 / 180  # Convert to radians
 

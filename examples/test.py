@@ -1,6 +1,6 @@
 import pyg_engine
 from pathlib import Path
-from pyg_engine import BasicShape, Engine, GameObject, PymunkBoxCollider, PymunkRigidBody, Size
+from pyg_engine import BasicShape, Engine, GameObject, BoxCollider, RigidBody, Size
 from pygame import Color, Vector2
 
 examples_dir = Path(__file__).parent
@@ -31,16 +31,16 @@ player = GameObject(
     rotation=15
 )
 
-player.add_component( PymunkRigidBody,
+player.add_component( RigidBody,
                               mass=1.0,  # Heavy
                               gravity_scale=1.0,  # Normal gravity to reduce oscillation energy
                               drag=0.15,  # Higher drag to dampen oscillations
                               use_gravity=True,  # Make it fall
                               lock_rotation=False )  # Allow natural rolling
 
-# Adding colliders. Use PymunkCircleCollider for circles
+# Adding colliders. Use CircleCollider for circles
 player.add_component(
-        PymunkBoxCollider,
+        BoxCollider,
         width=50,
         height=50,
         material=pyg_engine.Materials.METAL,
@@ -62,11 +62,11 @@ floor  = GameObject(
         )
 
 # Every interactable gameobject needs a rigidbody and collider
-floor.add_component(PymunkRigidBody,
+floor.add_component(RigidBody,
                     is_kinematic=True, # Kinematic necessary for physics simulations
                     use_gravity=False)
 floor.add_component(
-        PymunkBoxCollider,
+        BoxCollider,
         width=800,
         height=20,
         material=pyg_engine.Materials.DEFAULT,

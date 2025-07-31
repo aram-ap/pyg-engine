@@ -4,7 +4,7 @@ Advanced mouse interactions with physics example
 
 import pygame as pg
 from pygame import Color, Vector2
-from pyg_engine import Engine, GameObject, Size, BasicShape, MouseHoverComponent, MouseClickComponent, MouseWheelComponent, MouseButton, PymunkRigidBody, PymunkBoxCollider, PymunkCircleCollider
+from pyg_engine import Engine, GameObject, Size, BasicShape, MouseHoverComponent, MouseClickComponent, MouseWheelComponent, MouseButton, RigidBody, BoxCollider, CircleCollider
 
 class DraggableObject(GameObject):
     """A draggable object that can be picked up and dropped."""
@@ -18,11 +18,11 @@ class DraggableObject(GameObject):
         self.add_component(MouseWheelComponent)
         
         # Add physics components
-        self.add_component(PymunkRigidBody, mass=1.0)
+        self.add_component(RigidBody, mass=1.0)
         if shape == BasicShape.Circle:
-            self.add_component(PymunkCircleCollider, radius=size.x/2)
+            self.add_component(CircleCollider, radius=size.x/2)
         else:
-            self.add_component(PymunkBoxCollider, width=size.x, height=size.y)
+            self.add_component(BoxCollider, width=size.x, height=size.y)
         
         # State variables
         self.original_color = color
@@ -78,7 +78,7 @@ class DraggableObject(GameObject):
         self.color = self.original_color
         
         # Make the object dynamic again
-        rigidbody = self.get_component(PymunkRigidBody)
+        rigidbody = self.get_component(RigidBody)
         if rigidbody:
             rigidbody.set_kinematic(False)
         
@@ -92,7 +92,7 @@ class DraggableObject(GameObject):
             self.color = self.drag_color
             
             # Make the object kinematic while dragging
-            rigidbody = self.get_component(PymunkRigidBody)
+            rigidbody = self.get_component(RigidBody)
             if rigidbody:
                 print(f"DEBUG: {self.name} - Before kinematic: object_pos={self.position}, body_pos={rigidbody.body.position if rigidbody.body else 'None'}")
                 rigidbody.set_kinematic(True)
@@ -108,7 +108,7 @@ class DraggableObject(GameObject):
             print(f"DEBUG: {self.name} drag - mouse_pos: {mouse_pos}, world_pos: {world_pos}, target_pos: {target_pos}")
             
             # Update rigidbody position
-            rigidbody = self.get_component(PymunkRigidBody)
+            rigidbody = self.get_component(RigidBody)
             if rigidbody and rigidbody.body:
                 # Check for NaN values before setting position
                 if not (target_pos.x != target_pos.x or target_pos.y != target_pos.y):
@@ -122,7 +122,7 @@ class DraggableObject(GameObject):
             self.color = self.original_color
             
             # Make the object dynamic again
-            rigidbody = self.get_component(PymunkRigidBody)
+            rigidbody = self.get_component(RigidBody)
             if rigidbody:
                 rigidbody.set_kinematic(False)
                 # Ensure the body is at the correct position
@@ -157,11 +157,11 @@ class DraggableObject(GameObject):
             
             # Update collider size
             if self.basicShape == BasicShape.Circle:
-                collider = self.get_component(PymunkCircleCollider)
+                collider = self.get_component(CircleCollider)
                 if collider:
                     collider.radius = new_size.x / 2
             else:
-                collider = self.get_component(PymunkBoxCollider)
+                collider = self.get_component(BoxCollider)
                 if collider:
                     collider.width = new_size.x
                     collider.height = new_size.y
@@ -173,8 +173,8 @@ class Wall(GameObject):
         super().__init__(name=name, position=position, size=size, color=color)
         
         # Add static physics components
-        self.add_component(PymunkRigidBody, mass=0.0, is_kinematic=True)  # Static
-        self.add_component(PymunkBoxCollider, width=size.x, height=size.y)
+        self.add_component(RigidBody, mass=0.0, is_kinematic=True)  # Static
+        self.add_component(BoxCollider, width=size.x, height=size.y)
 
 class Floor(GameObject):
     """A static floor for physics boundaries."""
@@ -183,8 +183,8 @@ class Floor(GameObject):
         super().__init__(name=name, position=position, size=size, color=color)
         
         # Add static physics components
-        self.add_component(PymunkRigidBody, mass=0.0, is_kinematic=True)  # Static
-        self.add_component(PymunkBoxCollider, width=size.x, height=size.y)
+        self.add_component(RigidBody, mass=0.0, is_kinematic=True)  # Static
+        self.add_component(BoxCollider, width=size.x, height=size.y)
 
 class CameraController(GameObject):
     """Enhanced camera controller with automatic view management."""

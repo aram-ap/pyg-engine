@@ -1,332 +1,340 @@
 import pygame as pg
 from pygame import Vector2
+import pymunk
 from .rigidbody import RigidBody
-from .collider import Collider, BoxCollider, CircleCollider
+from .collider import Collider, BoxCollider, CircleCollider, CollisionInfo
 from .material import PhysicsMaterial, Materials
-import math
 
 class PhysicsSystem:
-    """Physics system with collision detection and resolution."""
+    """Physics system using Pymunk for realistic 2D physics simulation."""
     
     def __init__(self):
+        # Create pymunk space with physics settings
+        self.space = pymunk.Space()
+        self.space.gravity = (0, -500)  # Standard physics: negative Y is downward
+        self.space.damping = 0.98  # More damping to reduce oscillations
+        self.space.iterations = 10  # Reduced for better performance while maintaining stability
+        
+        # Collision layers for filtering
         self.collision_layers = {
             "Default": ["Default"],
             "Player": ["Player", "Environment"],
             "Environment": ["Player"],
             "NoCollision": []
         }
+        
+        # Collision tracking and mapping
         self._active_collisions = {}
+        self._collider_map = {}  # Map pymunk shapes to our colliders
         self.enable_debug = False
-        print("PhysicsSystem initialized (enhanced version)")
+        
+        # Pause state
+        self.paused = False
+        self.space._prev_gravity = self.space.gravity
+        self.space._prev_damping = self.space.damping
+        
+        # Physics settings for fixed timestep
+        self.iterations = 10  # Reduced for better performance while maintaining stability
+        self.dt_fixed = 1.0/60.0  # Fixed timestep for stability
+        self.accumulator = 0.0  # For fixed timestep accumulation
+        
+        print("PhysicsSystem initialized")
 
     def update(self, engine, game_objects):
-        """Main physics update loop."""
+        """Main physics update with fixed timestep."""
         dt = engine.dt()
         if dt <= 0:
             return
+        
+        # Accumulate time for fixed timestep
+        self.accumulator += dt
+        
+        # Process physics in fixed timesteps for stability
+        while self.accumulator >= self.dt_fixed:
+            self._physics_step(engine, game_objects, self.dt_fixed)
+            self.accumulator -= self.dt_fixed
+        
+        # Update GameObject positions/rotations from physics bodies
+        self._sync_gameobjects_from_physics(game_objects)
 
-        # Get all physics objects
-        physics_objects = []  # List of (obj, rb, col) tuples
+    def _physics_step(self, engine, game_objects, dt):
+        """Perform one physics step."""
+        if self.paused:
+            return
+        
+        # Step 1: Ensure all physics objects are properly set up
+        self._setup_physics_objects(game_objects)
+        
+        # Step 2: Apply forces and handle user input
+        self._apply_forces_and_input(game_objects, dt)
+        
+        # Step 3: Step the physics simulation
+        self.space.step(dt)
+        
+        # Step 4: Handle collision events
+        self._handle_collision_events()
 
+    def _setup_physics_objects(self, game_objects):
+        """Ensure all physics objects have proper pymunk bodies and shapes."""
         for obj in game_objects:
             if not obj.enabled:
                 continue
+                
             rb = obj.get_component(RigidBody)
-            col = obj.get_component(Collider)
-            if rb and col:
-                physics_objects.append((obj, rb, col))
+            collider = obj.get_component(Collider)
+            
+            if rb and collider and not rb.body:
+                self._create_physics_body(obj, rb, collider)
 
-        # STEP 1: Update velocities (gravity, forces, drag)
-        for obj, rb, col in physics_objects:
-            if rb.is_kinematic:
+    def _create_physics_body(self, game_object, rigidbody, collider):
+        """Create pymunk body and shape for a game object."""
+        
+        # Create body based on kinematic state
+        if rigidbody.is_kinematic:
+            body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+        else:
+            # Calculate moment of inertia based on shape for dynamic bodies
+            if isinstance(collider, BoxCollider):
+                moment = pymunk.moment_for_box(rigidbody.mass, (collider.width, collider.height))
+            elif isinstance(collider, CircleCollider):
+                # Use proper moment calculation for a solid circle (inner radius = 0)
+                moment = pymunk.moment_for_circle(rigidbody.mass, 0, collider.radius, (0, 0))
+            else:
+                moment = pymunk.moment_for_box(rigidbody.mass, (32, 32))  # Default
+            
+            body = pymunk.Body(rigidbody.mass, moment)
+            
+            # Store the original moment for rotation freezing/unfreezing
+            rigidbody._original_moment = moment
+        
+        # Set initial position and rotation
+        body.position = (game_object.position.x, game_object.position.y)
+        body.angle = game_object.rotation * 3.14159 / 180  # Convert to radians, Y-flip handled in rendering
+        
+        # Create shape based on collider type
+        if isinstance(collider, CircleCollider):
+            # Create circle shape - always centered to prevent rocking
+            offset = (0, 0)  # Force center to prevent center-of-mass issues
+            shape = pymunk.Circle(body, collider.radius, offset)
+        elif isinstance(collider, BoxCollider):
+            # Create box shape
+            half_width = collider.width / 2
+            half_height = collider.height / 2
+            vertices = [
+                (-half_width, -half_height),
+                (half_width, -half_height),
+                (half_width, half_height),
+                (-half_width, half_height)
+            ]
+            # Apply offset to vertices instead of using offset parameter
+            if collider.offset.x != 0 or collider.offset.y != 0:
+                offset_vertices = []
+                for vertex in vertices:
+                    offset_vertices.append((vertex[0] + collider.offset.x, vertex[1] + collider.offset.y))
+                vertices = offset_vertices
+            shape = pymunk.Poly(body, vertices)
+        else:
+            # Default box shape
+            shape = pymunk.Poly.create_box(body, (32, 32))
+        
+        # Set material properties
+        material = collider.material
+        if isinstance(material, str):
+            # Convert string material to PhysicsMaterial object
+            from material import Materials
+            if material == "Player":
+                material = Materials.RUBBER  # Good for player movement
+            elif material == "Environment":
+                material = Materials.WOOD  # Good for platforms
+            else:
+                material = Materials.DEFAULT  # Fallback
+        
+        shape.friction = material.friction
+        shape.elasticity = material.bounce
+        
+        # Set collision filters based on collision layers
+        shape.collision_type = self._get_collision_type(collider.collision_layer)
+        
+        # Set sensor (trigger) property
+        shape.sensor = collider.is_trigger
+        
+        # Store references
+        rigidbody.body = body
+        rigidbody.shape = shape
+        collider.shape = shape
+        
+        # CRITICAL FIX: Store original moment of inertia for kinematic transitions
+        if not rigidbody.is_kinematic:
+            rigidbody._original_moment = body.moment
+        
+        # Map shape to collider for collision callbacks
+        self._collider_map[shape] = collider
+        
+        # Add to space
+        if not rigidbody.is_kinematic:
+            self.space.add(body, shape)
+        else:
+            self.space.add(body, shape)
+            
+        # Apply initial velocity if any
+        if hasattr(rigidbody, '_pygame_velocity'):
+            body.velocity = (rigidbody._pygame_velocity.x, rigidbody._pygame_velocity.y)
+        if hasattr(rigidbody, '_pygame_angular_velocity'):
+            body.angular_velocity = rigidbody._pygame_angular_velocity
+            
+        print(f"Created pymunk body for {game_object.name}: mass={rigidbody.mass}, "
+              f"moment={body.moment:.2f}, kinematic={rigidbody.is_kinematic}")
+
+    def _get_collision_type(self, layer_name):
+        """Convert collision layer name to collision type number."""
+        layer_map = {
+            "Default": 1,
+            "Player": 2,
+            "Environment": 3,
+            "NoCollision": 4
+        }
+        return layer_map.get(layer_name, 1)
+
+    def _apply_forces_and_input(self, game_objects, dt):
+        """Apply gravity scaling and other forces."""
+        for obj in game_objects:
+            if not obj.enabled:
                 continue
+                
+            rb = obj.get_component(RigidBody)
+            if rb and rb.body and not rb.is_kinematic:
+                # Apply gravity scaling
+                if rb.use_gravity and rb.gravity_scale != 1.0:
+                    # Cancel default gravity and apply scaled version
+                    gravity_force = (0, self.space.gravity[1] * rb.mass * (rb.gravity_scale - 1.0))
+                    rb.body.apply_force_at_local_point(gravity_force, (0, 0))
+                
+                # Apply drag (air resistance) - let Pymunk handle this more naturally
+                if rb.drag > 0:
+                    velocity = rb.body.velocity
+                    drag_force = (-velocity.x * rb.drag * rb.mass, 
+                                 -velocity.y * rb.drag * rb.mass)
+                    rb.body.apply_force_at_local_point(drag_force, (0, 0))
+                
+                # Apply angular drag
+                if rb.angular_drag > 0:
+                    angular_drag_torque = -rb.body.angular_velocity * rb.angular_drag * rb.body.moment
+                    rb.body.torque += angular_drag_torque
 
-            # Apply gravity
-            if rb.use_gravity:
-                rb.velocity.y += rb.gravity.y * rb.gravity_scale * dt
+    def _sync_gameobjects_from_physics(self, game_objects):
+        """Update GameObject positions/rotations from pymunk bodies."""
+        for obj in game_objects:
+            if not obj.enabled:
+                continue
+                
+            rb = obj.get_component(RigidBody)
+            if rb and rb.body:
+                # Don't override position for kinematic bodies that might be manually controlled
+                # Only update position for dynamic bodies, or kinematic bodies that aren't being dragged
+                is_being_dragged = hasattr(obj, 'is_dragging') and obj.is_dragging
+                
+                if not rb.is_kinematic or not is_being_dragged:
+                    # Update GameObject position and rotation from physics
+                    # Check for NaN values before updating
+                    body_x, body_y = rb.body.position.x, rb.body.position.y
+                    if not (body_x != body_x or body_y != body_y):  # NaN check
+                        obj.position.x = body_x
+                        obj.position.y = body_y
+                        # Check if this is a circle - circles need inverted rotation for correct rolling direction
+                        from .collider import CircleCollider
+                        is_circle = obj.get_component(CircleCollider) is not None
+                        
+                        if is_circle:
+                            obj.rotation = -rb.body.angle * 180 / 3.14159  # Invert for correct rolling
+                        else:
+                            obj.rotation = rb.body.angle * 180 / 3.14159  # Direct conversion for rectangles
+                    else:
+                        print(f"WARNING: NaN position detected for {obj.name}, resetting to origin")
+                        obj.position.x = 0
+                        obj.position.y = 0
+                        rb.body.position = (0, 0)
+                        rb.body.velocity = (0, 0)
+                
+                # Update rigidbody component
+                rb.update(None)
 
-            # Apply linear drag
-            if rb.drag > 0:
-                rb.velocity *= (1.0 - rb.drag * dt)
-
-            # Apply angular drag
-            if rb.angular_drag > 0:
-                rb.angular_velocity *= (1.0 - rb.angular_drag * dt)
-
-            # Apply accumulated forces
-            for force in rb._forces:
-                rb.velocity += (force / rb.mass) * dt
-            rb._forces.clear()
-
-            # Apply accumulated torques
-            total_torque = sum(rb._torques)
-            if total_torque != 0:
-                rb.angular_velocity += (total_torque / rb.moment_of_inertia) * dt
-            rb._torques.clear()
-
-            # No artificial velocity limits - let physics handle it naturally
-
-            # Clamp angular velocity
-            max_angular_speed = 20  # radians per second
-            rb.angular_velocity = max(-max_angular_speed, min(max_angular_speed, rb.angular_velocity))
-
-        # STEP 2: Move objects and rotate them
-        for obj, rb, col in physics_objects:
-            if not rb.is_kinematic:
-                obj.position += rb.velocity * dt
-                obj.rotation += rb.angular_velocity * (180 / 3.14159) * dt  # Convert to degrees
-
-        # STEP 3: Update all collider bounds
-        for obj, rb, col in physics_objects:
-            col.update_bounds()
-
-        # STEP 4: Detect all collisions
-        collisions = []
-        for i, (obj_a, rb_a, col_a) in enumerate(physics_objects):
-            for j, (obj_b, rb_b, col_b) in enumerate(physics_objects):
+    def _handle_collision_events(self):
+        """Handle collision enter/stay/exit events using bounding box collision detection."""
+        current_collisions = set()
+        
+        # Get all colliders
+        colliders = list(self._collider_map.values())
+        
+        # Check collisions between all pairs using bounding boxes
+        for i, collider_a in enumerate(colliders):
+            for j, collider_b in enumerate(colliders):
                 if i >= j:  # Skip self and duplicates
                     continue
-
-                if not self._should_collide(col_a, col_b):
+                
+                if not self._should_collide(collider_a, collider_b):
                     continue
-
-                collision = col_a.check_collision(col_b)
-                if collision and collision.penetration_depth > 0:
-                    collisions.append({
-                        'obj_a': obj_a, 'rb_a': rb_a, 'col_a': col_a,
-                        'obj_b': obj_b, 'rb_b': rb_b, 'col_b': col_b,
-                        'info': collision
-                    })
-
-        # STEP 5: Resolve all collisions
-        for collision_data in collisions:
-            self._resolve_collision(collision_data, dt)
-
-        # STEP 6: Handle collision events
-        self._update_collision_events(collisions)
-
-        # STEP 7: Enhanced damping and sleep logic
-        for obj, rb, col in physics_objects:
-            if rb.is_kinematic:
-                continue
-
-            speed = rb.velocity.length()
-            angular_speed = abs(rb.angular_velocity)
-
-            # Velocity-based damping: stronger at low speeds to prevent oscillation
-            if speed < 20:
-                rb.velocity *= (1 - 0.3 * dt)  # 30% damping per second at low speed
-            if angular_speed < 1.0:
-                rb.angular_velocity *= (1 - 0.5 * dt)  # 50% angular damping per second
-
-            # Sleep if below thresholds and in contact
-            sleep_threshold_linear = 2.0
-            sleep_threshold_angular = 0.05
-            if speed < sleep_threshold_linear and angular_speed < sleep_threshold_angular:
-                is_resting = any(id(col) in pair_id for pair_id in self._active_collisions)
-                if is_resting:
-                    rb.velocity = Vector2(0, 0)
-                    rb.angular_velocity = 0
-                    if self.enable_debug:
-                        print(f"Sleeping {obj.name}: fully rested")
-
-    def _resolve_collision(self, collision_data, dt):
-        """Resolve a collision with separation and impulse."""
-        obj_a = collision_data['obj_a']
-        obj_b = collision_data['obj_b']
-        rb_a = collision_data['rb_a']
-        rb_b = collision_data['rb_b']
-        col_a = collision_data['col_a']
-        col_b = collision_data['col_b']
-        info = collision_data['info']
-
-        # Skip if either is a trigger
-        if col_a.is_trigger or col_b.is_trigger:
-            return
-
-        # Calculate masses (kinematic = infinite mass)
-        mass_a = rb_a.mass if not rb_a.is_kinematic else float('inf')
-        mass_b = rb_b.mass if not rb_b.is_kinematic else float('inf')
-
-        if mass_a == float('inf') and mass_b == float('inf'):
-            return
-
-        # PART 1: Positional correction (separate objects)
-        if info.penetration_depth > 0.1:  # Small threshold to avoid jitter
-            percent = 0.8  # How much to correct
-            slop = 0.01  # Allowable penetration
-            correction = info.contact_normal * (max(info.penetration_depth - slop, 0) * percent)
-
-            if mass_a == float('inf'):
-                obj_b.position -= correction
-            elif mass_b == float('inf'):
-                obj_a.position += correction
-            else:
-                # Distribute based on mass
-                total_mass = mass_a + mass_b
-                obj_a.position += correction * (mass_b / total_mass)
-                obj_b.position -= correction * (mass_a / total_mass)
-
-        # PART 2: Velocity resolution with angular physics
-
-        # Calculate contact points relative to centers of mass
-        r_a = info.contact_point - obj_a.position
-        r_b = info.contact_point - obj_b.position
-
-        # Calculate velocities at contact points (including rotation)
-        vel_a = rb_a.velocity if rb_a else Vector2(0, 0)
-        vel_b = rb_b.velocity if rb_b else Vector2(0, 0)
-
-        # Add tangential velocity from rotation
-        if not rb_a.is_kinematic:
-            # Tangential velocity = angular_velocity × radius (perpendicular to radius)
-            tangential_a = Vector2(-r_a.y, r_a.x) * rb_a.angular_velocity
-            vel_a = vel_a + tangential_a
-
-        if not rb_b.is_kinematic:
-            tangential_b = Vector2(-r_b.y, r_b.x) * rb_b.angular_velocity
-            vel_b = vel_b + tangential_b
-
-        # Calculate relative velocity at contact point
-        relative_velocity = vel_a - vel_b
-
-        # Velocity along collision normal
-        velocity_along_normal = relative_velocity.dot(info.contact_normal)
-
-        # Don't resolve if velocities are separating
-        if velocity_along_normal > 0:
-            return
-
-        # Get combined material properties
-        material = self._combine_materials(col_a.material, col_b.material)
-
-        # Calculate impulse magnitude with angular effects
-        e = material.bounce  # Restitution
-
-        # Calculate effective mass including rotational inertia
-        r_a_cross_n = r_a.x * info.contact_normal.y - r_a.y * info.contact_normal.x
-        r_b_cross_n = r_b.x * info.contact_normal.y - r_b.y * info.contact_normal.x
-
-        effective_mass_inv = 0
-        if mass_a != float('inf'):
-            effective_mass_inv += 1 / mass_a + (r_a_cross_n * r_a_cross_n) / rb_a.moment_of_inertia
-        if mass_b != float('inf'):
-            effective_mass_inv += 1 / mass_b + (r_b_cross_n * r_b_cross_n) / rb_b.moment_of_inertia
-
-        if effective_mass_inv == 0:
-            return
-
-        impulse_magnitude = -(1 + e) * velocity_along_normal / effective_mass_inv
-
-        # Apply linear impulse
-        impulse = info.contact_normal * impulse_magnitude
-
-        if not rb_a.is_kinematic:
-            rb_a.velocity += impulse / mass_a
-            # Apply angular impulse
-            angular_impulse_a = r_a.x * impulse.y - r_a.y * impulse.x  # 2D cross product
-            rb_a.angular_velocity += angular_impulse_a / rb_a.moment_of_inertia
-
-        if not rb_b.is_kinematic:
-            rb_b.velocity -= impulse / mass_b
-            # Apply angular impulse
-            angular_impulse_b = r_b.x * impulse.y - r_b.y * impulse.x  # 2D cross product
-            rb_b.angular_velocity -= angular_impulse_b / rb_b.moment_of_inertia
-
-        # PART 3: Friction (tangent impulse) with angular effects
-        # Calculate tangent vector (perpendicular to normal)
-        tangent = Vector2(-info.contact_normal.y, info.contact_normal.x)
-        velocity_along_tangent = relative_velocity.dot(tangent)
-
-        if abs(velocity_along_tangent) > 0.01:  # Only apply if sliding
-            friction_magnitude = abs(impulse_magnitude) * material.friction
-
-            # Clamp friction (can't reverse direction)
-            if abs(friction_magnitude) > abs(velocity_along_tangent):
-                friction_magnitude = abs(velocity_along_tangent)
-
-            # Calculate friction impulse with angular effects
-            friction_direction = -1 if velocity_along_tangent > 0 else 1
-
-            # Effective mass for tangential direction
-            r_a_cross_t = r_a.x * tangent.y - r_a.y * tangent.x
-            r_b_cross_t = r_b.x * tangent.y - r_b.y * tangent.x
-
-            tangent_mass_inv = 0
-            if mass_a != float('inf'):
-                tangent_mass_inv += 1 / mass_a + (r_a_cross_t * r_a_cross_t) / rb_a.moment_of_inertia
-            if mass_b != float('inf'):
-                tangent_mass_inv += 1 / mass_b + (r_b_cross_t * r_b_cross_t) / rb_b.moment_of_inertia
-
-            if tangent_mass_inv > 0:
-                friction_impulse_magnitude = friction_magnitude * friction_direction / tangent_mass_inv
-                friction_impulse = tangent * friction_impulse_magnitude
-
-                if not rb_a.is_kinematic:
-                    rb_a.velocity += friction_impulse / mass_a
-                    # Apply angular friction
-                    angular_friction_a = r_a.x * friction_impulse.y - r_a.y * friction_impulse.x
-                    rb_a.angular_velocity += angular_friction_a / rb_a.moment_of_inertia
-
-                if not rb_b.is_kinematic:
-                    rb_b.velocity -= friction_impulse / mass_b
-                    # Apply angular friction
-                    angular_friction_b = r_b.x * friction_impulse.y - r_b.y * friction_impulse.x
-                    rb_b.angular_velocity -= angular_friction_b / rb_b.moment_of_inertia
-
-        # PART 4: Apply gravity torque for stability
-        if isinstance(col_a, BoxCollider) and abs(info.contact_normal.y) > 0.7:
-            gravity_torque = rb_a.apply_gravity_torque(info.contact_point)
-            scaled_torque = gravity_torque * dt * (1 - info.penetration_depth * 0.1)  # Scale down if deeply penetrating (resting)
-            rb_a.add_torque(scaled_torque)
-
-        if isinstance(col_b, BoxCollider) and abs(info.contact_normal.y) > 0.7:
-            gravity_torque = rb_b.apply_gravity_torque(info.contact_point)
-            scaled_torque = gravity_torque * dt * (1 - info.penetration_depth * 0.1)
-            rb_b.add_torque(scaled_torque)
-
-        if self.enable_debug:
-            print(f"Resolved collision: {obj_a.name} vs {obj_b.name}, impulse={impulse_magnitude:.2f}, "
-                  f"angular_a={rb_a.angular_velocity:.2f}, angular_b={rb_b.angular_velocity:.2f}")
-
-    def _update_collision_events(self, current_collisions):
-        """Track and trigger collision enter/stay/exit events."""
-        current_pairs = set()
-
-        # Process current collisions
-        for collision in current_collisions:
-            col_a = collision['col_a']
-            col_b = collision['col_b']
-            info = collision['info']
-
-            # Create unique pair ID
-            pair_id = tuple(sorted([id(col_a), id(col_b)]))
-            current_pairs.add(pair_id)
-
-            # Check if this is a new collision
-            if pair_id not in self._active_collisions:
-                # New collision - trigger enter event
-                self._active_collisions[pair_id] = (col_a, col_b)
-                if self.enable_debug:
-                    print(f"Collision ENTER: {collision['obj_a'].name} vs {collision['obj_b'].name}")
-
-            # Trigger collision events
-            col_a.handle_collision(info)
-            reverse_info = self._create_reverse_collision_info(info, col_a)
-            col_b.handle_collision(reverse_info)
-
+                
+                # Update bounds first
+                collider_a.update_bounds()
+                collider_b.update_bounds()
+                
+                # Simple bounding box collision check
+                if collider_a.bounds.colliderect(collider_b.bounds):
+                    pair_id = tuple(sorted([id(collider_a), id(collider_b)]))
+                    current_collisions.add(pair_id)
+                    
+                    # Create approximate collision info
+                    center_a = Vector2(collider_a.bounds.centerx, collider_a.bounds.centery)
+                    center_b = Vector2(collider_b.bounds.centerx, collider_b.bounds.centery)
+                    
+                    # Calculate normal from a to b
+                    if center_a.distance_to(center_b) > 0:
+                        normal = (center_b - center_a).normalize()
+                    else:
+                        normal = Vector2(1, 0)  # Default normal
+                    
+                    # Contact point is between the two centers
+                    contact_point = (center_a + center_b) / 2
+                    
+                    # Approximate penetration depth
+                    overlap_x = min(collider_a.bounds.right, collider_b.bounds.right) - max(collider_a.bounds.left, collider_b.bounds.left)
+                    overlap_y = min(collider_a.bounds.bottom, collider_b.bounds.bottom) - max(collider_a.bounds.top, collider_b.bounds.top)
+                    penetration = min(overlap_x, overlap_y)
+                    
+                    # Check if this is a new collision
+                    if pair_id not in self._active_collisions:
+                        self._active_collisions[pair_id] = (collider_a, collider_b)
+                        
+                        # Trigger enter events
+                        info_a = CollisionInfo(collider_b, contact_point, normal, penetration)
+                        info_b = CollisionInfo(collider_a, contact_point, -normal, penetration)
+                        
+                        collider_a.handle_collision(info_a)
+                        collider_b.handle_collision(info_b)
+                        
+                        if self.enable_debug:
+                            print(f"Collision ENTER: {collider_a.game_object.name} vs {collider_b.game_object.name}")
+                    else:
+                        # Trigger stay events
+                        info_a = CollisionInfo(collider_b, contact_point, normal, penetration)
+                        info_b = CollisionInfo(collider_a, contact_point, -normal, penetration)
+                        
+                        collider_a.handle_collision(info_a)
+                        collider_b.handle_collision(info_b)
+        
         # Check for ended collisions
-        ended_pairs = set(self._active_collisions.keys()) - current_pairs
+        ended_pairs = set(self._active_collisions.keys()) - current_collisions
         for pair_id in ended_pairs:
-            col_a, col_b = self._active_collisions[pair_id]
-            col_a.end_collision(col_b)
-            col_b.end_collision(col_a)
+            collider_a, collider_b = self._active_collisions[pair_id]
+            collider_a.end_collision(collider_b)
+            collider_b.end_collision(collider_a)
             del self._active_collisions[pair_id]
+            
             if self.enable_debug:
-                print(f"Collision EXIT")
+                print(f"Collision EXIT: {collider_a.game_object.name} vs {collider_b.game_object.name}")
 
     def _should_collide(self, collider_a, collider_b):
-        """Check collision layers."""
+        """Check if two colliders should collide based on collision layers."""
         layer_a = collider_a.collision_layer
         layer_b = collider_b.collision_layer
         allowed = self.collision_layers.get(layer_a, [])
@@ -338,13 +346,81 @@ class PhysicsSystem:
         friction = (mat_a.friction + mat_b.friction) / 2
         return PhysicsMaterial("Combined", bounce, friction)
 
-    def _create_reverse_collision_info(self, original_info, original_collider):
-        """Create reversed collision info."""
-        from collider import CollisionInfo
-        return CollisionInfo(
-            other_collider=original_collider,
-            contact_point=original_info.contact_point,
-            contact_normal=-original_info.contact_normal,
-            penetration_depth=original_info.penetration_depth
-        )
+    def add_object(self, game_object):
+        """Add a game object to the physics simulation."""
+        rb = game_object.get_component(RigidBody)
+        collider = game_object.get_component(Collider)
+        
+        if rb and collider:
+            self._create_physics_body(game_object, rb, collider)
 
+    def remove_object(self, game_object):
+        """Remove a game object from the physics simulation."""
+        rb = game_object.get_component(RigidBody)
+        collider = game_object.get_component(Collider)
+        
+        if rb and rb.body:
+            if rb.shape in self._collider_map:
+                del self._collider_map[rb.shape]
+            
+            try:
+                if rb.body in self.space.bodies:
+                    self.space.remove(rb.body)
+                if rb.shape in self.space.shapes:
+                    self.space.remove(rb.shape)
+            except:
+                pass  # Object might already be removed
+            
+            rb.body = None
+            rb.shape = None
+            
+        if collider:
+            collider.shape = None
+
+    def set_gravity(self, gravity_x, gravity_y):
+        """Set the global gravity."""
+        self.space.gravity = (gravity_x, gravity_y)
+        print(f"Gravity set to ({gravity_x}, {gravity_y})")
+
+    def get_gravity(self):
+        """Get the current global gravity."""
+        return Vector2(self.space.gravity[0], self.space.gravity[1])
+
+    def pause(self):
+        """Pause the physics simulation."""
+        self.paused = True
+        self.space._prev_gravity = self.space.gravity
+        self.space._prev_damping = self.space.damping
+        self.space.gravity = (0, 0)
+        self.space.damping = 1.0
+    
+    def unpause(self):
+        """Unpause the physics simulation."""
+        self.paused = False
+        self.space.gravity = self.space._prev_gravity
+        self.space.damping = self.space._prev_damping
+    
+    def toggle_pause(self):
+        """Toggle the pause state of the physics simulation."""
+        if self.paused:
+            self.unpause()
+        else:
+            self.pause()
+
+    def set_damping(self, damping):
+        """Set the damping of the physics simulation."""
+        self.space.damping = damping
+        self.space._prev_damping = damping
+
+
+
+
+    def __del__(self):
+        """Clean up the physics space."""
+        if hasattr(self, 'space'):
+            # Clear all bodies and shapes
+            for body in list(self.space.bodies):
+                self.space.remove(body)
+            for shape in list(self.space.shapes):
+                self.space.remove(shape)
+            print("PhysicsSystem cleaned up") 

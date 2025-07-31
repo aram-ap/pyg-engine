@@ -2,15 +2,14 @@
 
 A Python game engine built with Pygame and Pymunk for 2D physics, rendering, and game development.
 Inspired by the Unity game engine's Monobehavior system with scriptable game objects, rigidbody and collider system.
-Built in physics materials, update system, and mouse+keyboard input system. Built-in window resizing.
-
+Built-in physics materials, update system, and mouse+keyboard input system. Built-in window resizing.
 
 > **NOTE:** This is in alpha development stage. Everything is under active development and large changes will likely be made.
 > _Also,_ its pronounced _**pig engine**_ :)
 
 ## Features
 
-- **OOP Model**: Easy and simple game object implementation system. Create players, environment, enemies, etc. with ease
+- **OOP Model**: Simple game object implementation system
 - **2D Physics**: Built-in physics via Pymunk
 - **Input**: Mouse and keyboard input handling
 - **Components**: Modular component-based architecture
@@ -19,6 +18,14 @@ Built in physics materials, update system, and mouse+keyboard input system. Buil
 - **Collision**: Advanced collision detection and response
 
 ## Installation
+
+Requires Python 3.7+.
+
+Dependencies:
+- pygame >= 2.5.0
+- pymunk >= 6.4.0
+
+Install via pip:
 
 ```bash
 pip install pyg-engine
@@ -79,30 +86,34 @@ python examples/__init__.py
 # Run a specific example
 python examples/basic_example.py
 python examples/test.py
-python examples/mouse_example.py
 python examples/enhanced_mouse_example.py
-python examples/simple_drag_test.py
+python examples/enum_event_example.py
+python examples/main.py
+python examples/snake_game.py
+python examples/performance_analysis.py
+python examples/performance_test.py
+python examples/visual_runnable_demo.py
 ```
 
 Available examples:
 - `basic_example.py` - Basic engine setup and object creation
-- `test.py` - An example script into basic gameobject creation, components, and scripts
-- `main.py` - Complete physics demo with collision detection, mouse and keyboard input, multiple game objects, and physics materials.
+- `test.py` - Basic gameobject creation, components, and scripts
+- `main.py` - Complete physics demo with collision detection, input, multiple game objects, and physics materials
 - `enhanced_mouse_example.py` - Advanced mouse interactions with physics
-- `mouse_example.py` - Mouse input handling and interaction
+- `enum_event_example.py` - Enum-based event handling example
+- `snake_game.py` - Simple snake game demo
+- `performance_analysis.py` - Performance profiling and analysis
+- `performance_test.py` - Performance test scenarios
+- `visual_runnable_demo.py` - Visual demo with runnables
 
 ## Documentation
 
 See the `docs/` directory for detailed guides:
-
-- `README.md` - General documentation
-- `PHYSICS_CONTROLS_GUIDE.md` - Physics system guide
-- `MOUSE_INPUT_GUIDE.md` - Input system guide
-- `SPRITE_SYSTEM_UPGRADE.md` - Sprite system documentation
+- `CORE_SYSTEMS_GUIDE.md` - Comprehensive guide to engine architecture, systems, and usage
 
 ## Testing
 
-Run the test suite:
+Run the test suite (tests are located in the `tests/` directory):
 
 ```bash
 cd pyg_engine
@@ -142,7 +153,6 @@ BUGS:
 - Debug interface
 - File storage system
 - 2D lighting system
-
 
 ## License
 
