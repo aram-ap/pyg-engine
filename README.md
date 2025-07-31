@@ -11,7 +11,7 @@ Built-in physics materials, update system, event system and mouse+keyboard input
 
 - **OOP Model**: Simple game object implementation system
 - **2D Physics**: Built-in physics via Pymunk
-- **Input**: Mouse and keyboard input handling
+- **Input**: Mouse, keyboard, and joystick input handling
 - **Components**: Modular component-based architecture
 - **Scripts**: Dynamic script loading and execution
 - **Camera**: Flexible camera with multiple scaling modes
