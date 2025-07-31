@@ -13,6 +13,8 @@ A comprehensive guide to the core systems of the PyG Engine: Engine architecture
    - [CollisionInfo](#collisioninfo)
    - [Component](#component)
    - [Engine](#engine)
+   - [Event](#event)
+   - [EventManager](#eventmanager)
    - [GameObject](#gameobject)
    - [GlobalDictionary](#globaldictionary)
    - [Input](#input)
@@ -126,6 +128,23 @@ A comprehensive guide to the core systems of the PyG Engine: Engine architecture
 - `setRunning(running)` - Set engine running state
 - `start()` - Start game loop
 - `stop()` - Stop game loop
+
+### Event
+**Purpose**: Immutable data class representing an event in the game engine.
+
+**Properties**:
+- `type` - Event type identifier (e.g., 'collision', 'input', 'spawn')
+- `data` - Optional payload containing event-specific data
+- `timestamp` - Creation time for event ordering
+
+### EventManager
+**Purpose**: Manages event subscription, dispatch, and processing with thread-safe operations.
+
+**Functions**:
+- `subscribe(event_type, listener, priority)` - Subscribe a listener to an event type with optional priority
+- `unsubscribe(event_type, listener)` - Remove a listener from an event type subscription
+- `dispatch(event_type, data, immediate)` - Dispatch an event to all subscribed listeners
+- `process_queue()` - Process all queued events in FIFO order
 
 ### GameObject
 **Purpose**: Game object with component and script attachment capabilities.
@@ -627,6 +646,262 @@ engine.add_runnable(handle_raw_axis, 'update', Priority.NORMAL)
 - Handle input in high-priority runnables for responsive controls
 - Use joystick deadzones to prevent drift
 - Combine keyboard and joystick input for better accessibility
+
+### Event System
+
+The Event System provides a robust, thread-safe communication mechanism between different components of the game engine. It supports priority-based event handling, automatic memory management, and both immediate and queued event processing.
+
+#### Core Components
+
+**Event Class**
+```python
+from pyg_engine import Event
+
+# Create events with type and optional data
+collision_event = Event(type="collision", data={"damage": 10, "source": "enemy"})
+input_event = Event(type="key_press", data={"key": "SPACE"})
+spawn_event = Event(type="spawn", data={"object_type": "enemy", "position": Vector2(100, 100)})
+```
+
+**EventManager**
+```python
+from pyg_engine import EventManager, Priority
+
+# Access the engine's event manager
+event_manager = engine.event_manager
+
+# Subscribe to events with priority
+def handle_collision(event):
+    print(f"Collision detected: {event.data}")
+    # Handle collision logic
+
+def handle_spawn(event):
+    print(f"Spawning: {event.data}")
+    # Handle spawn logic
+
+# Subscribe with different priorities
+event_manager.subscribe("collision", handle_collision, Priority.HIGH)
+event_manager.subscribe("spawn", handle_spawn, Priority.NORMAL)
+
+# Unsubscribe when no longer needed
+event_manager.unsubscribe("collision", handle_collision)
+```
+
+#### Event Dispatch and Processing
+
+**Immediate Event Processing**
+```python
+def handle_immediate_events(engine):
+    # Process events immediately (synchronous)
+    event_manager.dispatch("player_moved", {
+        "position": player.position,
+        "velocity": player.velocity
+    }, immediate=True)
+
+engine.add_runnable(handle_immediate_events, 'update', Priority.NORMAL)
+```
+
+**Queued Event Processing**
+```python
+def handle_queued_events(engine):
+    # Queue events for later processing (asynchronous)
+    event_manager.dispatch("enemy_spawned", {
+        "enemy_type": "goblin",
+        "position": Vector2(200, 200)
+    }, immediate=False)
+    
+    # Process all queued events
+    event_manager.process_queue()
+
+engine.add_runnable(handle_queued_events, 'update', Priority.NORMAL)
+```
+
+#### Priority-Based Event Handling
+
+```python
+def setup_event_priorities(engine):
+    # Critical events (input, collision detection)
+    def handle_input_event(event):
+        print("Processing input event")
+    
+    # High priority events (physics, AI)
+    def handle_physics_event(event):
+        print("Processing physics event")
+    
+    # Normal priority events (gameplay logic)
+    def handle_gameplay_event(event):
+        print("Processing gameplay event")
+    
+    # Low priority events (UI, cleanup)
+    def handle_ui_event(event):
+        print("Processing UI event")
+    
+    # Subscribe with different priorities
+    event_manager.subscribe("input", handle_input_event, Priority.CRITICAL)
+    event_manager.subscribe("physics", handle_physics_event, Priority.HIGH)
+    event_manager.subscribe("gameplay", handle_gameplay_event, Priority.NORMAL)
+    event_manager.subscribe("ui", handle_ui_event, Priority.LOW)
+
+engine.add_runnable(setup_event_priorities, 'start', Priority.CRITICAL, max_runs=1)
+```
+
+#### Component Integration
+
+```python
+from pyg_engine import Component
+
+class EventComponent(Component):
+    def __init__(self, game_object):
+        super().__init__(game_object)
+        self.event_manager = game_object.engine.event_manager
+        
+    def start(self):
+        # Subscribe to events when component starts
+        self.event_manager.subscribe("collision", self.handle_collision)
+        self.event_manager.subscribe("damage", self.handle_damage)
+    
+    def handle_collision(self, event):
+        if event.data.get("target") == self.game_object:
+            print(f"{self.game_object.name} was hit!")
+    
+    def handle_damage(self, event):
+        if event.data.get("target") == self.game_object:
+            damage = event.data.get("amount", 0)
+            print(f"{self.game_object.name} took {damage} damage!")
+    
+    def on_destroy(self):
+        # Unsubscribe when component is destroyed
+        self.event_manager.unsubscribe("collision", self.handle_collision)
+        self.event_manager.unsubscribe("damage", self.handle_damage)
+
+# Add event component to game object
+player.add_component(EventComponent)
+```
+
+#### Script Integration
+
+```python
+# player_script.py
+class PlayerScript(Script):
+    def start(self, engine):
+        # Subscribe to events in script
+        engine.event_manager.subscribe("powerup_collected", self.handle_powerup)
+        engine.event_manager.subscribe("level_complete", self.handle_level_complete)
+    
+    def handle_powerup(self, event):
+        powerup_type = event.data.get("type")
+        if powerup_type == "speed":
+            self.speed *= 1.5
+        elif powerup_type == "health":
+            self.health += 25
+    
+    def handle_level_complete(self, event):
+        print("Level completed!")
+        # Handle level completion logic
+    
+    def on_destroy(self):
+        # Unsubscribe from events
+        self.engine.event_manager.unsubscribe("powerup_collected", self.handle_powerup)
+        self.engine.event_manager.unsubscribe("level_complete", self.handle_level_complete)
+
+# Add script with event handling
+player.add_script("player_script.py", "PlayerScript")
+```
+
+#### Advanced Event Patterns
+
+**Event Chaining**
+```python
+def setup_event_chain(engine):
+    def handle_player_damage(event):
+        # Player took damage
+        damage = event.data.get("amount", 0)
+        print(f"Player took {damage} damage")
+        
+        # Chain to UI update event
+        engine.event_manager.dispatch("ui_update", {
+            "health": player.health,
+            "damage_taken": damage
+        })
+    
+    def handle_ui_update(event):
+        # Update UI based on event data
+        health = event.data.get("health")
+        damage = event.data.get("damage_taken")
+        print(f"UI updated: Health={health}, Damage={damage}")
+    
+    event_manager.subscribe("player_damage", handle_player_damage)
+    event_manager.subscribe("ui_update", handle_ui_update)
+
+engine.add_runnable(setup_event_chain, 'start', Priority.CRITICAL, max_runs=1)
+```
+
+**Event Filtering**
+```python
+def handle_filtered_events(engine):
+    def handle_enemy_event(event):
+        # Only handle events for specific enemy types
+        enemy_type = event.data.get("enemy_type")
+        if enemy_type in ["goblin", "orc"]:
+            print(f"Handling {enemy_type} event")
+    
+    event_manager.subscribe("enemy_spawned", handle_enemy_event)
+    event_manager.subscribe("enemy_died", handle_enemy_event)
+
+engine.add_runnable(handle_filtered_events, 'start', Priority.CRITICAL, max_runs=1)
+```
+
+**Event Broadcasting**
+```python
+def broadcast_system_events(engine):
+    # Broadcast system-wide events
+    def broadcast_game_state():
+        engine.event_manager.dispatch("game_state_changed", {
+            "score": engine.globals.get("score", 0),
+            "level": engine.globals.get("level", 1),
+            "time": engine.globals.get("game_time", 0)
+        })
+    
+    # Broadcast every second
+    engine.add_runnable(broadcast_game_state, 'update', Priority.LOW)
+
+engine.add_runnable(broadcast_system_events, 'start', Priority.CRITICAL, max_runs=1)
+```
+
+#### Event System Features
+
+**Key Features:**
+- **Thread-Safe**: All operations are protected by locks for concurrent access
+- **Memory Management**: Automatic cleanup of dead references using weak references
+- **Priority Support**: Four priority levels for event processing order
+- **Flexible Processing**: Both immediate and queued event processing
+- **Component Integration**: Easy integration with components and scripts
+- **Event Chaining**: Events can trigger other events for complex workflows
+- **Automatic Cleanup**: Dead references are automatically removed
+
+**Priority Levels:**
+- `CRITICAL`: Execute first (input handling, core systems)
+- `HIGH`: Execute early (physics, AI, collision detection)
+- `NORMAL`: Standard execution (gameplay logic, state updates)
+- `LOW`: Execute last (UI updates, cleanup, logging)
+
+**Event Types:**
+- **System Events**: Engine state changes, initialization, cleanup
+- **Input Events**: Key presses, mouse actions, joystick input
+- **Physics Events**: Collisions, triggers, physics state changes
+- **Gameplay Events**: Player actions, enemy behavior, level progression
+- **UI Events**: Interface updates, menu navigation, HUD changes
+
+**Best Practices:**
+- Use appropriate priorities for event processing order
+- Unsubscribe from events when components/scripts are destroyed
+- Use immediate processing for critical events (input, collision)
+- Use queued processing for non-critical events (UI updates, logging)
+- Chain events carefully to avoid infinite loops
+- Filter events based on data content when needed
+- Use weak references for automatic memory management
+- Handle event processing errors gracefully
+- Monitor event queue size for performance optimization
 
 ### Camera System
 

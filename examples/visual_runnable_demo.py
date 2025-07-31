@@ -9,7 +9,7 @@ from pygame import Vector2, Color
 from pyg_engine import Engine, Priority, Input
 from pyg_engine.object_types import Size, BasicShape
 from pyg_engine.gameobject import GameObject
-from pyg_engine import RigidBody, BoxCollider, CircleCollider, Materials, MouseButton
+from pyg_engine import RigidBody, BoxCollider, CircleCollider, Materials
 
 def main():
     """Visual demo showing runnable system with camera controls, mouse spawning, and physics."""
@@ -426,8 +426,8 @@ def main():
         spawn_mode = engine.globals.get('spawn_mode', 'circle', 'spawning')
 
         info_lines = [
-            f"Mouse Screen: ({mouse_screen.x:.0f}, {mouse_screen.y:.0f})",
-            f"Mouse World: ({mouse_world.x:.1f}, {mouse_world.y:.1f})",
+            f"Mouse Screen: ({mouse_screen[0]:.0f}, {mouse_screen[1]:.0f})",
+            f"Mouse World: ({mouse_world[0]:.1f}, {mouse_world[1]:.1f})",
             f"Gravity: {'ON' if gravity_enabled else 'OFF'}",
             f"Spawn Mode: {spawn_mode.upper()}",
             f"Paused: {'YES' if engine.globals.get("paused") else 'NO'}"

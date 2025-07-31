@@ -1,7 +1,10 @@
 import pygame as pg
 from pygame import Color
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict, deque
+import weakref
 import threading
+from dataclasses import dataclass, field
+import time
 from .object_types import Size, BasicShape, Tag
 from .gameobject import GameObject
 from .physics_system import PhysicsSystem
@@ -9,6 +12,7 @@ from .camera import Camera
 from .runnable import RunnableSystem, Priority
 from .input import Input
 from .rigidbody import RigidBody
+from .event_manager import EventManager
 
 class Engine:
     """Core game engine that handles the main loop, rendering, and system coordination."""
@@ -46,7 +50,11 @@ class Engine:
         self.__all_sprites = pg.sprite.Group()
 
         # Core systems initialization
-        self.physics_system = PhysicsSystem()
+        self.physics_system = PhysicsSystem(self)
+
+        # Event system initialization
+        self.event_manager = EventManager()
+
 
         pg.init()
         # Create resizable window
@@ -105,6 +113,21 @@ class Engine:
     def running(self)->bool:
         """Check if engine is running."""
         return self.isRunning
+
+    # ================ Event System Integration ====================
+
+    def subscribe(self, event_type: str, listener: callable, priority: Priority = Priority.NORMAL):
+        """Subscribe a listener to an event type via the event manager."""
+        self.event_manager.subscribe(event_type, listener, priority)
+
+    def unsubscribe(self, event_type: str, listener: callable):
+        """Unsubscribe a listener from an event type via the event manager."""
+        self.event_manager.unsubscribe(event_type, listener)
+
+    def dispatch_event(self, event_type: str, data: dict = None, immediate: bool = False):
+        """Dispatch an event via the event manager."""
+        self.event_manager.dispatch(event_type, data, immediate)
+
 
     # ================ Runnable System Integration ====================
 
@@ -367,6 +390,9 @@ class Engine:
 
         # Run physics simulation AFTER all updates
         self.physics_system.update(self, self.getGameObjects())
+
+        # Process queued events before rendering
+        self.event_manager.process_queue()
 
         self.__processEvents()
         self.__render()

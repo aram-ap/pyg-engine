@@ -5,7 +5,7 @@ A comprehensive game engine built with Pygame and Pymunk for 2D physics,
 rendering, and game development.
 """
 
-__version__ = "1.0.0a3"
+__version__ = "1.0.0a4"
 __author__ = "Pyg Engine Team"
 __description__ = "A Python game engine with physics, rendering, and input systems"
 
@@ -14,6 +14,8 @@ from .engine import Engine
 from .engine import GlobalDictionary
 from .gameobject import GameObject
 from .camera import Camera
+from .event_manager import EventManager
+from .event import Event
 
 # Runnable system
 from .runnable import RunnableSystem, Priority, Runnable
@@ -23,7 +25,6 @@ from .physics_system import PhysicsSystem
 from .rigidbody import RigidBody
 from .collider import Collider
 from .collider import Collider, BoxCollider, CircleCollider
-from .collision_detector import CollisionDetectorScript
 
 # Input systems
 from .input import Input
@@ -42,6 +43,8 @@ __all__ = [
     'GlobalDictionary',
     'GameObject',
     'Camera',
+    'Event',
+    'EventManager',
     'RunnableSystem',
     'Priority',
     'Runnable',
@@ -51,12 +54,6 @@ __all__ = [
     'Collider',
     'BoxCollider',
     'CircleCollider',
-    'CollisionDetectorScript',
-    'MouseInputSystem',
-    'MouseHoverComponent',
-    'MouseClickComponent',
-    'MouseWheelComponent',
-    'MouseButton',
     'Input',
     'Component',
     'Script',

@@ -1,8 +1,8 @@
-# Pyg Engine
+# PyG Engine
 
-A Python game engine built with Pygame and Pymunk for 2D physics, rendering, and game development.
+A Python game engine built on Pygame and Pymunk for 2D physics, rendering, and game development.
 Inspired by the Unity game engine's Monobehavior system with scriptable game objects, rigidbody and collider system.
-Built-in physics materials, update system, and mouse+keyboard input system. Built-in window resizing.
+Built-in physics materials, update system, event system and mouse+keyboard input system. Built-in window resizing.
 
 > **NOTE:** This is in alpha development stage. Everything is under active development and large changes will likely be made.
 > _Also,_ its pronounced _**pig engine**_ :)
@@ -15,7 +15,8 @@ Built-in physics materials, update system, and mouse+keyboard input system. Buil
 - **Components**: Modular component-based architecture
 - **Scripts**: Dynamic script loading and execution
 - **Camera**: Flexible camera with multiple scaling modes
-- **Collision**: Advanced collision detection and response
+- **Event System**: Thread-safe event-driven communication with priority-based handling
+- **Documentation**: Comprehensive CORE_SYSTEMS_GUIDE with examples and best practices
 
 ## Installation
 
@@ -105,6 +106,11 @@ Available examples:
 - `performance_analysis.py` - Performance profiling and analysis
 - `performance_test.py` - Performance test scenarios
 - `visual_runnable_demo.py` - Visual demo with runnables
+- `mouse_test.py` - Mouse input testing and validation
+- `input_test.py` - Input system testing and validation
+- `using_no_display.py` - Headless engine operation without display
+- `global_dictionary_test.py` - Global dictionary system testing
+- `runnable_demo.py` - Runnable system demonstration and testing
 
 ## Documentation
 
@@ -133,7 +139,6 @@ pip install -e .
 QOL:
 - Components should be separate objects that can be passed into the add_component() function
 - Discrepancies in sizing. Box colliders should accept Size() or Tuples.
-- Scripts and Components need better documentation
 - Needs better debug logs + distinguish between errors and console outputs
 - Need a texture system
 

@@ -7,6 +7,7 @@ import sys
 from .object_types import BasicShape, Tag
 from .script import Script
 from .component import Component
+from .runnable import Priority  # NEW: Import for priority in subscriptions (adjust path if needed)
 
 class GameObject(pg.sprite.Sprite):
     """Game object with component and script attachment capabilities."""
@@ -42,6 +43,9 @@ class GameObject(pg.sprite.Sprite):
         # Script system
         self.scripts = []
         self._scripts_started = False
+
+        # NEW: Event subscription tracking (list of (event_type, listener) tuples)
+        self._event_subscriptions = []
 
         # Create the sprite image and rect
         self._create_sprite_surface()
@@ -232,6 +236,43 @@ class GameObject(pg.sprite.Sprite):
             return True
         return False
 
+    # ================ Event System Methods (NEW) ================
+
+    def add_event_listener(self, event_type: str, listener: callable, priority: Priority = Priority.NORMAL, engine=None):
+        """
+        Subscribe a listener to an event type via the engine's event manager.
+
+        - event_type: String identifier (e.g., "collision_enter").
+        - listener: Callable (e.g., self.on_event) that takes an Event.
+        - priority: Priority level for the listener.
+        - engine: The Engine instance (required; pass from start/update).
+        - Tracks the subscription for auto-unsubscribe on destroy.
+        """
+        if engine is None:
+            raise ValueError("Engine reference is required to add event listener")
+
+        engine.subscribe(event_type, listener, priority)
+        self._event_subscriptions.append((event_type, listener))
+        print(f"Added event listener for '{event_type}' on {self.name}")
+
+    def remove_event_listener(self, event_type: str, listener: callable, engine=None):
+        """
+        Unsubscribe a listener from an event type.
+
+        - event_type: The event type.
+        - listener: The callable to remove.
+        - engine: The Engine instance (required).
+        - Removes from tracking if successful.
+        """
+        if engine is None:
+            raise ValueError("Engine reference is required to remove event listener")
+
+        if engine.unsubscribe(event_type, listener):
+            self._event_subscriptions = [(et, lis) for et, lis in self._event_subscriptions if not (et == event_type and lis == listener)]
+            print(f"Removed event listener for '{event_type}' on {self.name}")
+            return True
+        return False
+
     # ================ Update Methods ================
 
     def update(self, engine):
@@ -288,8 +329,6 @@ class GameObject(pg.sprite.Sprite):
             except Exception as e:
                 print(f"Error starting script on {self.name}: {e}")
 
-
-
     # ================ Debug and Utility Methods ================
 
     def list_components(self):
@@ -306,11 +345,21 @@ class GameObject(pg.sprite.Sprite):
 
     def kill(self, engine):
         """Pygame sprite kill method - calls destroy and removes from groups."""
-        self.destroy(self)
+        self.destroy()
         super().kill()
 
     def destroy(self):
-        """Clean up; call on_destroy for all scripts and components."""
+        """Clean up; call on_destroy for all scripts and components, and unsubscribe events."""
+        # NEW: Auto-unsubscribe all tracked event listeners (requires engine, but since destroy is called by engine, we assume it's handled externally if needed)
+        # Note: Since destroy doesn't take engine, we'll print a warning if subscriptions exist but can't unsubscribe. For full auto-cleanup, pass engine to destroy from Engine.removeGameObject.
+        if self._event_subscriptions and hasattr(self, 'engine'):  # If we added self.engine elsewhere
+            for event_type, listener in self._event_subscriptions:
+                self.engine.unsubscribe(event_type, listener)
+        elif self._event_subscriptions:
+            print(f"Warning: {len(self._event_subscriptions)} event subscriptions on {self.name} not unsubscribed (no engine reference)")
+
+        self._event_subscriptions = []
+
         # Destroy all components
         for component in list(self.components.values()):  # Create a copy to avoid dict change during iteration
             try:
