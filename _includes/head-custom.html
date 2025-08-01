@@ -47,11 +47,11 @@
   /* Simple Hero Section */
   .hero-logo {
     text-align: center;
-    margin: 30px 0;
+    margin: 40px 0;
   }
   
   .hero-logo img {
-    max-width: 200px;
+    max-width: 600px;
     height: auto;
     border-radius: 8px;
     border: 2px solid var(--border-color);
@@ -490,11 +490,39 @@
   
   .main-content {
     color: var(--text-primary);
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
   }
   
   .main-content p {
     color: var(--text-secondary);
     line-height: 1.6;
+  }
+  
+  .main-content strong {
+    color: var(--text-primary);
+  }
+  
+  .main-content b {
+    color: var(--text-primary);
+  }
+  
+  .main-content i {
+    color: var(--text-secondary);
+  }
+  
+  .callout {
+    color: var(--text-secondary);
+  }
+  
+  .callout strong,
+  .callout b {
+    color: var(--text-primary);
+  }
+  
+  .callout i {
+    color: var(--text-secondary);
   }
   
   /* Table Styling */
@@ -525,6 +553,20 @@
   }
   
   tr:hover {
-    background-color: var(--white);
+    background-color: var(--bg-light);
+  }
+  
+  .page-header {
+    background-color: var(--bg-medium);
+    padding: 40px 20px;
+    margin-bottom: 0;
+  }
+  
+  .project-name {
+    color: var(--text-primary) !important;
+  }
+  
+  .project-tagline {
+    color: var(--text-secondary) !important;
   }
 </style> 
