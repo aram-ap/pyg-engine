@@ -136,7 +136,7 @@ pip install -e .
 ## Contributing
 
 <div class="callout">
-  We welcome contributions! Please check out the <a href="https://github.com/your-username/LinearInterpolation" class="btn">🐙 GitHub Repository</a> for more information.
+  We welcome contributions! Please check out the <a href="https://github.com/aram-ap/pyg-engine" class="btn">🐙 GitHub Repository</a> for more information.
 </div>
 
 ## License
