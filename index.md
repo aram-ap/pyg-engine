@@ -4,18 +4,16 @@ title: PyG Engine
 ---
 
 <div class="hero-logo">
-  ![Logo](images/1_lower-res.png)
+  <img src="{{ site.baseurl }}/images/1_lower-res.png" alt="PyG Engine Logo" style="max-width: 200px; height: auto; border-radius: 8px; border: 2px solid #30395C;">
 </div>
 
 # PyG Engine
 
-A Python game engine built on Pygame and Pymunk for 2D physics, rendering, and game development.
-Inspired by the Unity game engine's Monobehavior system with scriptable game objects, rigidbody and collider system.
-Built-in physics materials, update system, event system and mouse+keyboard input system. Built-in window resizing.
+A Python game engine built on Pygame and Pymunk for 2D physics, rendering, and game development. Built around scriptable game objects, rigidbody and collider system. Contains physics materials, update system, event system and mouse+keyboard input system
 
 <div class="callout warning">
-  **NOTE:** This is in alpha development stage. Everything is under active development and large changes will likely be made.
-  _Also,_ its pronounced _**pig engine**_ :)
+  <b>NOTE: This is in alpha development stage. Everything is under active development and large changes will likely be made.
+  <i>Also,</i> its pronounced <i>pig </i>engine :)</b>
 </div>
 
 ## Features
@@ -90,29 +88,27 @@ engine.addGameObject(player)
 engine.start()
 ```
 
-<div class="installation-section">
-  <h2>🚀 Installation</h2>
-  
-  <p><strong>Requires Python 3.7+</strong></p>
-  
-  <h3>Dependencies:</h3>
-  <ul>
-    <li>pygame >= 2.5.0</li>
-    <li>pymunk >= 6.4.0</li>
-  </ul>
-  
-  <h3>Install via pip:</h3>
-  ```bash
-  pip install pyg-engine
-  ```
-  
-  <h3>Or install from source:</h3>
-  ```bash
-  git clone <repository-url>
-  cd pyg-engine
-  pip install -e .
-  ```
-</div>
+## 🚀 Installation
+
+**Requires Python 3.7+**
+
+### Dependencies:
+- pygame >= 2.5.0
+- pymunk >= 6.4.0
+
+### Install via pip:
+
+```bash
+pip install pyg-engine
+```
+
+### Or install from source:
+
+```bash
+git clone <repository-url>
+cd pyg-engine
+pip install -e .
+```
 
 ## Documentation
 
@@ -140,7 +136,7 @@ engine.start()
 ## Contributing
 
 <div class="callout">
-  We welcome contributions! Please check out our <a href="https://github.com/your-username/LinearInterpolation" class="btn">🐙 GitHub Repository</a> for more information.
+  We welcome contributions! Please check out the <a href="https://github.com/your-username/LinearInterpolation" class="btn">🐙 GitHub Repository</a> for more information.
 </div>
 
 ## License
