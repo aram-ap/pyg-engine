@@ -1,3 +1,9 @@
+---
+layout: docs
+title: Core Systems Guide
+permalink: /docs/CORE_SYSTEMS_GUIDE.html
+---
+
 # PyG Engine Core Systems Guide
 
 A comprehensive guide to the core systems of the PyG Engine: Engine architecture, Global Dictionary, Runnable System, and component-based game development.
@@ -49,85 +55,149 @@ A comprehensive guide to the core systems of the PyG Engine: Engine architecture
 
 ## Classes
 
-### BasicShape
-**Purpose**: Enumeration of basic geometric shapes for game objects.
+<div class="class-doc">
+  <h3>BasicShape</h3>
+  <div class="class-purpose">
+    <strong>Purpose</strong>: Enumeration of basic geometric shapes for game objects.
+  </div>
+  
+  <div class="class-functions">
+    <h4>Values</h4>
+    <ul class="function-list">
+      <li><code>Rectangle</code> - Rectangular shape</li>
+      <li><code>Circle</code> - Circular shape</li>
+    </ul>
+  </div>
+</div>
 
-**Values**:
-- `Rectangle` - Rectangular shape
-- `Circle` - Circular shape
+<div class="class-doc">
+  <h3>BoxCollider</h3>
+  <div class="class-purpose">
+    <strong>Purpose</strong>: Rectangular collision detection with width and height bounds.
+  </div>
+  
+  <div class="class-functions">
+    <h4>Functions</h4>
+    <ul class="function-list">
+      <li><code>check_collision(other_collider)</code> - Detect collision with other collider</li>
+      <li><code>get_world_corners()</code> - Get world coordinates of box corners</li>
+      <li><code>update_bounds()</code> - Update collision bounds</li>
+    </ul>
+  </div>
+</div>
 
-### BoxCollider
-**Purpose**: Rectangular collision detection with width and height bounds.
+<div class="class-doc">
+  <h3>Camera</h3>
+  <div class="class-purpose">
+    <strong>Purpose</strong>: Viewport management and target following with zoom and scaling support.
+  </div>
+  
+  <div class="class-functions">
+    <h4>Functions</h4>
+    <ul class="function-list">
+      <li><code>follow(game_object, offset)</code> - Set GameObject to follow with optional offset</li>
+      <li><code>get_visible_rect()</code> - Get visible world area</li>
+      <li><code>resize(new_width, new_height)</code> - Handle window resize</li>
+      <li><code>screen_to_world(screen_pos)</code> - Convert screen to world coordinates</li>
+      <li><code>set_position(x, y)</code> - Manually set camera position</li>
+      <li><code>update(dt)</code> - Update camera position and bounds</li>
+      <li><code>world_to_screen(world_pos)</code> - Convert world to screen coordinates</li>
+    </ul>
+  </div>
+</div>
 
-**Functions**:
-- `check_collision(other_collider)` - Detect collision with other collider
-- `get_world_corners()` - Get world coordinates of box corners
-- `update_bounds()` - Update collision bounds
+<div class="class-doc">
+  <h3>CircleCollider</h3>
+  <div class="class-purpose">
+    <strong>Purpose</strong>: Circular collision detection with radius-based bounds.
+  </div>
+  
+  <div class="class-functions">
+    <h4>Functions</h4>
+    <ul class="function-list">
+      <li><code>check_collision(other_collider)</code> - Detect collision with other collider</li>
+      <li><code>update_bounds()</code> - Update collision bounds</li>
+    </ul>
+  </div>
+</div>
 
-### Camera
-**Purpose**: Viewport management and target following with zoom and scaling support.
+<div class="class-doc">
+  <h3>Collider</h3>
+  <div class="class-purpose">
+    <strong>Purpose</strong>: Base class for collision detection components.
+  </div>
+  
+  <div class="class-functions">
+    <h4>Functions</h4>
+    <ul class="function-list">
+      <li><code>add_collision_callback(event_type, callback)</code> - Add collision event handler</li>
+      <li><code>check_collision(other_collider)</code> - Detect collision with other collider</li>
+      <li><code>handle_collision(collision_info)</code> - Process collision event</li>
+      <li><code>remove_collision_callback(event_type, callback)</code> - Remove collision handler</li>
+      <li><code>update_bounds()</code> - Update collision bounds</li>
+    </ul>
+  </div>
+</div>
 
-**Functions**:
-- `follow(game_object, offset)` - Set GameObject to follow with optional offset
-- `get_visible_rect()` - Get visible world area
-- `resize(new_width, new_height)` - Handle window resize
-- `screen_to_world(screen_pos)` - Convert screen to world coordinates
-- `set_position(x, y)` - Manually set camera position
-- `update(dt)` - Update camera position and bounds
-- `world_to_screen(world_pos)` - Convert world to screen coordinates
+<div class="class-doc">
+  <h3>CollisionInfo</h3>
+  <div class="class-purpose">
+    <strong>Purpose</strong>: Information about a collision between two objects.
+  </div>
+  
+  <div class="class-functions">
+    <h4>Properties</h4>
+    <ul class="function-list">
+      <li><code>other_collider</code> - The other collider involved</li>
+      <li><code>other_gameobject</code> - Reference to the other GameObject</li>
+      <li><code>contact_point</code> - Where the collision occurred</li>
+      <li><code>contact_normal</code> - Direction to separate objects</li>
+      <li><code>penetration_depth</code> - How much objects are overlapping</li>
+    </ul>
+  </div>
+</div>
 
-### CircleCollider
-**Purpose**: Circular collision detection with radius-based bounds.
+<div class="class-doc">
+  <h3>Component</h3>
+  <div class="class-purpose">
+    <strong>Purpose</strong>: Base class for all components that can be attached to GameObjects.
+  </div>
+  
+  <div class="class-functions">
+    <h4>Functions</h4>
+    <ul class="function-list">
+      <li><code>on_destroy()</code> - Called when component is destroyed</li>
+      <li><code>start()</code> - Called once when component is first added</li>
+      <li><code>update(engine)</code> - Called every frame if component is enabled</li>
+    </ul>
+  </div>
+</div>
 
-**Functions**:
-- `check_collision(other_collider)` - Detect collision with other collider
-- `update_bounds()` - Update collision bounds
-
-### Collider
-**Purpose**: Base class for collision detection components.
-
-**Functions**:
-- `add_collision_callback(event_type, callback)` - Add collision event handler
-- `check_collision(other_collider)` - Detect collision with other collider
-- `handle_collision(collision_info)` - Process collision event
-- `remove_collision_callback(event_type, callback)` - Remove collision handler
-- `update_bounds()` - Update collision bounds
-
-### CollisionInfo
-**Purpose**: Information about a collision between two objects.
-
-**Properties**:
-- `other_collider` - The other collider involved
-- `other_gameobject` - Reference to the other GameObject
-- `contact_point` - Where the collision occurred
-- `contact_normal` - Direction to separate objects
-- `penetration_depth` - How much objects are overlapping
-
-### Component
-**Purpose**: Base class for all components that can be attached to GameObjects.
-
-**Functions**:
-- `on_destroy()` - Called when component is destroyed
-- `start()` - Called once when component is first added
-- `update(engine)` - Called every frame if component is enabled
-
-### Engine
-**Purpose**: Core game engine managing game loop, rendering, and system coordination.
-
-**Functions**:
-- `add_runnable(func, event_type, priority, max_runs, key, error_handler)` - Add function to execution queue
-- `addGameObject(gameobj)` - Add GameObject to engine
-- `add_error_handler(handler)` - Set global error handler
-- `clear_runnable_queue(event_type, key)` - Clear specific runnable queue
-- `dt()` - Get delta time
-- `get_runnable_stats()` - Get execution statistics
-- `getGameObjects()` - Get all active GameObjects
-- `removeGameObject(gameobj)` - Remove GameObject from engine
-- `running()` - Check if engine is active
-- `set_debug_mode(enabled)` - Enable debug logging
-- `setRunning(running)` - Set engine running state
-- `start()` - Start game loop
-- `stop()` - Stop game loop
+<div class="class-doc">
+  <h3>Engine</h3>
+  <div class="class-purpose">
+    <strong>Purpose</strong>: Core game engine managing game loop, rendering, and system coordination.
+  </div>
+  
+  <div class="class-functions">
+    <h4>Functions</h4>
+    <ul class="function-list">
+      <li><code>add_runnable(func, event_type, priority, max_runs, key, error_handler)</code> - Add function to execution queue</li>
+      <li><code>addGameObject(gameobj)</code> - Add GameObject to engine</li>
+      <li><code>add_error_handler(handler)</code> - Set global error handler</li>
+      <li><code>clear_runnable_queue(event_type, key)</code> - Clear specific runnable queue</li>
+      <li><code>dt()</code> - Get delta time</li>
+      <li><code>get_runnable_stats()</code> - Get execution statistics</li>
+      <li><code>getGameObjects()</code> - Get all active GameObjects</li>
+      <li><code>removeGameObject(gameobj)</code> - Remove GameObject from engine</li>
+      <li><code>running()</code> - Check if engine is active</li>
+      <li><code>set_debug_mode(enabled)</code> - Enable debug logging</li>
+      <li><code>setRunning(running)</code> - Set engine running state</li>
+      <li><code>start()</code> - Start game loop</li>
+      <li><code>stop()</code> - Stop game loop</li>
+    </ul>
+  </div>
+</div>
 
 ### Event
 **Purpose**: Immutable data class representing an event in the game engine.

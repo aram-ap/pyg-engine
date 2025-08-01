@@ -2,9 +2,6 @@ source "https://rubygems.org"
 
 gem "jekyll", "~> 4.3.0"
 gem "jekyll-theme-cayman", "~> 0.2.0"
-gem "jekyll-feed", "~> 0.17.0"
-gem "jekyll-seo-tag", "~> 2.8.0"
-gem "jekyll-sitemap", "~> 1.4.0"
 
 # If you have any plugins, put them here!
 group :jekyll_plugins do

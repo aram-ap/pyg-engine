@@ -278,4 +278,55 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk 
+
+# Jekyll specific
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+vendor/
+.bundle/
+
+# Jekyll build artifacts
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# Ruby/Bundler
+vendor/
+.bundle/
+Gemfile.lock
+
+# Jekyll plugins (if using local plugins)
+_plugins/
+
+# Jekyll drafts
+_drafts/
+
+# Jekyll posts (if you want to ignore them)
+# _posts/
+
+# Jekyll data (if you want to ignore them)
+# _data/
+
+# Jekyll layouts (if you want to ignore them)
+# _layouts/
+
+# Jekyll includes (if you want to ignore them)
+# _includes/
+
+# Jekyll assets (if you want to ignore them)
+# assets/
+
+# Jekyll config (if you want to ignore them)
+# _config.yml
+
+# Jekyll Gemfile (if you want to ignore them)
+# Gemfile
+
+# Jekyll .github (if you want to ignore them)
+# .github/
+
+# TODO
 TODO
