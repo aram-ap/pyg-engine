@@ -1,19 +1,19 @@
 <style>
   /* Color Variables */
   :root {
-    --bg-dark: #1A1F2B;
-    --bg-medium: #2A2F3B;
-    --bg-light: #3A3F4B;
-    --text-primary: #FFFFFF;
-    --text-secondary: #D0E4F2;
-    --text-muted: #85A5CC;
+    --bg-light: #FFFFFF;
+    --bg-medium: #F8F9FA;
+    --bg-dark: #E9ECEF;
+    --text-primary: #212529;
+    --text-secondary: #495057;
+    --text-muted: #6C757D;
     --accent-blue: #4A6491;
     --accent-light: #85A5CC;
-    --border-color: #30395C;
-    --shadow: rgba(0, 0, 0, 0.3);
+    --border-color: #DEE2E6;
+    --shadow: rgba(0, 0, 0, 0.1);
   }
 
-  /* Basic Dark Navigation */
+  /* Basic Light Navigation */
   .site-nav {
     margin-top: 20px;
   }
@@ -36,12 +36,13 @@
     border-radius: 4px;
     transition: all 0.2s ease;
     font-size: 14px;
-    background: var(--bg-medium);
+    background: var(--bg-light);
   }
   
   .site-nav a:hover {
     background-color: var(--accent-blue);
     border-color: var(--accent-blue);
+    color: white;
   }
   
   /* Simple Hero Section */
@@ -57,7 +58,7 @@
     border: 2px solid var(--border-color);
   }
   
-  /* Simple Dark Typography */
+  /* Simple Light Typography */
   .main-content h1 {
     font-size: 2.5em;
     margin-bottom: 0.5em;
@@ -94,10 +95,11 @@
   }
   
   .feature-card {
-    background: var(--bg-medium);
+    background: var(--bg-light);
     border-radius: 8px;
     padding: 20px;
     border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px var(--shadow);
   }
   
   .feature-card h4 {
@@ -143,15 +145,15 @@
   }
   
   .callout.warning {
-    background: var(--bg-medium);
+    background: #FFF3CD;
     border-left-color: #FFC107;
-    color: var(--text-secondary);
+    color: #856404;
   }
   
   .callout.info {
-    background: var(--bg-medium);
+    background: #D1ECF1;
     border-left-color: var(--accent-blue);
-    color: var(--text-secondary);
+    color: var(--text-primary);
   }
   
   /* Simple Buttons */
@@ -159,7 +161,7 @@
     display: inline-block;
     padding: 10px 20px;
     background: var(--accent-blue);
-    color: var(--text-primary);
+    color: white;
     text-decoration: none;
     border-radius: 4px;
     font-weight: 500;
@@ -170,19 +172,19 @@
   
   .btn:hover {
     background: var(--bg-light);
-    color: var(--text-primary);
+    color: var(--accent-blue);
     text-decoration: none;
   }
   
   .btn-secondary {
-    background: var(--bg-medium);
+    background: var(--bg-light);
     color: var(--text-primary);
     border-color: var(--border-color);
   }
   
   .btn-secondary:hover {
     background: var(--accent-blue);
-    color: var(--text-primary);
+    color: white;
   }
   
   /* Simple Installation Section */
@@ -193,6 +195,7 @@
     margin: 30px 0;
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px var(--shadow);
   }
   
   .installation-section h2 {
@@ -481,9 +484,9 @@
     color: var(--white);
   }
   
-  /* Dark Theme Background */
+  /* Light Theme Background */
   body {
-    background-color: var(--bg-dark);
+    background-color: var(--bg-light);
     color: var(--text-primary);
     line-height: 1.6;
   }
@@ -543,13 +546,13 @@
   }
   
   th {
-    background: var(--primary-dark);
-    color: var(--white);
+    background: var(--accent-blue);
+    color: white;
     font-weight: 600;
   }
   
   tr:nth-child(even) {
-    background-color: var(--accent-light);
+    background-color: var(--bg-medium);
   }
   
   tr:hover {

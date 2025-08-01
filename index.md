@@ -4,7 +4,7 @@ title: PyG Engine
 ---
 
 <div class="hero-logo">
-  <img src="{{ site.baseurl }}/images/1_lower-res.png" alt="PyG Engine Logo" style="max-width: 200px; height: auto; border-radius: 8px; border: 2px solid #30395C;">
+  <img src="{{ site.baseurl }}/images/1_lower-res.png" alt="PyG Engine Logo" style="max-width: 600px; height: auto; border-radius: 8px; border: 2px solid #30395C;">
 </div>
 
 # PyG Engine
