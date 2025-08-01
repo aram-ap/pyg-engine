@@ -169,52 +169,52 @@ cython_debug/
 .vscode/
 
 # Pygame specific
-*.wav
-*.ogg
-*.mp3
-*.flac
-*.aiff
-*.au
-*.wma
-*.m4a
-*.aac
-*.flv
-*.avi
-*.mp4
-*.mov
-*.wmv
-*.mkv
-*.webm
-*.m4v
-*.3gp
-*.ogv
-*.ogx
-*.swf
-*.flv
-*.f4v
-*.f4p
-*.f4a
-*.f4b
+# *.wav
+# *.ogg
+# *.mp3
+# *.flac
+# *.aiff
+# *.au
+# *.wma
+# *.m4a
+# *.aac
+# *.flv
+# *.avi
+# *.mp4
+# *.mov
+# *.wmv
+# *.mkv
+# *.webm
+# *.m4v
+# *.3gp
+# *.ogv
+# *.ogx
+# *.swf
+# *.flv
+# *.f4v
+# *.f4p
+# *.f4a
+# *.f4b
 
 # Game assets (common formats)
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.bmp
-*.tiff
-*.tga
-*.pcx
-*.ico
-*.cur
-*.ani
+# *.png
+# *.jpg
+# *.jpeg
+# *.gif
+# *.bmp
+# *.tiff
+# *.tga
+# *.pcx
+# *.ico
+# *.cur
+# *.ani
 
 # Font files
-*.ttf
-*.otf
-*.woff
-*.woff2
-*.eot
+# *.ttf
+# *.otf
+# *.woff
+# *.woff2
+# *.eot
 
 # Game data files
 *.dat

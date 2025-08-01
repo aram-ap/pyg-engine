@@ -1,3 +1,5 @@
+<!-- ![Logo](images/1_zoomed.png) -->
+![Logo](images/1.png)
 # PyG Engine
 
 A Python game engine built on Pygame and Pymunk for 2D physics, rendering, and game development.
