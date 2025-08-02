@@ -8,10 +8,7 @@ import time
 import psutil
 import os
 import pymunk
-from pyg_engine.pymunk_physics_system import PhysicsSystem
-from pyg_engine.rigidbody import RigidBody
-from pyg_engine.collider import CircleCollider, BoxCollider
-from pyg_engine.material import Materials
+from pyg_engine import PhysicsSystem, RigidBody, CircleCollider, BoxCollider, Materials
 
 def get_memory_usage():
     """Get current memory usage in MB."""

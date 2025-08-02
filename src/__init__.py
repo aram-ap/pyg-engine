@@ -5,8 +5,8 @@ A comprehensive game engine built with Pygame and Pymunk for 2D physics,
 rendering, and game development.
 """
 
-__version__ = "1.0.0a4"
-__author__ = "Pyg Engine Team"
+__version__ = "1.0.0a5"
+__author__ = "Aram Aprahamian"
 __description__ = "A Python game engine with physics, rendering, and input systems"
 
 # Core engine components

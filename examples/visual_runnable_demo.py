@@ -7,8 +7,8 @@ Demonstrates the runnable system with camera controls, mouse-based spawning, and
 import pygame as pg
 from pygame import Vector2, Color
 from pyg_engine import Engine, Priority, Input
-from pyg_engine.object_types import Size, BasicShape
-from pyg_engine.gameobject import GameObject
+from pyg_engine import Size, BasicShape
+from pyg_engine import GameObject
 from pyg_engine import RigidBody, BoxCollider, CircleCollider, Materials
 
 def main():
@@ -69,7 +69,6 @@ def main():
     def spawn_at_mouse(engine):
         import random
         import math
-        from pyg_engine.gameobject import GameObject
         from pygame import Vector2, Color
 
         # Get current spawn mode

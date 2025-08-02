@@ -13,10 +13,8 @@ def test_imports():
     try:
         from pyg_engine import (
             Engine, GameObject, Camera, 
-            PhysicsSystem, PhysicsSystem,
-            RigidBody, RigidBody,
-            Collider, Collider,
-            MouseInputSystem, Component, Script,
+            PhysicsSystem, RigidBody, Collider,
+            Component, Script, Input,
             Size, BasicShape, Tag, PhysicsMaterial
         )
         print("✓ All core modules imported successfully")
@@ -51,7 +49,7 @@ def test_gameobject_creation():
     try:
         from pyg_engine import GameObject
         from pygame import Vector2, Color
-        from pyg_engine.object_types import BasicShape, Tag
+        from pyg_engine import BasicShape, Tag
         
         obj = GameObject(
             name="TestObject",

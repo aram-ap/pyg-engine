@@ -7,8 +7,7 @@ Demonstrates how to use the optimized runnable system in the game engine.
 import pygame as pg
 from pygame import Vector2
 from pyg_engine import Engine, Priority
-from pyg_engine.object_types import Size
-from pyg_engine.gameobject import GameObject
+from pyg_engine import Size, GameObject
 
 def main():
     """Main demo function showing various runnable usage patterns."""
@@ -26,7 +25,6 @@ def main():
     
     # 2. Spawn objects with limited runs
     def spawn_enemy(engine):
-        from pyg_engine.gameobject import GameObject
         from pygame import Vector2
         import random
         
@@ -69,7 +67,6 @@ def main():
     # 6. Complex formation spawning
     def spawn_formation(engine):
         import math
-        from pyg_engine.gameobject import GameObject
         from pygame import Vector2
         
         center = Vector2(engine.getWindowSize().w // 2, engine.getWindowSize().h // 2)

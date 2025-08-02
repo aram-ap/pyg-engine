@@ -4,7 +4,7 @@ Basic example demonstrating the core functionality of Pyg Engine
 
 from pyg_engine import Engine, GameObject, Size
 from pygame import Color, Vector2
-from pyg_engine.object_types import BasicShape, Tag
+from pyg_engine import BasicShape, Tag
 
 def main():
     """Main function demonstrating basic engine usage"""

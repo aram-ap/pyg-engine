@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0a5] - 2025-08-02
+
+### Added
+- New website and documentation system
+- Fixed import errors in example files
+
+### Fixed
+- Corrected import statements in all example files to use proper module structure
+- Fixed `from pyg_engine.gameobject import GameObject` to `from pyg_engine import GameObject`
+- Updated `from pyg_engine.object_types import Size, BasicShape` to `from pyg_engine import Size, BasicShape`
+- Fixed `from pyg_engine.pymunk_physics_system import PhysicsSystem` to `from pyg_engine import PhysicsSystem`
+- Resolved all incorrect submodule imports across example files
+
 ## [Unreleased]
 
 ### Added

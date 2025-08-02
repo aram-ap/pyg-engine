@@ -10,8 +10,7 @@ import psutil
 import os
 from pygame import Vector2, Color
 from pyg_engine import Engine, Priority
-from pyg_engine.object_types import Size, BasicShape
-from pyg_engine.gameobject import GameObject
+from pyg_engine import Size, BasicShape, GameObject
 from pyg_engine import RigidBody, BoxCollider, CircleCollider, Materials
 
 def get_memory_usage():
