@@ -6,7 +6,7 @@ rendering, and game development.
 """
 
 __version__ = "1.0.0a5"
-__author__ = "Aram Aprahamian"
+__author__ = "Pyg Engine Team"
 __description__ = "A Python game engine with physics, rendering, and input systems"
 
 # Core engine components
@@ -33,6 +33,7 @@ from .components.component import Component
 from .components.script import Script
 
 # Utilities
+from .utilities.color import Color, Colors
 from .utilities.object_types import Size, BasicShape, Tag
 from .physics.material import PhysicsMaterial, Materials
 
@@ -59,5 +60,7 @@ __all__ = [
     'BasicShape',
     'Tag',
     'PhysicsMaterial',
-    'Materials'
+    'Materials',
+    'Color',
+    'Colors'
 ]

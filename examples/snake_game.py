@@ -4,12 +4,12 @@ A complete Snake game implementation using the pyg_engine system.
 """
 
 import pygame as pg
-from pygame import Color, Vector2
+from pygame import Vector2
 import random
 import math
 from pyg_engine import (
-    Engine, GameObject, Size, BasicShape, Tag, 
-    RigidBody, BoxCollider, Materials
+    Engine, GameObject, Size, BasicShape, Tag,
+    RigidBody, BoxCollider, Materials, Color
 )
 
 def get_script_path(script_name):
@@ -25,21 +25,21 @@ def main():
     print("Objective: Eat the red food to grow and increase your score!")
     print("Don't hit the walls or yourself!")
     print("=" * 50)
-    
+
     # Create engine
     engine = Engine(
         size=Size(800, 600),
         backgroundColor=Color(20, 20, 20),  # Dark background
         windowName="Snake Game - Pyg Engine",
-        fpsCap=60
+        fpsCap=0
     )
-    
+
     # Position camera to center the game area
     # Game area is 40x30 cells, each cell is 20px, so total area is 800x600
     # Center the camera on the game area
     engine.camera.position = Vector2(400, 300)
     engine.camera.zoom = 1.0  # Set zoom to 1 for proper scaling
-    
+
     # Create game controller
     game_controller = GameObject(
         name="GameController",
@@ -48,17 +48,17 @@ def main():
         color=Color(0, 0, 0, 0),  # Invisible
         tag=Tag.Environment
     )
-    
+
     # Add snake script using the proper scripting system
     game_controller.add_script(get_script_path("snake_script.py"), "SnakeScript",
                               grid_size=20,
                               game_speed=10)
-    
+
     # Add to engine
     engine.addGameObject(game_controller)
-    
+
     # Start the game
     engine.start()
 
 if __name__ == "__main__":
-    main() 
+    main()

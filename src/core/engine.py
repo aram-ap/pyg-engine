@@ -1,5 +1,8 @@
+import io
+import pkgutil
+
 import pygame as pg
-from pygame import Color
+from pygame import RESIZABLE, Color
 from collections import OrderedDict, defaultdict, deque
 import weakref
 import threading
@@ -13,6 +16,7 @@ from .runnable import RunnableSystem, Priority
 from ..input.input import Input
 from ..physics.rigidbody import RigidBody
 from ..events.event_manager import EventManager
+import moderngl
 
 class Engine:
     """Core game engine that handles the main loop, rendering, and system coordination."""
@@ -22,7 +26,9 @@ class Engine:
     def __init__(self, size: Size = Size(w=800, h=600),
                  backgroundColor: Color = Color(0,0,0),
                  running = False,
-                 windowName = "PyGame", displaySize = True, fpsCap = 60, useDisplay = True):
+                 windowName = "PyGame", displaySize = True, fpsCap = 60, useDisplay = True,
+                 displayMode = pg.RESIZABLE, icon = None
+                 ):
         Engine.__debug_log("Initializing Engine")
         self.isRunning:bool = running
         self.fpsCap:int = fpsCap
@@ -55,6 +61,26 @@ class Engine:
         # Event system initialization
         self.event_manager = EventManager()
 
+        # Display mode (e.g. pygame.FULLSCREEN, RESIZABLE, SCALED, SHOWN, ETC)
+        self.displayMode = displayMode
+
+        if icon is None:
+            try:
+                data = pkgutil.get_data("pyg_engine", "etc/pyg_logo_transparent.png")
+            except Exception as exc:
+                data = None
+                Engine.__debug_log(f"Failed to access default icon resource: {exc}")
+
+            if data:
+                try:
+                    icon_surface = pg.image.load(io.BytesIO(data), "pyg_logo_transparent.png")
+                    pg.display.set_icon(icon_surface)
+                except Exception as exc:
+                    Engine.__debug_log(f"Failed to load default icon surface: {exc}")
+            else:
+                Engine.__debug_log("Default icon resource not available; using pygame default icon.")
+        else:
+            pg.display.set_icon(icon)
 
         pg.init()
         # Create resizable window
@@ -64,7 +90,7 @@ class Engine:
         self.camera.scale_mode = "fit"  # Options: "fit", "fill", "stretch", "fixed"
 
         if useDisplay:
-            self.screen = pg.display.set_mode((self.__size.w, self.__size.h), pg.RESIZABLE)
+            self.screen = pg.display.set_mode((self.__size.w, self.__size.h), displayMode)
 
         if(running):
             self.start()
@@ -89,7 +115,7 @@ class Engine:
         if(size.w > 0 and size.h > 0):
             self.__size = size
         if self.__useDisplay:
-            self.screen = pg.display.set_mode((self.__size.w, self.__size.h), pg.RESIZABLE)
+            self.screen = pg.display.set_mode((self.__size.w, self.__size.h), flags=self.displayMode, vsync=True)
 
     def stop(self):
         """Stop the game engine."""
@@ -193,7 +219,7 @@ class Engine:
         """Handle window resize events."""
         self.__size = Size(event.w, event.h)
         if self.__useDisplay:
-            self.screen = pg.display.set_mode((self.__size.w, self.__size.h), pg.RESIZABLE)
+            self.screen = pg.display.set_mode((self.__size.w, self.__size.h), self.displayMode)
         self.camera.resize(event.w, event.h)
         Engine.__debug_log("Handling Resize to {}".format(self.__size))
 

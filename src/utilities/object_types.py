@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
+
 @dataclass
 class Size:
     """Width and height dimensions."""
@@ -20,4 +21,3 @@ class Tag(Enum):
     Player = "player"
     Environment = "environment"
     Other = "other"
-

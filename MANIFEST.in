@@ -2,6 +2,7 @@ include README.md
 include requirements.txt
 include LICENSE
 recursive-include src *.py
+recursive-include src/etc *.png
 recursive-include examples *.py
 recursive-include docs *.md
 recursive-include tests *.py
