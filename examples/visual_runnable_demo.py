@@ -5,9 +5,9 @@ Demonstrates the runnable system with camera controls, mouse-based spawning, and
 """
 
 import pygame as pg
-from pygame import Vector2, Color
+from pygame import Color
 from pyg_engine import Engine, Priority, Input
-from pyg_engine import Size, BasicShape
+from pyg_engine import Vector2, Size, BasicShape
 from pyg_engine import GameObject
 from pyg_engine import RigidBody, BoxCollider, CircleCollider, Materials
 
@@ -15,8 +15,8 @@ def main():
     """Visual demo showing runnable system with camera controls, mouse spawning, and physics."""
 
     # Create engine
-    engine = Engine(fpsCap=120, size=Size(w=800, h=600), windowName="Physics Camera Demo",
-                    backgroundColor = "#1E201E")
+    engine = Engine(fpsCap=120, size=Size(w=2560, h=1600), windowName="Physics Camera Demo",
+                    backgroundColor = "#1E201E", displayMode=pg.RESIZABLE)
     engine.globals.set("paused", False)
 
     # ===== CAMERA CONTROLS =====

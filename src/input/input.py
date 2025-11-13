@@ -258,13 +258,13 @@ class Input:
         MOUSE_MOTION = auto()
         MOUSE_ENTER = auto()
         MOUSE_LEAVE = auto()
-        
+
         # Keyboard events
         KEY_DOWN = auto()
         KEY_UP = auto()
         KEY_REPEAT = auto()
         KEY_HOLD = auto()
-        
+
         # Joystick events
         JOYSTICK_BUTTON_DOWN = auto()
         JOYSTICK_BUTTON_UP = auto()
@@ -273,7 +273,7 @@ class Input:
         JOYSTICK_BALL_MOTION = auto()
         JOYSTICK_CONNECTED = auto()
         JOYSTICK_DISCONNECTED = auto()
-        
+
         # Window events
         WINDOW_FOCUS_GAINED = auto()
         WINDOW_FOCUS_LOST = auto()
@@ -281,13 +281,13 @@ class Input:
         WINDOW_MOVED = auto()
         WINDOW_MINIMIZED = auto()
         WINDOW_RESTORED = auto()
-        
+
         # System events
         QUIT = auto()
         ACTIVEEVENT = auto()
         VIDEORESIZE = auto()
         VIDEOEXPOSE = auto()
-        
+
         # Custom events
         INPUT_DEVICE_CHANGED = auto()
         INPUT_MAPPING_CHANGED = auto()
@@ -296,7 +296,7 @@ class Input:
 
     class Mouse:
         """Main mouse interface providing clean access to mouse position, relative movement, and scroll."""
-        
+
         def __init__(self, input):
             self.input = input
             self._last_pos = (0, 0)
@@ -304,59 +304,59 @@ class Input:
             self._rel_movement = (0, 0)
             self._scroll_delta = (0, 0)
             self._button_states = [False, False, False]  # Left, Middle, Right, Button4, Button5
-            
+
         def get_pos(self) -> tuple[int, int]:
             """Get the current mouse position as a tuple (x, y)."""
             return pygame.mouse.get_pos()
-        
+
         def get_rel(self) -> tuple[int, int]:
             """Get the relative mouse movement since last frame as a tuple (x, y)."""
             return pygame.mouse.get_rel()
-        
+
         def get_scroll(self) -> tuple[int, int]:
             """Get the scroll wheel movement as a tuple (x, y). Returns (0, 0) if no scroll."""
             # Check for scroll events from the input system
             scroll_x = 0
             scroll_y = 0
-            
+
             # Check for vertical scroll (button 4 = up, button 5 = down)
             if self.input.get_event_state('mouse_scroll_up'):
                 scroll_y = 1
             elif self.input.get_event_state('mouse_scroll_down'):
                 scroll_y = -1
-                
+
             return (scroll_x, scroll_y)
-        
+
         def get_button(self, button: int) -> bool:
             """Get the state of a mouse button. 0=Left, 1=Middle, 2=Right, 3=Button4, 4=Button5."""
             return pygame.mouse.get_pressed()[button]
-        
+
         def get_button_down(self, button: int) -> bool:
             """Check if a mouse button was pressed this frame."""
             return self.input.get_event_state('mouse_button_down', button)
-        
+
         def get_button_up(self, button: int) -> bool:
             """Check if a mouse button was released this frame."""
             return self.input.get_event_state('mouse_button_up', button)
-        
+
         def set_pos(self, pos: tuple[int, int]):
             """Set the mouse position."""
             pygame.mouse.set_pos(pos)
-        
+
         def set_visible(self, visible: bool):
             """Set mouse cursor visibility."""
             pygame.mouse.set_visible(visible)
-        
+
         def get_visible(self) -> bool:
             """Get mouse cursor visibility."""
             return pygame.mouse.get_visible()
-        
+
         def update(self):
             """Update mouse state - called by the input system each frame."""
             self._last_pos = self._current_pos
             self._current_pos = self.get_pos()
             self._rel_movement = self.get_rel()
-            
+
             # Update button states
             pressed = pygame.mouse.get_pressed()
             for i in range(len(self._button_states)):
@@ -368,14 +368,14 @@ class Input:
         self.mouse_states = {}
         self.key_aliases = {}
         self.axis_bindings = {}
-        
+
         # Store mouse relative movement for the current frame
         self._mouse_rel_x = 0.0
         self._mouse_rel_y = 0.0
-        
+
         # Initialize the main Mouse interface
         self.mouse = self.Mouse(self)
-        
+
         # Enhanced event-based input system
         self.event_states = {
             # Mouse events
@@ -386,13 +386,13 @@ class Input:
             self.InputEvent.MOUSE_MOTION: False,
             self.InputEvent.MOUSE_ENTER: False,
             self.InputEvent.MOUSE_LEAVE: False,
-            
+
             # Keyboard events
             self.InputEvent.KEY_DOWN: {},  # Track key down events per key
             self.InputEvent.KEY_UP: {},  # Track key up events per key
             self.InputEvent.KEY_REPEAT: {},  # Track key repeat events per key
             self.InputEvent.KEY_HOLD: {},  # Track key hold events per key
-            
+
             # Joystick events
             self.InputEvent.JOYSTICK_BUTTON_DOWN: {},  # Track joystick button down events
             self.InputEvent.JOYSTICK_BUTTON_UP: {},  # Track joystick button up events
@@ -401,7 +401,7 @@ class Input:
             self.InputEvent.JOYSTICK_BALL_MOTION: {},  # Track joystick ball motion events
             self.InputEvent.JOYSTICK_CONNECTED: False,
             self.InputEvent.JOYSTICK_DISCONNECTED: False,
-            
+
             # Window events
             self.InputEvent.WINDOW_FOCUS_GAINED: False,
             self.InputEvent.WINDOW_FOCUS_LOST: False,
@@ -409,20 +409,20 @@ class Input:
             self.InputEvent.WINDOW_MOVED: False,
             self.InputEvent.WINDOW_MINIMIZED: False,
             self.InputEvent.WINDOW_RESTORED: False,
-            
+
             # System events
             self.InputEvent.QUIT: False,
             self.InputEvent.ACTIVEEVENT: False,
             self.InputEvent.VIDEORESIZE: False,
             self.InputEvent.VIDEOEXPOSE: False,
-            
+
             # Custom events
             self.InputEvent.INPUT_DEVICE_CHANGED: False,
             self.InputEvent.INPUT_MAPPING_CHANGED: False,
             self.InputEvent.INPUT_PROFILE_LOADED: False,
             self.InputEvent.INPUT_PROFILE_SAVED: False,
         }
-        
+
         # Legacy event states for backward compatibility
         self._legacy_event_states = {
             'mouse_scroll_up': False,
@@ -435,7 +435,7 @@ class Input:
             'joystick_button_down': {},  # Track joystick button down events
             'joystick_axis_motion': {},  # Track joystick axis motion events
         }
-        
+
         # Initialize alias dictionary after classes are defined
         self.alias = {
 
@@ -483,7 +483,6 @@ class Input:
             self.Axis.MENU_SELECT: [self.Keybind.K_ENTER, self.Keybind.K_SPACE, self.Axis.JOYSTICK_A],
             self.Axis.MENU_BACK: [self.Keybind.K_ESCAPE, self.Keybind.K_BACKSPACE, self.Axis.JOYSTICK_B],
             self.Axis.PAUSE: [self.Keybind.K_ESCAPE, self.Axis.JOYSTICK_START],
-
 
             # Advanced movement
             self.Axis.STRAFE_LEFT: [self.Keybind.Q, self.Keybind.A],
@@ -757,7 +756,7 @@ class Input:
         except Exception as e:
             print(f"Mouse input error: {e}")
             return 0.0
-        
+
         return 0.0
 
     def process_event(self, event):
@@ -779,7 +778,7 @@ class Input:
             elif event.button == 5:  # Mouse wheel down
                 self.event_states[self.InputEvent.MOUSE_SCROLL_DOWN] = True
                 self._legacy_event_states['mouse_scroll_down'] = True
-                
+
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:  # Left mouse button
                 self.event_states[self.InputEvent.MOUSE_BUTTON_UP][0] = True
@@ -796,73 +795,73 @@ class Input:
                 self.event_states[self.InputEvent.MOUSE_BUTTON_DOWN][2] = False
                 self._legacy_event_states['mouse_button_up'][2] = True
                 self._legacy_event_states['mouse_button_down'][2] = False
-                
+
         elif event.type == pygame.MOUSEMOTION:
             self.event_states[self.InputEvent.MOUSE_MOTION] = True
-            
+
         elif event.type == pygame.KEYDOWN:
             self.event_states[self.InputEvent.KEY_DOWN][event.key] = True
             self._legacy_event_states['key_down'][event.key] = True
-            
+
         elif event.type == pygame.KEYUP:
             self.event_states[self.InputEvent.KEY_UP][event.key] = True
             self.event_states[self.InputEvent.KEY_DOWN][event.key] = False
             self._legacy_event_states['key_up'][event.key] = True
             self._legacy_event_states['key_down'][event.key] = False
-            
+
         elif event.type == pygame.JOYBUTTONDOWN:
             self.event_states[self.InputEvent.JOYSTICK_BUTTON_DOWN][event.button] = True
             self._legacy_event_states['joystick_button_down'][event.button] = True
-            
+
         elif event.type == pygame.JOYBUTTONUP:
             self.event_states[self.InputEvent.JOYSTICK_BUTTON_UP][event.button] = True
             self.event_states[self.InputEvent.JOYSTICK_BUTTON_DOWN][event.button] = False
             self._legacy_event_states['joystick_button_up'][event.button] = True
             self._legacy_event_states['joystick_button_down'][event.button] = False
-            
+
         elif event.type == pygame.JOYAXISMOTION:
             self.event_states[self.InputEvent.JOYSTICK_AXIS_MOTION][event.axis] = event.value
             self._legacy_event_states['joystick_axis_motion'][event.axis] = event.value
-            
+
         elif event.type == pygame.JOYHATMOTION:
             self.event_states[self.InputEvent.JOYSTICK_HAT_MOTION][event.hat] = event.value
-            
+
         elif event.type == pygame.JOYBALLMOTION:
             self.event_states[self.InputEvent.JOYSTICK_BALL_MOTION][event.ball] = event.value
-            
+
         elif event.type == pygame.JOYDEVICEADDED:
             self.event_states[self.InputEvent.JOYSTICK_CONNECTED] = True
-            
+
         elif event.type == pygame.JOYDEVICEREMOVED:
             self.event_states[self.InputEvent.JOYSTICK_DISCONNECTED] = True
-            
+
         elif event.type == pygame.WINDOWFOCUSGAINED:
             self.event_states[self.InputEvent.WINDOW_FOCUS_GAINED] = True
-            
+
         elif event.type == pygame.WINDOWFOCUSLOST:
             self.event_states[self.InputEvent.WINDOW_FOCUS_LOST] = True
-            
+
         elif event.type == pygame.WINDOWSIZECHANGED:
             self.event_states[self.InputEvent.WINDOW_RESIZED] = True
-            
+
         elif event.type == pygame.WINDOWMOVED:
             self.event_states[self.InputEvent.WINDOW_MOVED] = True
-            
+
         elif event.type == pygame.WINDOWMINIMIZED:
             self.event_states[self.InputEvent.WINDOW_MINIMIZED] = True
-            
+
         elif event.type == pygame.WINDOWRESTORED:
             self.event_states[self.InputEvent.WINDOW_RESTORED] = True
-            
+
         elif event.type == pygame.QUIT:
             self.event_states[self.InputEvent.QUIT] = True
-            
+
         elif event.type == pygame.ACTIVEEVENT:
             self.event_states[self.InputEvent.ACTIVEEVENT] = True
-            
+
         elif event.type == pygame.VIDEORESIZE:
             self.event_states[self.InputEvent.VIDEORESIZE] = True
-            
+
         elif event.type == pygame.VIDEOEXPOSE:
             self.event_states[self.InputEvent.VIDEOEXPOSE] = True
 
@@ -876,7 +875,7 @@ class Input:
                 else:
                     return self.event_states[event_type]
             return False
-        
+
         # Handle legacy string-based event types
         if event_type == 'mouse_scroll_up':
             return self._legacy_event_states['mouse_scroll_up']
@@ -905,12 +904,12 @@ class Input:
         """Update input states - called by the engine each frame."""
         # Update the main mouse interface
         self.mouse.update()
-        
+
         # Capture mouse relative movement once per frame
         rel_x, rel_y = pygame.mouse.get_rel()
         self._mouse_rel_x = rel_x / 10.0  # Scale down for smoother input
         self._mouse_rel_y = rel_y / 10.0  # Scale down for smoother input
-        
+
         # Clear event states that should only last one frame
         # New enum-based event states
         self.event_states[self.InputEvent.MOUSE_SCROLL_UP] = False
@@ -937,14 +936,14 @@ class Input:
         self.event_states[self.InputEvent.INPUT_MAPPING_CHANGED] = False
         self.event_states[self.InputEvent.INPUT_PROFILE_LOADED] = False
         self.event_states[self.InputEvent.INPUT_PROFILE_SAVED] = False
-        
+
         # Legacy event states
         self._legacy_event_states['mouse_scroll_up'] = False
         self._legacy_event_states['mouse_scroll_down'] = False
         self._legacy_event_states['mouse_button_up'].clear()
         self._legacy_event_states['key_up'].clear()
         self._legacy_event_states['joystick_button_up'].clear()
-        
+
         # Try to initialize joysticks if not already done
         if pygame.joystick.get_count() > 0 and not pygame.joystick.get_init():
             self.try_joystick_init()

@@ -1,8 +1,9 @@
 import pygame as pg
-from pygame import Vector2, Rect
+from pygame import Rect
 import pymunk
 from enum import Enum, auto
 from ..components.component import Component
+from ..utilities.vector2 import Vector2
 from .material import PhysicsMaterial, Materials
 
 class CollisionEvent(Enum):

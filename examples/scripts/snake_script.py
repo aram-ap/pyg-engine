@@ -3,9 +3,9 @@ Snake script for the Snake game example
 """
 
 import pygame as pg
-from pygame import Color, Vector2
+from pygame import Color
 import random
-from pyg_engine import Script, Input
+from pyg_engine import Script, Input, Vector2
 
 class SnakeScript(Script):
     """Script for controlling the snake in the Snake game."""

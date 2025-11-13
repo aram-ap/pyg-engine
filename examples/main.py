@@ -3,10 +3,8 @@ Complete physics demo with collision detection
 """
 
 from re import I
-import pygame as pg
-from pygame import Color, Vector2
 import sys
-from pyg_engine import Size, BasicShape, Tag, GameObject, Engine, RigidBody, BoxCollider, CircleCollider, Materials, GlobalDictionary
+from pyg_engine import Vector2, Color, Size, BasicShape, Tag, GameObject, Engine, RigidBody, BoxCollider, CircleCollider, Materials, GlobalDictionary
 import os
 import sys
 from pathlib import Path

@@ -16,7 +16,6 @@ from .runnable import RunnableSystem, Priority
 from ..input.input import Input
 from ..physics.rigidbody import RigidBody
 from ..events.event_manager import EventManager
-import moderngl
 
 class Engine:
     """Core game engine that handles the main loop, rendering, and system coordination."""
@@ -215,12 +214,12 @@ class Engine:
         pg.display.set_caption(new_title)
         Engine.__debug_log("Changed window title to: '{}'".format(new_title))
 
-    def __handleResize(self, event: pg.Event):
+    def __handleResize(self, event: pg.event.Event):
         """Handle window resize events."""
-        self.__size = Size(event.w, event.h)
+        self.__size = Size(w=event.w, h=event.h)
         if self.__useDisplay:
             self.screen = pg.display.set_mode((self.__size.w, self.__size.h), self.displayMode)
-        self.camera.resize(event.w, event.h)
+        self.camera.resize(w=event.w, h=event.h)
         Engine.__debug_log("Handling Resize to {}".format(self.__size))
 
     # ================= Game Loop ======================

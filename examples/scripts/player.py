@@ -3,9 +3,9 @@ Player script for Pyg Engine examples
 """
 
 import pygame as pg
+from pygame import Vector2 
 import random
-from pygame import Vector2, Color
-from pyg_engine import Script, RigidBody, Input, Priority
+from pyg_engine import Script, RigidBody, Input, Priority, Color
 
 class PlayerScript(Script):
     """A script that handles player input and movement."""
@@ -124,7 +124,7 @@ class PlayerScript(Script):
                 elif self.control_mode == "velocity":
                     # Apply velocity-based movement - WORLD VELOCITY (not relative to rotation)
                     target_velocity = movement * self.speed
-                    current_velocity = Vector2(self.rigidbody.velocity)
+                    current_velocity = Vector2(self.rigidbody.velocity.x, self.rigidbody.velocity.y)
 
                     # Smooth velocity transition for better feel
                     velocity_smoothing = getattr(self, 'velocity_smoothing', 0.8)

@@ -4,11 +4,10 @@ A complete Snake game implementation using the pyg_engine system.
 """
 
 import pygame as pg
-from pygame import Vector2
 import random
 import math
 from pyg_engine import (
-    Engine, GameObject, Size, BasicShape, Tag,
+    Engine, GameObject, Vector2, Size, BasicShape, Tag,
     RigidBody, BoxCollider, Materials, Color
 )
 

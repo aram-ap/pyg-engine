@@ -1,19 +1,20 @@
 import pygame as pg
-from pygame import Color, Vector2
 import time
 import importlib.util
 import sys
 
 from ..utilities.object_types import BasicShape, Tag
+from ..utilities.vector2 import Vector2
 from ..components.script import Script
 from ..components.component import Component
-from .runnable import Priority  # NEW: Import for priority in subscriptions (adjust path if needed)
+from ..utilities.color import Color, Colors
+from .runnable import Priority
 
 class GameObject(pg.sprite.Sprite):
     """Game object with component and script attachment capabilities."""
 
-    def __init__(self, name: str, id: int = time.time_ns(), enabled: bool = True, position: Vector2 = Vector2(),
-                 size: Vector2 = Vector2(), rotation: float = 0.0, color: Color = Color(255, 255, 255, 255),
+    def __init__(self, name: str, id: int = time.time_ns(), enabled: bool = True, position: Vector2 = Vector2(0, 0),
+                 size: Vector2 = Vector2(1.0, 1.0), rotation: float = 0.0, color: Color = Color(255, 255, 255, 255),
                  tag: Tag = Tag.Other, basicShape: BasicShape = BasicShape.Rectangle, script_configs=None,
                  show_rotation_line: bool = False):
         # Initialize pygame sprite

@@ -1,5 +1,5 @@
 import pygame as pg
-from pygame import Vector2
+from ..utilities.vector2 import Vector2
 
 class Camera:
     """Camera system for viewport management and target following."""
