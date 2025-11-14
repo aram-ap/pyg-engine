@@ -255,6 +255,11 @@ class Engine:
             if event.type == pg.KEYDOWN:
                 # Execute key press runnables
                 self.runnable_system.execute_runnables('key_press', event.key, self)
+                # Pass to input system for event state tracking
+                self.input.process_event(event)
+            elif event.type == pg.KEYUP:
+                # Pass to input system for event state tracking
+                self.input.process_event(event)
 
             if event.type == pg.MOUSEWHEEL:
                 # Handle mouse wheel events - pass to input system
