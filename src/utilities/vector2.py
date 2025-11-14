@@ -5,7 +5,7 @@ from typing import Union, ClassVar
 
 Number = Union[int, float]
 
-@dataclass
+@dataclass(slots=True)
 class Vector2:
     """Vector2 class for 2D vector operations"""
     x: float
