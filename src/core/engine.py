@@ -1,5 +1,6 @@
 import io
 import pkgutil
+import os
 
 import pygame as pg
 from pygame import RESIZABLE, Color
@@ -16,6 +17,28 @@ from .runnable import RunnableSystem, Priority
 from ..input.input import Input
 from ..physics.rigidbody import RigidBody
 from ..events.event_manager import EventManager
+
+
+def configure_headless_mode():
+    """
+    Configure the engine to run in headless mode (no display window).
+    
+    This MUST be called BEFORE creating any Engine instances or importing pygame modules.
+    It sets the SDL_VIDEODRIVER environment variable to 'dummy' which tells SDL
+    not to create any display windows.
+    
+    Example:
+        from src.core.engine import Engine, configure_headless_mode
+        
+        # Call this first for headless mode
+        configure_headless_mode()
+        
+        # Now create engine
+        engine = Engine(useDisplay=False)
+    """
+    os.environ['SDL_VIDEODRIVER'] = 'dummy'
+    print("Headless mode configured - SDL will use dummy video driver")
+
 
 class Engine:
     """Core game engine that handles the main loop, rendering, and system coordination."""
@@ -34,6 +57,7 @@ class Engine:
         self.__size = size
         self.__dt = 0.0
         self.__useDisplay = useDisplay
+        self.time_scale = 1.0  # Time scaling for ML/training (1.0 = normal speed)
 
         # Global dictionary system
         self.globals = GlobalDictionary()
@@ -63,33 +87,43 @@ class Engine:
         # Display mode (e.g. pygame.FULLSCREEN, RESIZABLE, SCALED, SHOWN, ETC)
         self.displayMode = displayMode
 
-        if icon is None:
-            try:
-                data = pkgutil.get_data("pyg_engine", "etc/pyg_logo_transparent.png")
-            except Exception as exc:
-                data = None
-                Engine.__debug_log(f"Failed to access default icon resource: {exc}")
-
-            if data:
-                try:
-                    icon_surface = pg.image.load(io.BytesIO(data), "pyg_logo_transparent.png")
-                    pg.display.set_icon(icon_surface)
-                except Exception as exc:
-                    Engine.__debug_log(f"Failed to load default icon surface: {exc}")
-            else:
-                Engine.__debug_log("Default icon resource not available; using pygame default icon.")
-        else:
-            pg.display.set_icon(icon)
-
+        # Initialize pygame
         pg.init()
-        # Create resizable window
+        
+        # Create clock
         self.clock = pg.time.Clock()
 
+        # Create camera
         self.camera = Camera(self.__size.w, self.__size.h)
         self.camera.scale_mode = "fit"  # Options: "fit", "fill", "stretch", "fixed"
 
+        # Setup display (with or without window)
         if useDisplay:
+            # Handle icon setup (only in display mode, after pg.init())
+            if icon is None:
+                try:
+                    data = pkgutil.get_data("pyg_engine", "etc/pyg_logo_transparent.png")
+                except Exception as exc:
+                    data = None
+                    Engine.__debug_log(f"Failed to access default icon resource: {exc}")
+
+                if data:
+                    try:
+                        icon_surface = pg.image.load(io.BytesIO(data), "pyg_logo_transparent.png")
+                        pg.display.set_icon(icon_surface)
+                    except Exception as exc:
+                        Engine.__debug_log(f"Failed to load default icon surface: {exc}")
+                else:
+                    Engine.__debug_log("Default icon resource not available; using pygame default icon.")
+            else:
+                pg.display.set_icon(icon)
+            
+            # Create display window
             self.screen = pg.display.set_mode((self.__size.w, self.__size.h), displayMode)
+        else:
+            # Create a dummy surface for headless mode (for compatibility)
+            self.screen = pg.Surface((self.__size.w, self.__size.h))
+            Engine.__debug_log("Dummy surface created for headless mode")
 
         if(running):
             self.start()
@@ -115,6 +149,9 @@ class Engine:
             self.__size = size
         if self.__useDisplay:
             self.screen = pg.display.set_mode((self.__size.w, self.__size.h), flags=self.displayMode, vsync=True)
+        else:
+            # Update dummy surface in headless mode
+            self.screen = pg.Surface((self.__size.w, self.__size.h))
 
     def stop(self):
         """Stop the game engine."""
@@ -203,8 +240,33 @@ class Engine:
 
     # ================= Physics Stuff ======================
     def dt(self)->float:
-        """Return delta time (time since last frame)."""
+        """Return delta time (time since last frame), scaled by time_scale."""
+        return self.__dt * self.time_scale
+    
+    def get_unscaled_dt(self)->float:
+        """Return unscaled delta time (real time since last frame)."""
         return self.__dt
+    
+    def set_time_scale(self, scale: float):
+        """
+        Set the time scale for the simulation.
+        Useful for ML training, slow-motion effects, or fast-forwarding.
+        
+        Args:
+            scale: Time scale multiplier (1.0 = normal speed, 2.0 = double speed, 0.5 = half speed)
+                   Must be positive. Higher values allow faster-than-realtime training.
+        
+        Raises:
+            ValueError: If scale is not positive
+        """
+        if scale <= 0:
+            raise ValueError(f"Time scale must be positive, got {scale}")
+        self.time_scale = scale
+        Engine.__debug_log(f"Time scale set to {scale}x")
+    
+    def get_time_scale(self) -> float:
+        """Get the current time scale multiplier."""
+        return self.time_scale
 
     # ================= Display Stuff ======================
     def setWindowTitle(self, title: str):
@@ -219,6 +281,9 @@ class Engine:
         self.__size = Size(w=event.w, h=event.h)
         if self.__useDisplay:
             self.screen = pg.display.set_mode((self.__size.w, self.__size.h), self.displayMode)
+        else:
+            # Update dummy surface in headless mode
+            self.screen = pg.Surface((self.__size.w, self.__size.h))
         self.camera.resize(event.w, event.h)
         Engine.__debug_log("Handling Resize to {}".format(self.__size))
 
@@ -280,8 +345,8 @@ class Engine:
 
     def __renderBackground(self):
         """Render background color."""
-        if self.__useDisplay:
-            self.screen.fill(self.background_color)
+        # Always fill the surface (even in headless mode) for compatibility
+        self.screen.fill(self.background_color)
 
     def __renderGameObject(self, gameobj: GameObject):
         """Render a single game object with camera transform."""
@@ -316,7 +381,15 @@ class Engine:
         # Update sprite position for rendering
         gameobj.rect.center = pos
 
-        # Render based on shape with zoom
+        # Check for Sprite component and render it if present
+        from ..rendering.sprite import Sprite
+        sprite_component = gameobj.get_component(Sprite)
+        if sprite_component and sprite_component.enabled and sprite_component._current_image:
+            # Render using Sprite component
+            sprite_component.render(self.screen, self.camera)
+            return  # Skip basic shape rendering
+
+        # Render based on shape with zoom (fallback if no sprite)
         if gameobj.basicShape == BasicShape.Circle:
             radius = 40 if gameobj.size.x == 0 else int(max(gameobj.size.x, gameobj.size.y) / 2)
             if self.__useDisplay:
@@ -377,22 +450,25 @@ class Engine:
 
     def __render(self):
         """Main rendering pipeline."""
-        self.__renderBackground()
-        self.__renderBody()
-
-        # Execute render runnables
-        self.runnable_system.execute_runnables('render', engine=self)
-
-        self.__renderUI()
-
-        # Update display
+        # In headless mode, skip rendering but still process timing
         if self.__useDisplay:
+            self.__renderBackground()
+            self.__renderBody()
+
+            # Execute render runnables
+            self.runnable_system.execute_runnables('render', engine=self)
+
+            self.__renderUI()
+
+            # Update display
             pg.display.flip()
 
         # Limit FPS and calculate delta time
-        if(self.fpsCap > 0):
+        # In headless mode with high time_scale, optionally uncap FPS for maximum speed
+        if self.fpsCap > 0 and (self.__useDisplay or self.time_scale <= 1.0):
             self.__dt = self.clock.tick(self.fpsCap) / 1000.00
         else:
+            # Uncapped FPS for headless mode with time_scale > 1.0
             self.__dt = self.clock.tick() / 1000.00
 
     def __update(self):

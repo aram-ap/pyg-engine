@@ -1,58 +1,80 @@
-import pyg_engine
-from pyg_engine import Engine, Size, GameObject
-from enum import Enum
-from typing import Dict
+"""
+Base UI Element class for all UI components
+"""
 
+import pygame as pg
+from ..utilities.vector2 import Vector2
+from ..utilities.color import Color
+from .anchors import Anchor, get_anchor_position
 
-class Alignment(Enum):
-    # Where to set the screen's origin point
-    TopLeft = "Top Left"
-    TopCenter= "Top Center"
-    TopRight = "Top Right"
-    CenterLeft = "Center Left"
-    Center = "Center"
-    CenterRight = "Center Right"
-    BottomLeft = "Bottom Left"
-    BottomCenter = "Bottom Center"
-    BottomRight = "Bottom Right"
-
-class UI_Element(GameObject):
-
-    def __init__(self, engine: Engine):
-        super.__init__(engine)
-
-        # size and position are already defined in the GameObject class
-        self.layer = 0          # 0 is ground layer, anything higher than it will cover it.
-        self.priority = 0
-        self._enabled = True
-        self.visible = True
-        self.children : list[UI_Element]
-        self.alignment = Alignment.Center
-        self.input_enabled = False
-
-    def add_child(self, child: UI_Element, enabled: bool = True):
+class UIElement:
+    """Base class for all UI elements."""
+    
+    def __init__(self, anchor=Anchor.CENTER, offset=Vector2(0, 0), 
+                 size=Vector2(100, 50), visible=True, enabled=True, layer=0):
+        """
+        Initialize a UI element.
+        
+        Args:
+            anchor: Anchor point for positioning
+            offset: Offset from anchor point
+            size: Size of the element (width, height)
+            visible: Whether the element is visible
+            enabled: Whether the element is enabled
+            layer: Rendering layer (higher = on top)
+        """
+        self.anchor = anchor
+        self.offset = offset
+        self.size = size
+        self.visible = visible
+        self.enabled = enabled
+        self.layer = layer
+        
+        # Calculated screen position
+        self._screen_pos = Vector2(0, 0)
+        self._rect = pg.Rect(0, 0, int(size.x), int(size.y))
+        
+        # Parent-child system
+        self.parent = None
+        self.children = []
+        
+    def update_position(self, screen_width, screen_height):
+        """Update screen position based on anchor and offset."""
+        anchor_x, anchor_y = get_anchor_position(self.anchor, screen_width, screen_height)
+        self._screen_pos.x = anchor_x + self.offset.x
+        self._screen_pos.y = anchor_y + self.offset.y
+        
+        # Update rect for collision detection
+        self._rect.center = (int(self._screen_pos.x), int(screen_height - self._screen_pos.y))
+        
+    def get_rect(self):
+        """Get the bounding rectangle for this element."""
+        return self._rect
+    
+    def contains_point(self, x, y):
+        """Check if a point is inside this element."""
+        return self._rect.collidepoint(x, y)
+    
+    def add_child(self, child):
+        """Add a child element."""
+        if child not in self.children:
+            child.parent = self
+            self.children.append(child)
+    
+    def remove_child(self, child):
+        """Remove a child element."""
         if child in self.children:
-            return
-
-        self.children.append(child)
-
-    @property
-    def enabled(self) -> bool:
-        return self._enabled
-
-    @enabled.setter
-    def enabled(self, value: bool) -> None:
-        """Runs whenever ``obj.enabled = …`` is executed."""
-        if self._enabled != value:
-            self._enabled = value
-            self._on_enabled_change(value)
-
-    def _on_enabled_change(self, is_enabled: bool) -> None:
-        if self._enabled == is_enabled:
-            return
-
-        if is_enabled:
-            for child in self._children:
-                self._chil
-
-
+            child.parent = None
+            self.children.remove(child)
+    
+    def update(self, engine):
+        """Update logic - override in subclasses."""
+        pass
+    
+    def render(self, screen, screen_height):
+        """Render the element - override in subclasses."""
+        pass
+    
+    def handle_event(self, event, engine):
+        """Handle input events - override in subclasses."""
+        pass

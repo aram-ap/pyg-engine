@@ -8,6 +8,7 @@ class Script:
     def __init__(self, game_object, **kwargs):
         self.game_object = game_object  # Reference to the attached GameObject
         self._started = False
+        self.enabled = True  # Scripts can be enabled/disabled like components
         self.config = kwargs  # Configuration parameters
 
         # Apply configuration to script properties

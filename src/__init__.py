@@ -32,6 +32,15 @@ from .input.input import Input
 from .components.component import Component
 from .components.script import Script
 
+# Rendering system
+from .rendering.sprite import Sprite, SpriteRenderer
+from .rendering.animator import Animator, AnimationState
+from .rendering.sprite_sheet import SpriteSheet, load_animation_frames
+
+# Audio system
+from .audio.audio_manager import AudioManager, audio_manager
+from .audio.sound import Sound, SoundOneShot
+
 # Utilities
 from .utilities.color import Color, Colors
 from .utilities.object_types import Size, BasicShape, Tag
@@ -57,6 +66,16 @@ __all__ = [
     'Input',
     'Component',
     'Script',
+    'Sprite',
+    'SpriteRenderer',
+    'Animator',
+    'AnimationState',
+    'SpriteSheet',
+    'load_animation_frames',
+    'AudioManager',
+    'audio_manager',
+    'Sound',
+    'SoundOneShot',
     'Size',
     'BasicShape',
     'Tag',
