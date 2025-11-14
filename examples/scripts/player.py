@@ -3,9 +3,8 @@ Player script for Pyg Engine examples
 """
 
 import pygame as pg
-from pygame import Vector2 
 import random
-from pyg_engine import Script, RigidBody, Input, Priority, Color
+from pyg_engine import Script, RigidBody, Input, Priority, Color, Vector2
 
 class PlayerScript(Script):
     """A script that handles player input and movement."""
@@ -110,11 +109,11 @@ class PlayerScript(Script):
                         movement.x += 1  # Physics right is positive X
 
             # Normalize movement vector for consistent speed
-            if movement.length() > 0:
-                movement = movement.normalize()
+            if movement.magnitude > 0:
+                movement = movement.normalized
 
             # Apply movement based on control mode (WORLD COORDINATES ONLY)
-            if self.rigidbody and movement.length() > 0:
+            if self.rigidbody and movement.magnitude > 0:
                 # Remove debug prints for cleaner output
                 if self.control_mode == "force":
                     # Apply force-based movement - WORLD FORCE (not relative to rotation)
@@ -128,7 +127,7 @@ class PlayerScript(Script):
 
                     # Smooth velocity transition for better feel
                     velocity_smoothing = getattr(self, 'velocity_smoothing', 0.8)
-                    new_velocity = current_velocity.lerp(target_velocity, 1 - velocity_smoothing)
+                    new_velocity = Vector2.lerp(current_velocity, target_velocity, 1 - velocity_smoothing)
 
                     # No artificial speed limits - let physics handle it naturally
                     self.rigidbody.velocity = new_velocity
@@ -182,8 +181,8 @@ class PlayerScript(Script):
         if engine.input.get_event_state('mouse_button_down', 0) and self.is_hovering and not self.is_dragging:
             # Left mouse button clicked on this object
             self.click_in_bounds = True
-            self.mouse_down_start_pos = world_pos.copy()
-            self.last_mouse_pos = world_pos.copy()
+            self.mouse_down_start_pos = Vector2(world_pos.x, world_pos.y)
+            self.last_mouse_pos = Vector2(world_pos.x, world_pos.y)
 
             # Calculate pivot point (where on the object you clicked)
             # This is the offset from the object's center to the click point
@@ -206,7 +205,8 @@ class PlayerScript(Script):
         mouse_pressed = input.get(Input.Keybind.MOUSE_LEFT)
 
         # Get world position using the modern input system
-        mouse_pos = Vector2(input.mouse.get_pos())
+        mouse_pos_tuple = input.mouse.get_pos()
+        mouse_pos = Vector2(mouse_pos_tuple[0], mouse_pos_tuple[1])
         if hasattr(engine, 'camera'):
             world_pos = engine.camera.screen_to_world(mouse_pos)
         else:
@@ -229,7 +229,7 @@ class PlayerScript(Script):
                     import pymunk
 
                     # Calculate the local point on the object where we clicked
-                    if hasattr(self, 'pivot_offset') and self.pivot_offset.length() > 0:
+                    if hasattr(self, 'pivot_offset') and self.pivot_offset.magnitude > 0:
                         local_point = (self.pivot_offset.x, self.pivot_offset.y)
                     else:
                         local_point = (0, 0)
@@ -297,7 +297,7 @@ class PlayerScript(Script):
                 self.mouse_joint = None
 
             # Apply throw velocity based on drag movement
-            if self.rigidbody and hasattr(self, 'drag_velocity') and self.drag_velocity.length() > 2.0:
+            if self.rigidbody and hasattr(self, 'drag_velocity') and self.drag_velocity.magnitude > 2.0:
                 throw_velocity = self.drag_velocity
 
                 # Add randomness for natural feel

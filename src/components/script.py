@@ -1,5 +1,6 @@
 import pygame as pg
-from pygame import Vector2, Color
+from ..utilities.vector2 import Vector2
+from ..utilities.color import Color
 
 class Script:
     """Base class for game scripts that can be attached to GameObjects."""

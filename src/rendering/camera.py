@@ -77,7 +77,7 @@ class Camera:
     def world_to_screen(self, world_pos):
         """Convert world coordinates to screen coordinates."""
         if isinstance(world_pos, (list, tuple)):
-            world_pos = Vector2(world_pos)
+            world_pos = Vector2(world_pos[0], world_pos[1])
 
         # Check for NaN values
         if (isinstance(world_pos.x, float) and (world_pos.x != world_pos.x or world_pos.x == float('inf') or world_pos.x == float('-inf'))) or \
@@ -93,7 +93,7 @@ class Camera:
     def screen_to_world(self, screen_pos):
         """Convert screen coordinates to world coordinates."""
         if isinstance(screen_pos, (list, tuple)):
-            screen_pos = Vector2(screen_pos)
+            screen_pos = Vector2(screen_pos[0], screen_pos[1])
 
         # Check for NaN values
         if (isinstance(screen_pos.x, float) and (screen_pos.x != screen_pos.x or screen_pos.x == float('inf') or screen_pos.x == float('-inf'))) or \

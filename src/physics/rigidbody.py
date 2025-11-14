@@ -82,7 +82,7 @@ class RigidBody(Component):
     def velocity(self, value):
         """Set velocity from pygame Vector2."""
         if isinstance(value, (list, tuple)):
-            value = Vector2(value)
+            value = Vector2(value[0], value[1])
         self._pygame_velocity = value
         if self.body:
             self.body.velocity = (value.x, value.y)
@@ -117,11 +117,11 @@ class RigidBody(Component):
             return
 
         if isinstance(force, (list, tuple)):
-            force = Vector2(force)
+            force = Vector2(force[0], force[1])
 
         if point:
             if isinstance(point, (list, tuple)):
-                point = Vector2(point)
+                point = Vector2(point[0], point[1])
             self.body.apply_force_at_world_point((force.x, force.y), (point.x, point.y))
         else:
             self.body.apply_force_at_local_point((force.x, force.y), (0, 0))
@@ -139,9 +139,9 @@ class RigidBody(Component):
             return
 
         if isinstance(force, (list, tuple)):
-            force = Vector2(force)
+            force = Vector2(force[0], force[1])
         if isinstance(point, (list, tuple)):
-            point = Vector2(point)
+            point = Vector2(point[0], point[1])
 
         self.body.apply_force_at_world_point((force.x, force.y), (point.x, point.y))
 
@@ -151,11 +151,11 @@ class RigidBody(Component):
             return
 
         if isinstance(impulse, (list, tuple)):
-            impulse = Vector2(impulse)
+            impulse = Vector2(impulse[0], impulse[1])
 
         if point:
             if isinstance(point, (list, tuple)):
-                point = Vector2(point)
+                point = Vector2(point[0], point[1])
             self.body.apply_impulse_at_world_point((impulse.x, impulse.y), (point.x, point.y))
         else:
             self.body.apply_impulse_at_local_point((impulse.x, impulse.y), (0, 0))
@@ -166,9 +166,9 @@ class RigidBody(Component):
             return
 
         if isinstance(impulse, (list, tuple)):
-            impulse = Vector2(impulse)
+            impulse = Vector2(impulse[0], impulse[1])
         if isinstance(point, (list, tuple)):
-            point = Vector2(point)
+            point = Vector2(point[0], point[1])
 
         self.body.apply_impulse_at_world_point((impulse.x, impulse.y), (point.x, point.y))
 
@@ -182,13 +182,13 @@ class RigidBody(Component):
     def set_velocity(self, velocity):
         """Directly set the velocity."""
         if isinstance(velocity, (list, tuple)):
-            velocity = Vector2(velocity)
+            velocity = Vector2(velocity[0], velocity[1])
         self.velocity = velocity
 
     def add_velocity(self, velocity):
         """Add to the current velocity."""
         if isinstance(velocity, (list, tuple)):
-            velocity = Vector2(velocity)
+            velocity = Vector2(velocity[0], velocity[1])
         current_vel = self.velocity
         self.velocity = current_vel + velocity
 
@@ -196,7 +196,7 @@ class RigidBody(Component):
 
     def get_speed(self):
         """Get the current linear speed."""
-        return self.velocity.length()
+        return self.velocity.magnitude
 
     def get_angular_speed(self):
         """Get the current angular speed (absolute value)."""
