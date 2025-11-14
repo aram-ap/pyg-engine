@@ -219,7 +219,7 @@ class Engine:
         self.__size = Size(w=event.w, h=event.h)
         if self.__useDisplay:
             self.screen = pg.display.set_mode((self.__size.w, self.__size.h), self.displayMode)
-        self.camera.resize(w=event.w, h=event.h)
+        self.camera.resize(event.w, event.h)
         Engine.__debug_log("Handling Resize to {}".format(self.__size))
 
     # ================= Game Loop ======================
@@ -260,7 +260,6 @@ class Engine:
             elif event.type == pg.KEYUP:
                 # Pass to input system for event state tracking
                 self.input.process_event(event)
-
             if event.type == pg.MOUSEWHEEL:
                 # Handle mouse wheel events - pass to input system
                 self.input.process_event(event)
@@ -273,8 +272,6 @@ class Engine:
             elif event.type == pg.MOUSEMOTION:
                 # Handle mouse motion events - pass to input system
                 self.input.process_event(event)
-
-
 
             if event.type == pg.VIDEORESIZE:
                 # Handle window resize
