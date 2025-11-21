@@ -1,8 +1,12 @@
 name: Publish to PyPI
 
 on:
+  push:
+    branches:
+      - cpp  # Trigger on push to cpp branch
   release:
     types: [published]
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   build-and-publish:
@@ -45,5 +49,8 @@ jobs:
         run: |
           python -m build
       
-      - name: Publish to PyPI
+      - name: Publish to PyPI or TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Use TestPyPI for branch pushes, real PyPI for releases
+          repository-url: ${{ github.event_name == 'release' && 'https://upload.pypi.org/legacy/' || 'https://test.pypi.org/legacy/' }}
