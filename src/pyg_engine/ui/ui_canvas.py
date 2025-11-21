@@ -18,6 +18,11 @@ class UICanvas:
         self.engine = engine
         self.elements = []  # List of UI elements
         self.input_enabled = True
+        self.name = getattr(engine, 'name', None)
+        
+        # Register with engine debug system if available
+        if hasattr(engine, 'register_ui_canvas'):
+            engine.register_ui_canvas(self)
         
     def add_element(self, element):
         """
@@ -44,6 +49,11 @@ class UICanvas:
     def clear(self):
         """Remove all UI elements."""
         self.elements.clear()
+
+    def __del__(self):
+        """Ensure canvas is unregistered."""
+        if hasattr(self.engine, 'unregister_ui_canvas'):
+            self.engine.unregister_ui_canvas(self)
     
     def get_elements_by_layer(self, layer):
         """Get all elements on a specific layer."""

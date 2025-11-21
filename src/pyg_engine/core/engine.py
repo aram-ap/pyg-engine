@@ -1,6 +1,7 @@
 import io
 import pkgutil
 import os
+from importlib.resources import files, as_file
 
 import pygame as pg
 from pygame import RESIZABLE, Color
@@ -17,6 +18,7 @@ from .runnable import RunnableSystem, Priority
 from ..input.input import Input
 from ..physics.rigidbody import RigidBody
 from ..events.event_manager import EventManager
+from .debug_interface import DebugInterface
 
 
 def configure_headless_mode():
@@ -83,6 +85,12 @@ class Engine:
 
         # Event system initialization
         self.event_manager = EventManager()
+
+        # Debug interface for developer tools
+        self.debug_interface = DebugInterface(self)
+
+        # UI canvases registry for debug tools
+        self._ui_canvases = []
 
         # Display mode (e.g. pygame.FULLSCREEN, RESIZABLE, SCALED, SHOWN, ETC)
         self.displayMode = displayMode
@@ -238,6 +246,21 @@ class Engine:
         """Return all game objects as a list."""
         return list(self.__gameobjects)
 
+    # ================ UI Canvas Management ====================
+    def register_ui_canvas(self, canvas):
+        """Register a UI canvas for debug tooling."""
+        if canvas and canvas not in self._ui_canvases:
+            self._ui_canvases.append(canvas)
+
+    def unregister_ui_canvas(self, canvas):
+        """Unregister a UI canvas."""
+        if canvas in self._ui_canvases:
+            self._ui_canvases.remove(canvas)
+
+    def get_ui_canvases(self):
+        """Get all registered UI canvases."""
+        return list(self._ui_canvases)
+
     # ================= Physics Stuff ======================
     def dt(self)->float:
         """Return delta time (time since last frame), scaled by time_scale."""
@@ -309,7 +332,15 @@ class Engine:
         # Start Update Loop.
         # TODO: Make this async and add notification system
         while(self.isRunning):
-            self.__update()
+            # Check if we should update (handles pause/step logic)
+            if self.debug_interface.should_update():
+                self.__update()
+            else:
+                # When paused, still process events to keep UI responsive
+                self.__processEvents()
+                # Small sleep to avoid busy-waiting
+                import time
+                time.sleep(0.01)
 
     def __processEvents(self):
         """Process pygame events."""

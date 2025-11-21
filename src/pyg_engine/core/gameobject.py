@@ -12,8 +12,12 @@ from .runnable import Priority
 
 class GameObject(pg.sprite.Sprite):
     """Game object with component and script attachment capabilities."""
+    
+    # Class variable to track next available ID
+    _next_id = 1
+    _id_lock = None  # Will be initialized on first use
 
-    def __init__(self, name: str, id: int = time.time_ns(), enabled: bool = True, position: Vector2 = Vector2(0, 0),
+    def __init__(self, name: str, id: int = None, enabled: bool = True, position: Vector2 = Vector2(0, 0),
                  size: Vector2 = Vector2(1.0, 1.0), rotation: float = 0.0, color: Color = Color(255, 255, 255, 255),
                  tag: Tag = Tag.Other, basicShape: BasicShape = BasicShape.Rectangle, script_configs=None,
                  show_rotation_line: bool = False):
@@ -27,7 +31,26 @@ class GameObject(pg.sprite.Sprite):
             size = Vector2(size[0], size[1])
 
         self.name = name
-        self.id = id
+        
+        # Auto-generate unique ID if not provided
+        if id is None:
+            # Initialize lock if needed
+            if GameObject._id_lock is None:
+                import threading
+                GameObject._id_lock = threading.Lock()
+            
+            with GameObject._id_lock:
+                self.id = GameObject._next_id
+                GameObject._next_id += 1
+        else:
+            self.id = id
+            # Update next_id if this ID is greater
+            if GameObject._id_lock is None:
+                import threading
+                GameObject._id_lock = threading.Lock()
+            with GameObject._id_lock:
+                if id >= GameObject._next_id:
+                    GameObject._next_id = id + 1
         self.enabled = enabled
         self.position = position
         self.size = size

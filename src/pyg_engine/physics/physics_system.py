@@ -37,7 +37,7 @@ class PhysicsSystem:
 
         # Physics settings for fixed timestep
         self.iterations = 10  # Reduced for better performance while maintaining stability
-        self.dt_fixed = 1.0/60.0  # Fixed timestep for stability
+        self.dt_fixed = 1.0/120.0  # Fixed timestep for stability
         self.accumulator = 0.0  # For fixed timestep accumulation
 
         print("PhysicsSystem initialized")

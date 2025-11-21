@@ -5,6 +5,8 @@ A comprehensive game engine built with Pygame and Pymunk for 2D physics,
 rendering, and game development.
 """
 
+from typing import TYPE_CHECKING
+
 __version__ = "1.0.0a6"
 __author__ = "Aram Aprahamian"
 __description__ = "A Python game engine with physics, rendering, and input systems"
@@ -47,6 +49,34 @@ from .utilities.object_types import Size, BasicShape, Tag
 from .physics.material import PhysicsMaterial, Materials
 from .utilities.vector2 import Vector2
 
+# Developer tools (optional PyQt dependency)
+if TYPE_CHECKING:
+    # For type checkers, provide a stub signature
+    def start_dev_tool(engine: 'Engine', *, window_title: str = "Pyg Engine Dev Tool") -> None:
+        """Launch the developer debug tool for real-time engine inspection."""
+        ...
+else:
+    # At runtime, try to import the actual implementation
+    _dev_tool_import_error = None
+    try:
+        import sys
+        import os
+        # Add parent directory to path for tools import
+        # From src/pyg_engine/__init__.py, go up to project root, then to tools/
+        _tools_path = os.path.join(os.path.dirname(__file__), '..', '..', 'tools')
+        if _tools_path not in sys.path:
+            sys.path.insert(0, _tools_path)
+        from dev_tool import start_dev_tool
+    except Exception as e:  # pragma: no cover - optional dependency (PyQt)
+        _dev_tool_import_error = e
+        
+        def start_dev_tool(*_, **__):
+            """Fallback when dev tool dependencies are missing."""
+            raise RuntimeError(
+                "Developer tool is unavailable. Install PyQt6 (e.g. pip install PyQt6 "
+                "or pip install -e .[dev-tools]) to enable start_dev_tool()."
+            ) from _dev_tool_import_error
+
 # Main exports - these are the primary classes users will interact with
 __all__ = [
     'Engine',
@@ -83,5 +113,6 @@ __all__ = [
     'Materials',
     'Color',
     'Colors',
-    'Vector2'
+    'Vector2',
+    'start_dev_tool'
 ]

@@ -4,8 +4,7 @@ Complete physics demo with collision detection
 
 from re import I
 import sys
-from pyg_engine import Vector2, Color, Size, BasicShape, Tag, GameObject, Engine, RigidBody, BoxCollider, CircleCollider, Materials, GlobalDictionary
-import os
+from pyg_engine import Vector2, Color, Size, BasicShape, Tag, GameObject, Engine, RigidBody, BoxCollider, CircleCollider, Materials, GlobalDictionary, start_dev_tool
 import sys
 from pathlib import Path
 
@@ -105,6 +104,14 @@ def main():
 
     # Create engine
     engine = Engine(fpsCap=60, windowName="Three Players Physics Demo", size=Size(1200, 800))
+
+    # Optional: Start dev tool if PyQt6 is installed
+    try:
+        start_dev_tool(engine)
+    except RuntimeError as e:
+        print(f"Note: {e}")
+        print("Continuing without dev tool...\n")
+
     Engine.log_debug = True
     input = engine.input
 

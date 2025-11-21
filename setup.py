@@ -12,8 +12,8 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",
-    packages=["pyg_engine"],
-    package_dir={"pyg_engine": "src"},
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -40,6 +40,9 @@ setup(
             "black>=22.0.0",
             "flake8>=5.0.0",
         ],
+        "dev-tools": [
+            "PyQt6>=6.5.0",
+        ],
     },
     include_package_data=True,
     package_data={
@@ -50,4 +53,4 @@ setup(
             "pyg-engine=pyg_engine.cli:main",
         ],
     },
-) 
+)

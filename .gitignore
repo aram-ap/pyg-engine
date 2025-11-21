@@ -225,6 +225,7 @@ cython_debug/
 *.xml
 *.yaml
 *.yml
+!pyrightconfig_old.json
 
 # Log files
 *.log
@@ -277,7 +278,7 @@ Icon
 .AppleDesktop
 Network Trash Folder
 Temporary Items
-.apdisk 
+.apdisk
 
 # Jekyll specific
 _site/
