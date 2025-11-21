@@ -16,7 +16,20 @@ endif()
 
 # Python and Pybind11
 find_package(Python 3.8 COMPONENTS Interpreter Development REQUIRED)
-find_package(pybind11 CONFIG REQUIRED)
+
+# Try to find pybind11 using Python (works with pip-installed pybind11)
+execute_process(
+    COMMAND "${Python_EXECUTABLE}" -m pybind11 --cmakedir
+    OUTPUT_VARIABLE pybind11_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    RESULT_VARIABLE pybind11_NOTFOUND
+)
+
+if(pybind11_NOTFOUND)
+    message(FATAL_ERROR "pybind11 not found. Please install it via: pip install pybind11")
+endif()
+
+find_package(pybind11 REQUIRED)
 
 # SFML
 include(FetchContent)
