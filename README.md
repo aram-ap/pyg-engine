@@ -51,18 +51,12 @@ Pyg-Engine combines the ease of use of Python with the performance of C++.
 
 ## Installation
 
-**Pypi**:
+**Pypi**: 
 ```bash
 pip install pyg-engine
 ```
 
-**CPP Version**:
-```bash
-pip install git+https://github.com/aram-ap/pyg-engine.git@cpp
-```
-
-
-**Local Install**:
+You can install the engine via pip (requires CMake and a C++ compiler):
 
 ```bash
 pip install .

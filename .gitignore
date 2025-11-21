@@ -153,3 +153,6 @@ _deps/
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+
+
+.plans/

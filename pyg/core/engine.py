@@ -11,3 +11,6 @@ class Engine:
     @property
     def version(self):
         return self._core.get_version()
+
+    def __str__(self):
+        return f"Engine(version={self.version})"

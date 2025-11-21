@@ -4,7 +4,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pybind11
 from setuptools import Extension, setup, find_packages
 from setuptools.command.build_ext import build_ext
 
@@ -43,7 +42,6 @@ class CMakeBuild(build_ext):
             f"-DCMAKE_LIBRARY_OUTPUT_DIRECTORY={extdir}",
             f"-DPython_EXECUTABLE={sys.executable}",
             f"-DCMAKE_BUILD_TYPE={cfg}",  # not used on MSVC, but no harm
-            f"-Dpybind11_DIR={pybind11.get_cmake_dir()}",
         ]
         build_args = []
         # Adding CMake arguments set as environment variable
