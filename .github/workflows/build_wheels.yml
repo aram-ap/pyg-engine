@@ -1,0 +1,43 @@
+name: Build Wheels
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev libopenal-dev libvorbis-dev libflac-dev libgl1-mesa-dev libxrandr-dev libfreetype6-dev
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.2
+        env:
+          # Configure cibuildwheel
+          CIBW_SKIP: "pp* cp36-* cp37-*"  # Skip PyPy and older Python versions
+          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          CIBW_ARCHS_LINUX: "auto64"
+          CIBW_ARCHS_WINDOWS: "auto64"
+          
+          # SFML specific build settings via environment variables if needed by CMake
+          # Ensure CMake can find the dependencies or they are fetched
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
+

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "cmake>=3.15", "pybind11>=2.10.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyg-engine"
+version = "0.1.0"
+description = "A Python game engine with C++/SFML backend"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+license = "MIT"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "pymunk>=6.0.0",
+    "numpy>=1.20.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/aram-ap/pyg-engine"
+"Bug Tracker" = "https://github.com/aram-ap/pyg-engine/issues"
+
+[tool.cibuildwheel]
+build = "*"
+skip = "pp*"  # Skip PyPy
+test-requires = "pytest"
+test-command = "pytest {project}/tests"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64", "x86"]
+

@@ -1,0 +1,94 @@
+cmake_minimum_required(VERSION 3.15)
+project(pyg_engine CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Detect platform
+if(WIN32)
+    set(PLATFORM_WINDOWS ON)
+elseif(APPLE)
+    set(PLATFORM_MACOS ON)
+else()
+    set(PLATFORM_LINUX ON)
+endif()
+
+# Python and Pybind11
+find_package(Python 3.8 COMPONENTS Interpreter Development REQUIRED)
+find_package(pybind11 CONFIG REQUIRED)
+
+# SFML
+include(FetchContent)
+
+FetchContent_Declare(
+    SFML
+    GIT_REPOSITORY https://github.com/SFML/SFML.git
+    GIT_TAG 2.6.1
+)
+
+set(SFML_BUILD_AUDIO ON CACHE BOOL "" FORCE)
+set(SFML_BUILD_GRAPHICS ON CACHE BOOL "" FORCE)
+set(SFML_BUILD_WINDOW ON CACHE BOOL "" FORCE)
+set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(SFML)
+
+# ImGui - keeping declared but not used for this minimal example to preserve build setup
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.89.9
+)
+FetchContent_MakeAvailable(imgui)
+
+set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "Path to ImGui source" FORCE)
+set(IMGUI_SFML_FIND_SFML OFF CACHE BOOL "" FORCE)
+set(IMGUI_SFML_IMGUI_DEMO OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+    imgui-sfml
+    GIT_REPOSITORY https://github.com/SFML/imgui-sfml.git
+    GIT_TAG v2.6
+)
+FetchContent_MakeAvailable(imgui-sfml)
+
+# Source definitions
+set(CORE_SOURCES
+    src/core/Core.cpp
+)
+
+set(BINDING_SOURCES
+    src/bindings/module.cpp
+)
+
+# Create the extension module
+pybind11_add_module(_native
+    ${CORE_SOURCES}
+    ${BINDING_SOURCES}
+)
+
+# Include directories
+target_include_directories(_native PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${imgui_SOURCE_DIR}
+    ${imgui-sfml_SOURCE_DIR}
+)
+
+# Link libraries
+target_link_libraries(_native PRIVATE
+    sfml-graphics
+    sfml-window
+    sfml-audio
+    sfml-system
+    # ImGui-SFML::ImGui-SFML # Not linking for minimal example but available
+)
+
+# Copy the extension to the pyg package directory after build (CMake post-build)
+add_custom_command(TARGET _native POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:_native> ${CMAKE_CURRENT_SOURCE_DIR}/pyg/
+)
+
+install(TARGETS _native DESTINATION pyg)

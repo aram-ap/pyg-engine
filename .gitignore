@@ -1,10 +1,13 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 
 # C extensions
 *.so
+*.pyd
+*.dylib
+*.dll
 
 # Distribution / packaging
 .Python
@@ -27,8 +30,6 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
@@ -55,21 +56,9 @@ cover/
 *.mo
 *.pot
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
+# Documentation
 docs/_build/
+/site
 
 # PyBuilder
 .pybuilder/
@@ -82,43 +71,6 @@ target/
 profile_default/
 ipython_config.py
 
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
-
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/#use-with-ide
-.pdm.toml
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
 # Environments
 .env
 .venv
@@ -128,117 +80,43 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
+# PEP 582
+__pypackages__/
+
+# IDEs
 .spyderproject
 .spyproject
-
-# Rope project settings
 .ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be added to the global gitignore or merged into this project gitignore.  For a PyCharm
-#  project, it is recommended to include the following files:
-#  .idea/
-#  *.iml
-#  *.ipr
-#  *.iws
 .idea/
 *.iml
 *.ipr
 *.iws
-
-# VS Code
 .vscode/
 
-# Pygame specific
-# *.wav
-# *.ogg
-# *.mp3
-# *.flac
-# *.aiff
-# *.au
-# *.wma
-# *.m4a
-# *.aac
-# *.flv
-# *.avi
-# *.mp4
-# *.mov
-# *.wmv
-# *.mkv
-# *.webm
-# *.m4v
-# *.3gp
-# *.ogv
-# *.ogx
-# *.swf
-# *.flv
-# *.f4v
-# *.f4p
-# *.f4a
-# *.f4b
+# Type Checking & Linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
 
-# Game assets (common formats)
-# *.png
-# *.jpg
-# *.jpeg
-# *.gif
-# *.bmp
-# *.tiff
-# *.tga
-# *.pcx
-# *.ico
-# *.cur
-# *.ani
+# Cython
+cython_debug/
 
-# Font files
-# *.ttf
-# *.otf
-# *.woff
-# *.woff2
-# *.eot
-
-# Game data files
-*.dat
-*.sav
-*.cfg
-*.ini
-*.json
-*.xml
-*.yaml
-*.yml
-
-# Log files
+# Game Engine Assets/Logs
 *.log
 logs/
-
-# Temporary files
 *.tmp
 *.temp
 *.bak
 *.swp
 *.swo
 *~
+*.dat
+*.sav
 
-# OS generated files
+# OS Generated
 .DS_Store
 .DS_Store?
 ._*
@@ -246,87 +124,32 @@ logs/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-# Windows
-*.lnk
-
-# Linux
-*~
-
-# macOS
 .AppleDouble
 .LSOverride
-
-# Icon must end with two \r
 Icon
-
-# Thumbnails
-._*
-
-# Files that might appear in the root of a volume
 .DocumentRevisions-V100
 .fseventsd
-.Spotlight-V100
 .TemporaryItems
-.Trashes
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
 
-# Directories potentially created on remote AFP share
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk 
-
-# Jekyll specific
-_site/
-.sass-cache/
-.jekyll-cache/
-.jekyll-metadata
-vendor/
-.bundle/
-
-# Jekyll build artifacts
-_site/
-.sass-cache/
-.jekyll-cache/
-.jekyll-metadata
-
-# Ruby/Bundler
-vendor/
-.bundle/
-Gemfile.lock
-
-# Jekyll plugins (if using local plugins)
-_plugins/
-
-# Jekyll drafts
-_drafts/
-
-# Jekyll posts (if you want to ignore them)
-# _posts/
-
-# Jekyll data (if you want to ignore them)
-# _data/
-
-# Jekyll layouts (if you want to ignore them)
-# _layouts/
-
-# Jekyll includes (if you want to ignore them)
-# _includes/
-
-# Jekyll assets (if you want to ignore them)
-# assets/
-
-# Jekyll config (if you want to ignore them)
-# _config.yml
-
-# Jekyll Gemfile (if you want to ignore them)
-# Gemfile
-
-# Jekyll .github (if you want to ignore them)
-# .github/
-
-# TODO
-TODO
+# C++ / CMake Build Artifacts
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+install_manifest.txt
+compile_commands.json
+_deps/
+*-build/
+*.o
+*.obj
+*.lib
+*.a
+*.pdb
+*.ilk
+*.exp
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
