@@ -51,14 +51,68 @@ Pyg-Engine combines the ease of use of Python with the performance of C++.
 
 ## Installation
 
-**Pypi**: 
+### System Dependencies
+
+Before installing, you need to install system dependencies for SFML.
+
+**Quick Install (Recommended):**
+
+Download and run the dependency installer script:
+```bash
+curl -O https://raw.githubusercontent.com/aram-ap/pyg-engine/cpp/install_deps.py
+python install_deps.py
+```
+
+Or install manually:
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install -y \
+    libxcursor-dev \
+    libxrandr-dev \
+    libxinerama-dev \
+    libxi-dev \
+    libudev-dev \
+    libgl1-mesa-dev \
+    libflac-dev \
+    libogg-dev \
+    libvorbis-dev \
+    libopenal-dev \
+    libfreetype6-dev \
+    cmake
+```
+
+**macOS:**
+```bash
+brew install sfml cmake
+```
+
+**Windows:**
+- Install Visual Studio with C++ support
+- Install CMake from https://cmake.org/download/
+
+### Install from PyPI
+
 ```bash
 pip install pyg-engine
 ```
 
-You can install the engine via pip (requires CMake and a C++ compiler):
+### Install from GitHub
 
 ```bash
+# Install from the latest stable release
+pip install git+https://github.com/aram-ap/pyg-engine.git
+
+# Install from a specific branch
+pip install git+https://github.com/aram-ap/pyg-engine.git@cpp
+```
+
+### Install from Source
+
+```bash
+git clone https://github.com/aram-ap/pyg-engine.git
+cd pyg-engine
 pip install .
 ```
 
