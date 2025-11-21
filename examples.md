@@ -29,6 +29,9 @@ This page showcases various examples demonstrating the capabilities of the PyG E
 
 ### Games and Demos
 
+- **flappy_bird/** - Complete Flappy Bird game with leaderboard system
+  - Features: Score tracking, username input, persistent leaderboard
+  - Run: `python -m examples.flappy_bird.flappy_bird`
 - **snake_game.py** - Complete Snake game implementation
 - **runnable_demo.py** - Runnable system demonstration
 - **visual_runnable_demo.py** - Visual demonstration of runnable system
@@ -46,6 +49,8 @@ This page showcases various examples demonstrating the capabilities of the PyG E
 
 ## Running Examples
 
+### Simple Examples
+
 To run any example, navigate to the examples directory and execute:
 
 ```bash
@@ -57,6 +62,21 @@ Or run from the project root:
 
 ```bash
 python examples/basic_example.py
+```
+
+### Project Examples (like Flappy Bird)
+
+For organized project examples, use the module path from the project root:
+
+```bash
+python -m examples.flappy_bird.flappy_bird
+```
+
+Or navigate to the specific project directory:
+
+```bash
+cd examples/flappy_bird
+python flappy_bird.py
 ```
 
 ## Example Code Snippets

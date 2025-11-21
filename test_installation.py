@@ -19,7 +19,7 @@ def test_imports():
             MouseInputSystem, Component, Script,
             Size, BasicShape, Tag, PhysicsMaterial
         )
-        print("✓ All core modules imported successfully")
+        print("All core modules imported successfully")
         return True
     except ImportError as e:
         print(f"✗ Import error: {e}")
@@ -38,7 +38,7 @@ def test_basic_engine_creation():
             backgroundColor=Color(0, 0, 0),
             running=False
         )
-        print("✓ Engine created successfully")
+        print("Engine created successfully")
         return True
     except Exception as e:
         print(f"✗ Engine creation failed: {e}")
@@ -61,7 +61,7 @@ def test_gameobject_creation():
             tag=Tag.Other,
             basicShape=BasicShape.Rectangle
         )
-        print("✓ Game object created successfully")
+        print("Game object created successfully")
         return True
     except Exception as e:
         print(f"✗ Game object creation failed: {e}")
@@ -90,7 +90,7 @@ def main():
     print(f"Tests passed: {passed}/{total}")
     
     if passed == total:
-        print("✓ All tests passed! Pyg Engine is ready to use.")
+        print("All tests passed! Pyg Engine is ready to use.")
         return 0
     else:
         print("✗ Some tests failed. Please check the installation.")
