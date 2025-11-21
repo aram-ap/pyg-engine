@@ -3,8 +3,6 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  push:
-    branches: [cpp]
 
 jobs:
   build-and-publish:
@@ -21,11 +19,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
+      
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libudev-dev libopenal-dev libvorbis-dev libflac-dev libgl1-mesa-dev libxrandr-dev libfreetype6-dev
+          sudo apt-get install -y \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libudev-dev \
+            libgl1-mesa-dev \
+            libflac-dev \
+            libogg-dev \
+            libvorbis-dev \
+            libopenal-dev \
+            libfreetype6-dev
       
       - name: Install build dependencies
         run: |
