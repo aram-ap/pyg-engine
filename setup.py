@@ -98,7 +98,7 @@ class CMakeBuild(build_ext):
 
 setup(
     name="pyg-engine",
-    version="0.1.0",
+    version="0.1.0a1",
     author="Your Name",
     author_email="your.email@example.com",
     description="A Python game engine with C++/SFML backend",
