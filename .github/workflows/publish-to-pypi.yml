@@ -11,9 +11,10 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    # Only use the pypi environment for actual releases
     environment:
-      name: pypi
-      url: https://pypi.org/p/pyg-engine  
+      name: ${{ github.event_name == 'release' && 'pypi' || '' }}
+      url: ${{ github.event_name == 'release' && 'https://pypi.org/p/pyg-engine' || '' }}
     permissions:
       id-token: write  
     steps:
@@ -49,8 +50,7 @@ jobs:
         run: |
           python -m build
       
-      - name: Publish to PyPI or TestPyPI
+      - name: Publish to PyPI
+        # Only publish on actual releases
+        if: github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          # Use TestPyPI for branch pushes, real PyPI for releases
-          repository-url: ${{ github.event_name == 'release' && 'https://upload.pypi.org/legacy/' || 'https://test.pypi.org/legacy/' }}
