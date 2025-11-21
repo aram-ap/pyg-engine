@@ -3,4 +3,6 @@ try:
 except ImportError:
     import _native # Fallback?
 
-from .core.engine import Engine
+from .core.engine import Engine, LogType
+
+__all__ = ["Engine", "LogType"]

@@ -67,9 +67,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui-sfml)
 
+# spdlog
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG v1.12.0
+)
+FetchContent_MakeAvailable(spdlog)
+
 # Source definitions
 set(CORE_SOURCES
     src/core/Core.cpp
+    src/core/Window.cpp
+    src/logging/Logger.cpp
 )
 
 set(BINDING_SOURCES
@@ -96,6 +106,7 @@ target_link_libraries(_native PRIVATE
     sfml-window
     sfml-audio
     sfml-system
+    spdlog::spdlog
     # ImGui-SFML::ImGui-SFML # Not linking for minimal example but available
 )
 

@@ -3,6 +3,10 @@
 System dependency installer for pyg-engine.
 Run this script before installing pyg-engine to install required system libraries.
 
+Note: Some dependencies (SFML, spdlog, ImGui) are automatically downloaded
+and built via CMake's FetchContent during the build process. This script
+only installs system-level dependencies that cannot be auto-fetched.
+
 Usage:
     python install_deps.py
     

@@ -39,6 +39,7 @@ Pyg-Engine combines the ease of use of Python with the performance of C++.
 | **Audio** | SFML Audio | Sound effects, music |
 | **Physics** | pymunk | 2D physics simulation (wrapped) |
 | **UI** | ImGui | Debugger and Editor UI |
+| **Logging** | spdlog | Fast C++ logging library |
 | **Bindings** | pybind11 | C++ to Python interface |
 
 ## Key Features

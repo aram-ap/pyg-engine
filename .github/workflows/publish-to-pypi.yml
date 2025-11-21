@@ -29,6 +29,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            cmake \
             libxcursor-dev \
             libxrandr-dev \
             libxinerama-dev \
@@ -40,6 +41,7 @@ jobs:
             libvorbis-dev \
             libopenal-dev \
             libfreetype6-dev
+          # Note: spdlog, SFML, ImGui are automatically fetched via CMake FetchContent
       
       - name: Install build dependencies
         run: |

@@ -1,5 +1,8 @@
 #include <pybind11/pybind11.h>
+#include <pybind11/native_enum.h>
 #include "core/Core.h"
+#include "core/Window.h"
+#include "logging/Logger.h"
 
 namespace py = pybind11;
 
@@ -8,8 +11,65 @@ PYBIND11_MODULE(_native, m) {
 
     py::class_<pyg::Core>(m, "Core")
         .def(py::init<>())
+        .def_property("tick_rate", &pyg::Core::getTickRate, &pyg::Core::setTickRate)
         .def("get_version", &pyg::Core::getVersion)
         .def("update", &pyg::Core::update)
         .def("render", &pyg::Core::render)
-        .def("on_destroy", &pyg::Core::on_destroy);
+        .def("on_destroy", &pyg::Core::on_destroy)
+        .def("log", static_cast<void (pyg::Core::*)(std::string)>(&pyg::Core::log))
+        .def("log_type", static_cast<void (pyg::Core::*)(pyg::Logger::Type, std::string)>(&pyg::Core::logType))
+        .def("is_running", &pyg::Core::isRunning)
+        .def("start", &pyg::Core::start)
+        .def("stop", &pyg::Core::stop)
+        .def("pause", &pyg::Core::pause)
+        .def("resume", &pyg::Core::resume)
+        .def("restart", &pyg::Core::restart)
+        .def("exit", &pyg::Core::exit)
+        .def("set_window", &pyg::Core::setWindow)
+        .def("get_window", &pyg::Core::getWindow);
+
+
+    py::class_<pyg::Logger>(m, "Logger")
+        .def_static("init", &pyg::Logger::init, py::arg("name") = "pyg_engine", py::arg("logFile") = "")
+        .def_static("shutdown", &pyg::Logger::shutdown)
+        .def_static("set_level", &pyg::Logger::setLevel);
+
+    py::native_enum<pyg::Logger::Type>(m, "LogType", "enum.Enum")
+        .value("Trace", pyg::Logger::Type::Trace)
+        .value("Debug", pyg::Logger::Type::Debug)
+        .value("Info", pyg::Logger::Type::Info)
+        .value("Warn", pyg::Logger::Type::Warning)
+        .value("Error", pyg::Logger::Type::Error)
+        .value("Critical", pyg::Logger::Type::Critical)
+        .export_values()
+        .finalize();
+
+    py::class_<pyg::Window>(m, "Window")
+        .def("create", &pyg::Window::create)
+        .def("close", &pyg::Window::close)
+        .def("destroy", &pyg::Window::destroy)
+        .def("is_open", &pyg::Window::isOpen)
+        .def("poll_events", &pyg::Window::pollEvents)
+        .def("display", &pyg::Window::display)
+        .def("clear", &pyg::Window::clear)
+        .def("set_title", &pyg::Window::setTitle)
+        .def("get_title", &pyg::Window::getTitle)
+        .def("set_icon", &pyg::Window::setIcon)
+        .def("set_size", &pyg::Window::setSize)
+        .def("get_size", &pyg::Window::getSize)
+        .def("set_position", &pyg::Window::setPosition)
+        .def("get_position", &pyg::Window::getPosition)
+        .def("set_visible", &pyg::Window::setVisible)
+        .def("is_visible", &pyg::Window::isVisible)
+        .def("set_framerate_limit", &pyg::Window::setFramerateLimit)
+        .def("get_framerate_limit", &pyg::Window::getFramerateLimit)
+        .def("set_vertical_sync_enabled", &pyg::Window::setVerticalSyncEnabled)
+        .def("is_vertical_sync_enabled", &pyg::Window::isVerticalSyncEnabled)
+        .def("set_mouse_cursor_visible", &pyg::Window::setMouseCursorVisible)
+        .def("is_mouse_cursor_visible", &pyg::Window::isMouseCursorVisible)
+        .def("set_mouse_cursor_grabbed", &pyg::Window::setMouseCursorGrabbed)
+        .def("is_mouse_cursor_grabbed", &pyg::Window::isMouseCursorGrabbed)
+        .def("set_mouse_cursor_position", &pyg::Window::setMouseCursorPosition)
+        .def("get_mouse_cursor_position", &pyg::Window::getMouseCursorPosition)
+        .def(py::init<>());
 }
