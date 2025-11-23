@@ -8,7 +8,7 @@ LogType = _native.LogType
 
 class Engine:
     def __init__(self, name: str = "Pyg-Engine", tick_rate: int = 60):
-        self._core = _native.Core()
+        self._engine = _native.Engine()
         self.tick_rate = tick_rate
 
         if name == "Pyg-Engine":
@@ -17,46 +17,46 @@ class Engine:
             self._name = name
 
     def start(self):
-        self._core.log_type(LogType.Info, f"Engine started: {self.name}")
+        self._engine.log_type(LogType.Info, f"Engine started: {self.name}")
 
     def stop(self):
-        self._core.log_type(LogType.Info, f"Engine stopping: {self.name}")
-        self._core.log_type(LogType.Info, f"Engine stopped: {self.name}")
-        self._core.stop()
+        self._engine.log_type(LogType.Info, f"Engine stopping: {self.name}")
+        self._engine.log_type(LogType.Info, f"Engine stopped: {self.name}")
+        self._engine.stop()
 
     @property
     def tick_rate(self) -> int:
-        return self._core.tick_rate
+        return self._engine.tick_rate
 
     @tick_rate.setter
     def tick_rate(self, tick_rate: int):
         if tick_rate <= 0:
-            self._core.log_type(LogType.Error, f"Tick rate must be positive, got {tick_rate}")
+            self._engine.log_type(LogType.Error, f"Tick rate must be positive, got {tick_rate}")
             raise ValueError("tick_rate must be positive")
-        self._core.tick_rate = tick_rate
+        self._engine.tick_rate = tick_rate
 
     def set_window_title(self, title: str):
-        self._core.set_window_title(title)
+        self._engine.set_window_title(title)
 
     def get_window_title(self) -> str:
-        return self._core.get_window_title()
+        return self._engine.get_window_title()
 
     def log(self, message: str):
-        self._core.log(message)
+        self._engine.log(message)
 
     def log_type(self, log_type: LogType, message: str):
-        self._core.log_type(log_type, message)
+        self._engine.log_type(log_type, message)
 
     @property
     def name(self) -> str:
-        # Window Name
+        # Returns the window Name
         return self._name
 
     @property
     def version(self) -> str:
         # Pyg-Engine Version
         # e.g., '0.1.0'
-        return self._core.get_version()
+        return self._engine.get_version()
 
     def __str__(self):
         return f"Engine(version={self.version})"

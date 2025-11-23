@@ -1,7 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/native_enum.h>
-#include "core/Core.h"
-#include "core/Window.h"
+#include "core/Engine.h"
+#include "../rendering/Window.h"
 #include "logging/Logger.h"
 
 namespace py = pybind11;
@@ -9,24 +9,24 @@ namespace py = pybind11;
 PYBIND11_MODULE(_native, m) {
     m.doc() = "Pyg-Engine native module";
 
-    py::class_<pyg::Core>(m, "Core")
+    py::class_<pyg::Engine>(m, "Engine")
         .def(py::init<>())
-        .def_property("tick_rate", &pyg::Core::getTickRate, &pyg::Core::setTickRate)
-        .def("get_version", &pyg::Core::getVersion)
-        .def("update", &pyg::Core::update)
-        .def("render", &pyg::Core::render)
-        .def("on_destroy", &pyg::Core::on_destroy)
-        .def("log", static_cast<void (pyg::Core::*)(std::string)>(&pyg::Core::log))
-        .def("log_type", static_cast<void (pyg::Core::*)(pyg::Logger::Type, std::string)>(&pyg::Core::logType))
-        .def("is_running", &pyg::Core::isRunning)
-        .def("start", &pyg::Core::start)
-        .def("stop", &pyg::Core::stop)
-        .def("pause", &pyg::Core::pause)
-        .def("resume", &pyg::Core::resume)
-        .def("restart", &pyg::Core::restart)
-        .def("exit", &pyg::Core::exit)
-        .def("set_window", &pyg::Core::setWindow)
-        .def("get_window", &pyg::Core::getWindow);
+        .def_property("tick_rate", &pyg::Engine::getTickRate, &pyg::Engine::setTickRate)
+        .def("get_version", &pyg::Engine::getVersion)
+        .def("update", &pyg::Engine::update)
+        .def("render", &pyg::Engine::render)
+        .def("on_destroy", &pyg::Engine::on_destroy)
+        .def("log", static_cast<void (pyg::Engine::*)(std::string)>(&pyg::Engine::log))
+        .def("log_type", static_cast<void (pyg::Engine::*)(pyg::Logger::Type, std::string)>(&pyg::Engine::logType))
+        .def("is_running", &pyg::Engine::isRunning)
+        .def("start", &pyg::Engine::start)
+        .def("stop", &pyg::Engine::stop)
+        .def("pause", &pyg::Engine::pause)
+        .def("resume", &pyg::Engine::resume)
+        .def("restart", &pyg::Engine::restart)
+        .def("exit", &pyg::Engine::exit)
+        .def("set_window", &pyg::Engine::setWindow)
+        .def("get_window", &pyg::Engine::getWindow);
 
 
     py::class_<pyg::Logger>(m, "Logger")

@@ -1,4 +1,4 @@
-#include "core/Window.h"
+#include "Window.h"
 #include "logging/Logger.h"
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Image.hpp>

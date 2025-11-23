@@ -2,16 +2,16 @@
 #include <SFML/System.hpp>
 #include "logging/Logger.h"
 #include <string>
-#include "core/Window.h"
+#include "../rendering/Window.h"
 
 namespace pyg {
 
-class Core {
+class Engine {
 public:
     static const std::string VERSION;
 
-    Core();
-    virtual ~Core();
+    Engine();
+    virtual ~Engine();
 
     virtual std::string getVersion() const;
     virtual int getTickRate() const;

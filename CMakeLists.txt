@@ -77,8 +77,8 @@ FetchContent_MakeAvailable(spdlog)
 
 # Source definitions
 set(CORE_SOURCES
-    src/core/Core.cpp
-    src/core/Window.cpp
+        src/core/Engine.cpp
+        src/rendering/Window.cpp
     src/logging/Logger.cpp
 )
 

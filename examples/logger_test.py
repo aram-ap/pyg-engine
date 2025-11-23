@@ -17,7 +17,7 @@ def main():
 
     # Simulate some updates
     # for i in range(3):
-    #     engine.update(0.016)  # ~60 FPS
+        # engine.update(0.016)  # ~60 FPS
 
     # Cleanup - this will log shutdown messages
     # engine.on_destroy()

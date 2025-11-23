@@ -1,12 +1,12 @@
-#include "core/Core.h"
+#include "core/Engine.h"
 #include "logging/Logger.h"
 #include <SFML/System/Sleep.hpp>
 #include <cstdlib>
 
 namespace pyg {
-    const std::string Core::VERSION = "0.1.0";
+    const std::string Engine::VERSION = "0.1.0";
 
-    Core::Core()
+    Engine::Engine()
         : tickRate(60),
           _window(new Window()),
           _ownsWindow(true),
@@ -17,39 +17,39 @@ namespace pyg {
             Logger::init("pyg_engine");
         }
 
-        PYG_INFO("Core initialized - Version: {}", VERSION);
+        PYG_INFO("Engine initialized - Version: {}", VERSION);
         _clock.restart();
     }
 
-    Core::~Core() {
+    Engine::~Engine() {
         if (_ownsWindow) {
             delete _window;
         }
         _window = nullptr;
     }
 
-    void Core::stop() {
+    void Engine::stop() {
         if (!_isRunning) {
             return;
         }
-        PYG_INFO("Core stopping");
+        PYG_INFO("Engine stopping");
         _isRunning = false;
         if (_window) {
             _window->close();
         }
     }
 
-    bool Core::isRunning() const {
+    bool Engine::isRunning() const {
         return _isRunning;
     }
 
-    void Core::start() {
+    void Engine::start() {
         if (!_window) {
             _window = new Window();
             _ownsWindow = true;
         }
 
-        PYG_INFO("Core starting");
+        PYG_INFO("Engine starting");
         _isRunning = true;
 
         while (_isRunning && _window->isOpen()) {
@@ -58,11 +58,11 @@ namespace pyg {
             render();
         }
 
-        PYG_INFO("Core stopped");
+        PYG_INFO("Engine stopped");
         on_destroy();
     }
 
-    void Core::update(sf::Time deltaTime) {
+    void Engine::update(sf::Time deltaTime) {
         if (_isPaused || !_window) {
             return;
         }
@@ -78,7 +78,7 @@ namespace pyg {
         _window->pollEvents();
     }
 
-    void Core::render() {
+    void Engine::render() {
         if (!_window) {
             return;
         }
@@ -87,26 +87,26 @@ namespace pyg {
         _window->display();
     }
 
-    void Core::pause() {
+    void Engine::pause() {
         _isPaused = true;
     }
 
-    void Core::resume() {
+    void Engine::resume() {
         _isPaused = false;
     }
 
-    void Core::restart() {
+    void Engine::restart() {
         PYG_INFO("Restarting core");
         stop();
         start();
     }
 
-    void Core::exit() {
+    void Engine::exit() {
         stop();
         std::exit(0);
     }
 
-    void Core::setWindow(Window* window) {
+    void Engine::setWindow(Window* window) {
         if (!window) {
             return;
         }
@@ -119,32 +119,32 @@ namespace pyg {
         _ownsWindow = false;
     }
 
-    Window* Core::getWindow() const {
+    Window* Engine::getWindow() const {
         return _window;
     }
 
-    void Core::on_destroy() {
-        PYG_INFO("Core shutting down");
+    void Engine::on_destroy() {
+        PYG_INFO("Engine shutting down");
         Logger::shutdown();
     }
 
-    void Core::log(std::string msg) {
+    void Engine::log(std::string msg) {
         PYG_INFO(msg);
     }
 
-    void Core::setTickRate(int tickRateValue) {
+    void Engine::setTickRate(int tickRateValue) {
         tickRate = tickRateValue;
     }
 
-    int Core::getTickRate() const {
+    int Engine::getTickRate() const {
         return tickRate;
     }
 
-    void Core::logType(Logger::Type type, std::string msg) {
+    void Engine::logType(Logger::Type type, std::string msg) {
         Logger::print(type, msg);
     }
 
-    std::string Core::getVersion() const {
+    std::string Engine::getVersion() const {
         return VERSION;
     }
 } // namespace pyg
