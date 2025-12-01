@@ -1,3 +1,4 @@
+#pragma once
 #include "core/Engine.h"
 #include "logging/Logger.h"
 #include <SFML/System/Sleep.hpp>
