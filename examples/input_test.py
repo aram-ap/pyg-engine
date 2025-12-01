@@ -31,12 +31,10 @@ class InputTest(GameObject):
     def update(self, deltatime: DeltaTime):
         input = self.engine.input
 
-
         # NOTE: All axis events are all floats [-1,1]
         #       All Keyboard events are bool True/False
         #       All Mouse Locations are Vector2: (x, y)
         #           Mouse Buttons are bool True/False
-
 
         # --------------------------------------------------------------------
 
