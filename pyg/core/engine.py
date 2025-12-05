@@ -10,6 +10,8 @@ class Engine:
     def __init__(self, name: str = "Pyg-Engine", tick_rate: int = 60):
         self._engine = _native.Engine()
         self.tick_rate = tick_rate
+        self.input = Input()
+
 
         if name == "Pyg-Engine":
             self._name = f"Pyg-Engine v{self.version}"

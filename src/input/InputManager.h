@@ -10,7 +10,7 @@ namespace pyg {
 // InputManager handles all input events and their corresponding callbacks.
 // From SFML, it's a singleton class.
 //
-class InputManager {
+class Input {
     public:
         static InputManager& getInstance();
         void update();

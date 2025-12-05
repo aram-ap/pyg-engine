@@ -51,9 +51,16 @@ namespace pyg {
     }
 
     long GameObject::getId() {
+        // Get the id
+        return id;
     }
 
+
     bool GameObject::isEnabled() {
+        // Get the enabled state
+        // Return true if enabled, false otherwise
+        // Default is true
+        return enabled;
     }
 
     void GameObject::setEnabled(bool enabled) {
