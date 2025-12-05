@@ -40,7 +40,6 @@ public:
     virtual std::vector<GameObject*> getChildren();
     virtual void removeAllChildren();
 
-
 private:
     long id;
     bool enabled;

@@ -27,9 +27,26 @@ public:
     virtual void pause();
     virtual void resume();
     virtual void restart();
-    virtual void exit();
+    virtual void setWindowTitle(std::string title);
+    virtual std::string getWindowTitle() const;
+    virtual void setWindowIcon(std::string icon);
+    virtual std::string getWindowIcon() const;
+    virtual void setWindowIcon(int width, int height, const unsigned char* data);
+    virtual void setWindowPosition(int x, int y);
+    virtual void setWindowStyle(Window::Style style);
+    virtual Window::Style getWindowStyle() const;
+    virtual void setWindowVerticalSyncEnabled(bool enabled);
+    virtual bool isWindowVerticalSyncEnabled() const;
+    virtual void setWindowFramerateLimit(unsigned int limit);
+    virtual unsigned int getWindowFramerateLimit() const;
+    virtual void setWindowMouseCursorVisible(bool visible);
+    virtual bool isWindowMouseCursorVisible() const;
+    virtual void setWindowMouseCursorGrabbed(bool grabbed);
+    virtual bool isWindowMouseCursorGrabbed() const;
+    virtual void setWindowSize(int width, int height);
     virtual void setWindow(Window* window);
     virtual Window* getWindow() const;
+    virtual void exit();
 
 private:
     int tickRate;

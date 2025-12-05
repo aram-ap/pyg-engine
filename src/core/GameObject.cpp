@@ -8,16 +8,46 @@
 namespace pyg {
 
     GameObject::GameObject(const long id, const std::string &name): id(0), enabled(true), name(name) {
-        // Assign a unique ID if none is provided
+        // Constructor
+
+        // Initialize the id
         if (id == 0) {
             static long nextId = 1;
             this->id = nextId++;
         } else {
             this->id = id;
         }
+
+        // Initialize the enabled state
+
+        // Initialize the name
+
+        // Initialize the parent
+
+        // Initialize the components
+
+        // Initialize the children
+
+        // Initialize the scene
+
+        // Add this object to the scene
+
     }
 
     GameObject::~GameObject() {
+        // Destructor
+        // Clean up any resources
+        // Remove this object from the scene
+        // Remove all children
+        // Remove all components
+        // Delete this object
+        // Reset the id
+        // Reset the enabled state
+        // Reset the name
+        // Reset the parent
+        // Reset the components
+        // Reset the children
+        // Reset the scene
     }
 
     long GameObject::getId() {
