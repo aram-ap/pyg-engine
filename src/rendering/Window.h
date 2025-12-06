@@ -20,6 +20,7 @@ public:
     virtual void setTitle(const std::string& title);
     virtual std::string getTitle() const;
     virtual void setIcon(const std::string& iconPath);
+    virtual void setIcon(unsigned int width, unsigned int height, const unsigned char* data);
     virtual void setSize(const sf::Vector2u& size);
     virtual sf::Vector2u getSize() const;
     virtual void setPosition(const sf::Vector2i& position);

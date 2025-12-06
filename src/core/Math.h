@@ -2,164 +2,36 @@
 // Created by Aram Aprahamian on 11/22/25.
 //
 
+#pragma once
+#include <cmath>
+#include <cfloat>
+#include <string>
+
 #ifndef MATH_H
 #define MATH_H
 
 namespace pyg {
 
 class Math {
+    private:
+
     public:
-        /* Vector2
-         *
-         * x = x-component
-         * y = y-component
-         */
-        struct Vector2 {
-            const float x;
-            const float y;
-        };
-
-        /* Vector3
-         *
-         * x = x-component
-         * y = y-component
-         * z = z-component
-         */
-        struct Vector3 {
-            const float x;
-            const float y;
-            const float z;
-        };
-
-        /* Vector4
-         *
-         * x = x-component
-         * y = y-component
-         * z = z-component
-         * w = w-component
-         */
-        struct Vector4 {
-            const float x;
-            const float y;
-            const float z;
-            const float w;
-        };
-
-        Math();
-        virtual ~Math();
-        static float PI;
-        static float EPSILON;
-        static float DEG2RAD;
-        static float RAD2DEG;
-        static float INFINITY;
-        static float NAN;
-        static float SQRT2;
-        static float SQRT3;
-        static float E;
-        static float GOLDEN_RATIO;
-        static float PHI;
-        static float TAU;
-        static float LOG2E;
-        static float LOG10E;
-        static float LN2;
-        static float LN10;
-        static float INVSQRT2;
-        static float INVSQRT3;
-
-        static Vector2 ZERO;
-        static Vector2 ONE;
-        static Vector2 UP;
-        static Vector2 DOWN;
-        static Vector2 LEFT;
-        static Vector2 RIGHT;
-
-        static Vector3 ZERO3;
-        static Vector3 ONE3;
-        static Vector3 UP3;
-        static Vector3 DOWN3;
-        static Vector3 LEFT3;
-        static Vector3 RIGHT3;
-
-        static Vector4 ZERO4;
-        static Vector4 ONE4;
-        static Vector4 UP4;
-        static Vector4 DOWN4;
-        static Vector4 LEFT4;
-        static Vector4 RIGHT4;
-        static Vector4 FORWARD;
-        static Vector4 BACK;
-        static Vector4 ZEROV;
-        static Vector4 ONEV;
-        static Vector4 UPV;
-        static Vector4 DOWNV;
-
-        static float dot(Vector2 a, Vector2 b);
-        static float dot(Vector3 a, Vector3 b);
-        static float dot(Vector4 a, Vector4 b);
-
-        static Vector2 cross(Vector2 a, Vector2 b);
-        static Vector3 cross(Vector3 a, Vector3 b);
-        static Vector4 cross(Vector4 a, Vector4 b);
-
-        static float length(Vector2 v);
-        static float length(Vector3 v);
-        static float length(Vector4 v);
-
-        static float distance(Vector2 a, Vector2 b);
-        static float distance(Vector3 a, Vector3 b);
-        static float distance(Vector4 a, Vector4 b);
-
-        static Vector2 normalize(Vector2 v);
-        static Vector3 normalize(Vector3 v);
-        static Vector4 normalize(Vector4 v);
-
-        static bool isNaN(Vector2 v);
-        static bool isNaN(Vector3 v);
-        static bool isNaN(Vector4 v);
-
-        static bool isInfinity(Vector2 v);
-        static bool isInfinity(Vector3 v);
-        static bool isInfinity(Vector4 v);
-
-        static bool isFinite(Vector2 v);
-        static bool isFinite(Vector3 v);
-        static bool isFinite(Vector4 v);
-
-        static bool isEqual(Vector2 a, Vector2 b);
-        static bool isEqual(Vector3 a, Vector3 b);
-        static bool isEqual(Vector4 a, Vector4 b);
-
-        static bool isGreater(Vector2 a, Vector2 b);
-        static bool isGreater(Vector3 a, Vector3 b);
-        static bool isGreater(Vector4 a, Vector4 b);
-
-        static bool isGreaterEqual(Vector2 a, Vector2 b);
-        static bool isGreaterEqual(Vector3 a, Vector3 b);
-        static bool isGreaterEqual(Vector4 a, Vector4 b);
-
-        static bool isLess(Vector2 a, Vector2 b);
-        static bool isLess(Vector3 a, Vector3 b);
-        static bool isLess(Vector4 a, Vector4 b);
-
-        static bool isLessEqual(Vector2 a, Vector2 b);
-        static bool isLessEqual(Vector3 a, Vector3 b);
-        static bool isLessEqual(Vector4 a, Vector4 b);
-
-        static bool isZero(Vector2 v);
-        static bool isZero(Vector3 v);
-        static bool isZero(Vector4 v);
-
-        static bool isNotZero(Vector2 v);
-        static bool isNotZero(Vector3 v);
-        static bool isNotZero(Vector4 v);
-
-        static bool isPositive(Vector2 v);
-        static bool isPositive(Vector3 v);
-        static bool isPositive(Vector4 v);
-
-        static bool isNegative(Vector2 v);
-        static bool isNegative(Vector3 v);
-        static bool isNegative(Vector4 v);
+        static constexpr float PI = 3.14159265358979323846f;
+        static constexpr float EPSILON = 0.00001f;
+        static constexpr float DEG2RAD = PI / 180.0f;
+        static constexpr float RAD2DEG = 180.0f / PI;
+        static constexpr float SQRT2 = 1.41421356237309504880f;
+        static constexpr float SQRT3 = 1.73205080756887729352f;
+        static constexpr float E = 2.71828182845904523536f;
+        static constexpr float GOLDEN_RATIO = (1 + 2.23606797749979f) / 2;
+        static constexpr float PHI = (1 + 2.23606797749979f) / 2;
+        static constexpr float TAU = 2 * PI;
+        static constexpr float LOG2E = 1.44269504088896340736f;
+        static constexpr float LOG10E = 0.434294481903251827651f;
+        static constexpr float LN2 = 0.693147180559945309417f;
+        static constexpr float LN10 = 2.3025;
+        static constexpr float INVSQRT2 = 0.707106781186547524401f;
+        static constexpr float INVSQRT3 = 0.577350269189625764509f;
 
         static bool isNaN(float value);
         static bool isInfinity(float value);

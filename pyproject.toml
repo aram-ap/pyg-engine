@@ -11,7 +11,6 @@ license = "MIT"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
-    "pymunk>=6.0.0",
     "numpy>=1.20.0",
 ]
 

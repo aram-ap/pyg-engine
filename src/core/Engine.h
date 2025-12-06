@@ -33,8 +33,8 @@ public:
     virtual std::string getWindowIcon() const;
     virtual void setWindowIcon(int width, int height, const unsigned char* data);
     virtual void setWindowPosition(int x, int y);
-    virtual void setWindowStyle(Window::Style style);
-    virtual Window::Style getWindowStyle() const;
+    // virtual void setWindowStyle(Window::Style style);
+    // virtual Window::Style getWindowStyle() const;
     virtual void setWindowVerticalSyncEnabled(bool enabled);
     virtual bool isWindowVerticalSyncEnabled() const;
     virtual void setWindowFramerateLimit(unsigned int limit);
@@ -44,6 +44,8 @@ public:
     virtual void setWindowMouseCursorGrabbed(bool grabbed);
     virtual bool isWindowMouseCursorGrabbed() const;
     virtual void setWindowSize(int width, int height);
+    virtual void setWindowVisible(bool visible);
+    virtual bool isWindowVisible() const;
     virtual void setWindow(Window* window);
     virtual Window* getWindow() const;
     virtual void exit();
@@ -53,9 +55,11 @@ private:
 
     Window* _window;
     bool _ownsWindow;
+    bool _windowVisible;
     sf::Clock _clock;
     bool _isPaused;
     bool _isRunning;
+    std::string _windowIconPath;
 };
 
 

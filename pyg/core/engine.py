@@ -12,7 +12,6 @@ class Engine:
         self.tick_rate = tick_rate
         self.input = Input()
 
-
         if name == "Pyg-Engine":
             self._name = f"Pyg-Engine v{self.version}"
         else:

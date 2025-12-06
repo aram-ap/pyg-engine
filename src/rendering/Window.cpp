@@ -13,7 +13,6 @@ Window::Window()
       _vsyncEnabled(false),
       _cursorVisible(true),
       _cursorGrabbed(false) {
-    create();
 }
 
 Window::~Window() {
@@ -71,6 +70,10 @@ void Window::setIcon(const std::string& iconPath) {
     _window.setIcon(image.getSize().x, image.getSize().y, image.getPixelsPtr());
 }
 
+void Window::setIcon(unsigned int width, unsigned int height, const unsigned char* data) {
+    _window.setIcon(width, height, data);
+}
+
 void Window::setSize(const sf::Vector2u& size) {
     _window.setSize(size);
 }
@@ -89,7 +92,9 @@ sf::Vector2i Window::getPosition() const {
 
 void Window::setVisible(bool visible) {
     _isVisible = visible;
-    _window.setVisible(visible);
+    if (_window.isOpen()) {
+        _window.setVisible(visible);
+    }
 }
 
 bool Window::isVisible() const {
