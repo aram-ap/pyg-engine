@@ -5,4 +5,5 @@
 #include "Renderer.h"
 
 namespace pyg {
+
 } // pyg

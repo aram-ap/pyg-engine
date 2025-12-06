@@ -37,7 +37,6 @@ Pyg-Engine combines the ease of use of Python with the performance of C++.
 | **Graphics** | SFML Graphics | 2D rendering, sprites, textures, shaders, OpenGL context |
 | **Window** | SFML Window | Window management, Input events |
 | **Audio** | SFML Audio | Sound effects, music |
-| **Physics** | pymunk | 2D physics simulation (wrapped) |
 | **UI** | ImGui | Debugger and Editor UI |
 | **Logging** | spdlog | Fast C++ logging library |
 | **Bindings** | pybind11 | C++ to Python interface |
@@ -86,7 +85,7 @@ sudo apt-get install -y \
 
 **macOS:**
 ```bash
-brew install sfml cmake
+brew install sfml cmake pybind11
 ```
 
 **Windows:**

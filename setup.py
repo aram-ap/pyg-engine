@@ -1,3 +1,4 @@
+#!/usr/local/bin python
 import os
 import re
 import subprocess
@@ -96,15 +97,34 @@ class CMakeBuild(build_ext):
             ["cmake", "--build", "."] + build_args, cwd=self.build_temp
         )
 
-setup(
-    name="pyg-engine",
-    version="0.1.0",
-    author="Aram Aprahamian",
-    author_email="aram@apra.dev",
-    description="A Python game engine with C++/SFML backend",
-    long_description="",
-    packages=find_packages(include=['pyg', 'pyg.*']),
-    ext_modules=[CMakeExtension("pyg._native")],
-    cmdclass={"build_ext": CMakeBuild},
-    zip_safe=False,
-)
+if __name__ == "__main__":
+    # --- Custom Logic: Support for --global flag ---
+    if "--global" in sys.argv:
+        # Remove the custom flag so it doesn't break setup()
+        sys.argv.remove("--global")
+
+        print("Detected --global flag: Installing package globally via pip...")
+        try:
+            # Call pip install . in the current process context
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "."])
+        except subprocess.CalledProcessError as e:
+            print(f"Error during global installation: {e}")
+            sys.exit(e.returncode)
+
+        print("Global installation complete.")
+        sys.exit(0)
+    # -----------------------------------------------
+
+    setup(
+        name="pyg-engine",
+        version="0.1.0",
+        author="Aram Aprahamian",
+        author_email="aram@apra.dev",
+        description="A Python game engine with C++/SFML backend",
+        long_description="",
+        packages=find_packages(include=['pyg', 'pyg.*']),
+        ext_modules=[CMakeExtension("pyg._native")],
+        cmdclass={"build_ext": CMakeBuild},
+        zip_safe=False,
+    )
+
