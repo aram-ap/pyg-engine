@@ -4,11 +4,71 @@ except ImportError:
     # Fallback for direct import or weird paths
     import _native
 
-from pyg import Math
+# Use _native.Math to avoid circular import issues
+Math = _native.Math
 
 class Color(_native.Color):
-    def __init__(self, r: int, g: int, b: int, a: int = 255):
-        super().__init__(Math.clamp_int(r, 0, 255), Math.clamp_int(g, 0, 255), Math.clamp_int(b, 0, 255), Math.clamp_int(a, 0, 255))
+    """Color class with RGBA components (0-255).
+    
+    Supports arithmetic operations and provides pre-defined color constants.
+    Component values are automatically clamped to 0-255 range and converted to integers.
+    """
+    
+    def __init__(self, r: int, g: int, b: int, a: int = 255) -> None:
+        """Initialize a Color with RGBA values.
+        
+        Args:
+            r: Red component (0-255)
+            g: Green component (0-255)
+            b: Blue component (0-255)
+            a: Alpha component (0-255), defaults to 255 (opaque)
+        """
+        super().__init__(
+            Math.clamp_int(int(r), 0, 255),
+            Math.clamp_int(int(g), 0, 255),
+            Math.clamp_int(int(b), 0, 255),
+            Math.clamp_int(int(a), 0, 255)
+        )
+    
+    @property
+    def r(self) -> int:
+        """Get the red component (0-255)."""
+        return _native.Color.r.fget(self)
+    
+    @r.setter
+    def r(self, value: float | int) -> None:
+        """Set the red component (0-255), automatically clamped and converted to int."""
+        _native.Color.r.fset(self, Math.clamp_int(int(value), 0, 255))
+    
+    @property
+    def g(self) -> int:
+        """Get the green component (0-255)."""
+        return _native.Color.g.fget(self)
+    
+    @g.setter
+    def g(self, value: float | int) -> None:
+        """Set the green component (0-255), automatically clamped and converted to int."""
+        _native.Color.g.fset(self, Math.clamp_int(int(value), 0, 255))
+    
+    @property
+    def b(self) -> int:
+        """Get the blue component (0-255)."""
+        return _native.Color.b.fget(self)
+    
+    @b.setter
+    def b(self, value: float | int) -> None:
+        """Set the blue component (0-255), automatically clamped and converted to int."""
+        _native.Color.b.fset(self, Math.clamp_int(int(value), 0, 255))
+    
+    @property
+    def a(self) -> int:
+        """Get the alpha component (0-255)."""
+        return _native.Color.a.fget(self)
+    
+    @a.setter
+    def a(self, value: float | int) -> None:
+        """Set the alpha component (0-255), automatically clamped and converted to int."""
+        _native.Color.a.fset(self, Math.clamp_int(int(value), 0, 255))
 
 Color.WHITE       = Color(255, 255, 255, 255)
 Color.BLACK       = Color(0, 0, 0, 255)
