@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
     setup(
         name="pyg-engine",
-        version="0.1.0",
+        version="1.1.0",
         author="Aram Aprahamian",
         author_email="aram@apra.dev",
         description="A Python game engine with C++/SFML backend",

@@ -64,11 +64,35 @@ public:
     return result;
   }
 
+  // Scalar division
+  Vector operator/(T scalar) const {
+    Vector result;
+    for (size_t i = 0; i < N; ++i) {
+        if (scalar == 0) {
+            throw std::runtime_error("Division by zero");
+        }
+      result.components[i] = components[i] / scalar;
+    }
+    return result;
+  }
+
   // Vector multiplication
   Vector operator*(const Vector &other) const {
     Vector result;
     for (size_t i = 0; i < N; ++i) {
       result.components[i] = components[i] * other.components[i];
+    }
+    return result;
+  }
+
+  // Vector division
+  Vector operator/(const Vector &other) const {
+    Vector result;
+    for (size_t i = 0; i < N; ++i) {
+        if (other.components[i] == 0) {
+            throw std::runtime_error("Division by zero");
+        }
+      result.components[i] = components[i] / other.components[i];
     }
     return result;
   }
@@ -88,7 +112,7 @@ public:
   // String representation for Python
   std::string toString() const {
     std::stringstream ss;
-    ss << "Vector" << N << "(";
+    ss << "(";
     for (size_t i = 0; i < N; ++i) {
       ss << components[i] << (i < N - 1 ? ", " : "");
     }

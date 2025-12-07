@@ -39,9 +39,11 @@ void bind_vector(py::module &m, const std::string &name) {
       .def(py::self + py::self)
       .def(py::self - py::self)
       .def(py::self * T())
+      .def(py::self / T())
       .def(
           "__rmul__", [](const Vec &v, T s) { return v * s; },
           py::is_operator())
+
 
       // Common Vector Functions
       .def("dot", &Vec::dot)

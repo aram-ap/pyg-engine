@@ -44,6 +44,9 @@ class Vector2:
     def __mul__(self, other: float) -> "Vector2":
         return Vector2(self.x * other, self.y * other)
 
+    # def __div__(self, other: float) -> "Vector2":
+    #     return Vector2(self.x / other, self.y / other)
+
     def __truediv__(self, other: float) -> "Vector2":
         return Vector2(self.x / other, self.y / other)
 
@@ -121,6 +124,9 @@ class Vector3:
 
     def __mul__(self, other: float) -> "Vector3":
         return Vector3(self.x * other, self.y * other, self.z * other)
+
+    # def __div__(self, other: float) -> "Vector3":
+    #     return Vector3(self.x / other, self.y / other, self.z / other)
 
     def __truediv__(self, other: float) -> "Vector3":
         return Vector3(self.x / other, self.y / other, self.z / other)
@@ -238,250 +244,335 @@ class Vector4:
     def __deepcopy__(self, memo) -> "Vector4":
         return Vector4(self.x, self.y, self.z, self.w)
 
-def dot(a: "Vector2", b: "Vector2") -> float:
-    return a.x * b.x + a.y * b.y
 
-def dot(a: "Vector3", b: "Vector3") -> float:
-    return a.x * b.x + a.y * b.y + a.z * b.z
+# pyright: ignore
+class Math:
 
-def dot(a: "Vector4", b: "Vector4") -> float:
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w
+    @staticmethod
+    def dot(a: "Vector2", b: "Vector2") -> float:
+        return a.x * b.x + a.y * b.y
 
-def cross(a: "Vector2", b: "Vector2") -> "Vector2":
-    return Vector2(a.y * b.x - a.x * b.y, a.x * b.y - a.y * b.x)
+    @staticmethod
+    def dot(a: "Vector3", b: "Vector3") -> float:
+        return a.x * b.x + a.y * b.y + a.z * b.z
 
-def cross(a: "Vector3", b: "Vector3") -> "Vector3":
-    return Vector3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x)
+    @staticmethod
+    def dot(a: "Vector4", b: "Vector4") -> float:
+        return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w
 
-def cross(a: "Vector4", b: "Vector4") -> "Vector4":
-    return Vector4(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x, a.w * b.x - a.x * b.w - a.y * b.z + a.z * b.y)
+    @staticmethod
+    def cross(a: "Vector2", b: "Vector2") -> "Vector2":
+        return Vector2(a.y * b.x - a.x * b.y, a.x * b.y - a.y * b.x)
 
-def length(v: "Vector2") -> float:
-    return math.sqrt(dot(v, v))
+    @staticmethod
+    def cross(a: "Vector3", b: "Vector3") -> "Vector3":
+        return Vector3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x)
 
-def length(v: "Vector3") -> float:
-    return math.sqrt(dot(v, v))
+    @staticmethod
+    def cross(a: "Vector4", b: "Vector4") -> "Vector4":
+        return Vector4(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x, a.w * b.x - a.x * b.w - a.y * b.z + a.z * b.y)
 
-def length(v: "Vector4") -> float:
-    return math.sqrt(dot(v, v))
+    @staticmethod
+    def length(v: "Vector2") -> float:
+        return math.sqrt(dot(v, v))
 
-def distance(a: "Vector2", b: "Vector2") -> float:
-    return length(a - b)
+    @staticmethod
+    def length(v: "Vector3") -> float:
+        return math.sqrt(dot(v, v))
 
-def distance(a: "Vector3", b: "Vector2") -> float:
-    return length(a - b)
+    @staticmethod
+    def length(v: "Vector4") -> float:
+        return math.sqrt(dot(v, v))
 
-def distance(a: "Vector4", b: "Vector2") -> float:
-    return length(a - b)
+    @staticmethod
+    def distance(a: "Vector2", b: "Vector2") -> float:
+        return length(a - b)
 
-def normalize(v: "Vector2") -> "Vector2":
-    return v / length(v)
+    @staticmethod
+    def distance(a: "Vector3", b: "Vector2") -> float:
+        return length(a - b)
 
-def normalize(v: "Vector3") -> "Vector3":
-    return v / length(v)
+    @staticmethod
+    def distance(a: "Vector4", b: "Vector2") -> float:
+        return length(a - b)
 
-def normalize(v: "Vector4") -> "Vector4":
-    return v / length(v)
+    @staticmethod
+    def normalize(v: "Vector2") -> "Vector2":
+        return v / length(v)
 
-def isNaN(v: "Vector2") -> bool:
-    return isNaN(v.x) or isNaN(v.y)
+    @staticmethod
+    def normalize(v: "Vector3") -> "Vector3":
+        return v / length(v)
 
-def isNaN(v: "Vector3") -> bool:
-    return isNaN(v.x) or isNaN(v.y) or isNaN(v.z)
+    @staticmethod
+    def normalize(v: "Vector4") -> "Vector4":
+        return v / length(v)
 
-def isNaN(v: "Vector4") -> bool:
-    return isNaN(v.x) or isNaN(v.y) or isNaN(v.z) or isNaN(v.w)
+    @staticmethod
+    def isNaN(v: "Vector2") -> bool:
+        return isNaN(v.x) or isNaN(v.y)
 
-def isInfinity(v: "Vector2") -> bool:
-    return isInfinity(v.x) or isInfinity(v.y)
+    @staticmethod
+    def isNaN(v: "Vector3") -> bool:
+        return isNaN(v.x) or isNaN(v.y) or isNaN(v.z)
 
-def isInfinity(v: "Vector3") -> bool:
-    return isInfinity(v.x) or isInfinity(v.y) or isInfinity(v.z)
+    @staticmethod
+    def isNaN(v: "Vector4") -> bool:
+        return isNaN(v.x) or isNaN(v.y) or isNaN(v.z) or isNaN(v.w)
 
-def isInfinity(v: "Vector4") -> bool:
-    return isInfinity(v.x) or isInfinity(v.y) or isInfinity(v.z) or isInfinity(v.w)
+    @staticmethod
+    def isInfinity(v: "Vector2") -> bool:
+        return isInfinity(v.x) or isInfinity(v.y)
 
-def isFinite(v: "Vector2") -> bool:
-    return isFinite(v.x) and isFinite(v.y)
+    @staticmethod
+    def isInfinity(v: "Vector3") -> bool:
+        return isInfinity(v.x) or isInfinity(v.y) or isInfinity(v.z)
 
-def isFinite(v: "Vector3") -> bool:
-    return isFinite(v.x) and isFinite(v.y) and isFinite(v.z)
+    @staticmethod
+    def isInfinity(v: "Vector4") -> bool:
+        return isInfinity(v.x) or isInfinity(v.y) or isInfinity(v.z) or isInfinity(v.w)
 
-def isFinite(v: "Vector4") -> bool:
-    return isFinite(v.x) and isFinite(v.y) and isFinite(v.z) and isFinite(v.w)
+    @staticmethod
+    def isFinite(v: "Vector2") -> bool:
+        return isFinite(v.x) and isFinite(v.y)
 
-def isEqual(a: "Vector2", b: "Vector2") -> bool:
-    return isEqual(a.x, b.x) and isEqual(a.y, b.y)
+    @staticmethod
+    def isFinite(v: "Vector3") -> bool:
+        return isFinite(v.x) and isFinite(v.y) and isFinite(v.z)
 
-def isEqual(a: "Vector3", b: "Vector3") -> bool:
-    return isEqual(a.x, b.x) and isEqual(a.y, b.y) and isEqual(a.z, b.z)
+    @staticmethod
+    def isFinite(v: "Vector4") -> bool:
+        return isFinite(v.x) and isFinite(v.y) and isFinite(v.z) and isFinite(v.w)
 
-def isEqual(a: "Vector4", b: "Vector4") -> bool:
-    return isEqual(a.x, b.x) and isEqual(a.y, b.y) and isEqual(a.z, b.z) and isEqual(a.w, b.w)
-
-def isGreater(a: "Vector2", b: "Vector2") -> bool:
-    return a.x > b.x and a.y > b.y
-
-def isGreater(a: "Vector3", b: "Vector3") -> bool:  # TODO: Implement
-    return a.x > b.x and a.y > b.y and a.z > b.z
-
-def isGreater(a: "Vector4", b: "Vector4") -> bool:  # TODO: Implement
-    return a.x > b.x and a.y > b.y and a.z > b.z and a.w > b.w
-
-def isGreaterEqual(a: "Vector2", b: "Vector2") -> bool:
-    return a.x >= b.x and a.y >= b.y
-
-def isGreaterEqual(a: "Vector3", b: "Vector3") -> bool:  # TODO: Implement
-    return a.x >= b.x and a.y >= b.y and a.z >= b.z
-
-def isGreaterEqual(a: "Vector4", b: "Vector4") -> bool:  # TODO: Implement
-    return a.x >= b.x and a.y >= b.y and a.z >= b.z and a.w >= b.w
-
-def isLess(a: "Vector2", b: "Vector2") -> bool:
-    return a.x < b.x and a.y < b.y
-
-def isLess(a: "Vector3", b: "Vector3") -> bool:  # TODO: Implement
-    return a.x < b.x and a.y < b.y and a.z < b.z
-
-def isLess(a: "Vector4", b: "Vector4") -> bool:  # TODO: Implement
-    return a.x < b.x and a.y < b.y and a.z < b.z and a.w < b.w
-
-def isLessEqual(a: "Vector2", b: "Vector2") -> bool:
-    return a.x <= b.x and a.y <= b.y
-
-def isLessEqual(a: "Vector3", b: "Vector3") -> bool:  # TODO: Implement
-    return a.x <= b.x and a.y <= b.y and a.z <= b.z
-
-def isLessEqual(a: "Vector4", b: "Vector4") -> bool:  # TODO: Implement
-    return a.x <= b.x and a.y <= b.y and a.z <= b.z and a.w <= b.w
-
-def isZero(v: "Vector2") -> bool:
-    return isEqual(v, ZERO)
-
-def isZero(v: "Vector3") -> bool:
-    return isEqual(v, ZERO3)
-
-def isZero(v: "Vector4") -> bool:
-    return isEqual(v, ZERO4)
-
-def isNotZero(v: "Vector2") -> bool:
-    return not isZero(v)
-
-def isNotZero(v: "Vector3") -> bool:
-    return not isZero(v)
-
-def isNotZero(v: "Vector4") -> bool:
-    return not isZero(v)
-
-def isPositive(v: "Vector2") -> bool:
-    return v.x > 0 and v.y > 0
-
-def isPositive(v: "Vector3") -> bool:
-    return v.x > 0 and v.y > 0 and v.z > 0
-
-def isPositive(v: "Vector4") -> bool:
-    return v.x > 0 and v.y > 0 and v.z > 0 and v.w > 0
-
-def isNegative(v: "Vector2") -> bool:
-    return v.x < 0 and v.y < 0
-
-def isNegative(v: "Vector3") -> bool:
-    return v.x < 0 and v.y < 0 and v.z < 0
-
-def isNegative(v: "Vector4") -> bool:
-    return v.x < 0 and v.y < 0 and v.z < 0 and v.w < 0
-
-def random() -> float:
-    return rand() / (float) RAND_MAX
-
-def random(min: float, max: float) -> float:
-    return min + (max - min) * random()
-
-def abs(value: float) -> float:
-    return value < 0 ? -value : value
-
-def sign(value: float) -> float:
-    return value < 0 ? -1 : 1
-
-def floor(value: float) -> float:
-    return (float) floor(value)
-
-def ceil(value: float) -> float:
-    return (float) ceil(value)
-
-def round(value: float) -> float:
-    return (float) round(value)
-
-def frac(value: float) -> float:
-    return value - floor(value)
-
-def mod(x: float, y: float) -> float:
-    return x - y * floor(x / y)
-
-def min(a: float, b: float) -> float:
-    return a < b ? a : b
-
-def max(a: float, b: float) -> float:
-    return a > b ? a : b
-
-def pow(x: float, y: float) -> float:
-    return powf(x, y)
-
-def sqrt(x: float) -> float:
-    return sqrtf(x)
-
-def sin(x: float) -> float:
-    return sinf(x)
-
-def cos(x: float) -> float:
-    return cosf(x)
-
-def tan(x: float) -> float:
-    return tanf(x)
-
-def asin(x: float) -> float:
-    return asinf(x)
-
-def acos(x: float) -> float:
-    return acosf(x)
-
-def atan(x: float) -> float:
-    return atanf(x)
-
-def atan2(y: float, x: float) -> float:
-    return atan2f(y, x)
-
-def exp(x: float) -> float:
-    return expf(x)
-
-def log(x: float) -> float:
-    return logf(x)
-
-def log2(x: float) -> float:
-    return log2f(x)
-
-def log10(x: float) -> float:
-    return log10f(x)
-
-def deg2rad(degrees: float) -> float:
-    return degrees * DEG2RAD
-
-def rad2deg(radians: float) -> float:
-    return radians * RAD2DEG
-
-def lerp(a: float, b: float, t: float) -> float:
-    return a * (1 - t) + b * t
-
-def clamp(value: float, min: float, max: float) -> float:
-    return value < min ? min : value > max ? max : value
-
-def smoothstep(edge0: float, edge1: float, x: float) -> float:
-    t = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f)
-    return t * t * (3 - 2 * t)
-
-def smootherstep(edge0: float, edge1: float, x: float) -> float:
-    x = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f)
-    return x * x * x * (x * (x * 6 - 15) + 10)
+    @staticmethod
+    def isEqual(a: "Vector2", b: "Vector2") -> bool:
+        return isEqual(a.x, b.x) and isEqual(a.y, b.y)
+
+    @staticmethod
+    def isEqual(a: "Vector3", b: "Vector3") -> bool:
+        return isEqual(a.x, b.x) and isEqual(a.y, b.y) and isEqual(a.z, b.z)
+
+    @staticmethod
+    def isEqual(a: "Vector4", b: "Vector4") -> bool:
+        return isEqual(a.x, b.x) and isEqual(a.y, b.y) and isEqual(a.z, b.z) and isEqual(a.w, b.w)
+
+    @staticmethod
+    def isGreater(a: "Vector2", b: "Vector2") -> bool:
+        return a.x > b.x and a.y > b.y
+
+    @staticmethod
+    def isGreater(a: "Vector3", b: "Vector3") -> bool:  # TODO: Implement
+        return a.x > b.x and a.y > b.y and a.z > b.z
+
+    @staticmethod
+    def isGreater(a: "Vector4", b: "Vector4") -> bool:  # TODO: Implement
+        return a.x > b.x and a.y > b.y and a.z > b.z and a.w > b.w
+
+    @staticmethod
+    def isGreaterEqual(a: "Vector2", b: "Vector2") -> bool:
+        return a.x >= b.x and a.y >= b.y
+
+    @staticmethod
+    def isGreaterEqual(a: "Vector3", b: "Vector3") -> bool:  # TODO: Implement
+        return a.x >= b.x and a.y >= b.y and a.z >= b.z
+
+    @staticmethod
+    def isGreaterEqual(a: "Vector4", b: "Vector4") -> bool:  # TODO: Implement
+        return a.x >= b.x and a.y >= b.y and a.z >= b.z and a.w >= b.w
+
+    @staticmethod
+    def isLess(a: "Vector2", b: "Vector2") -> bool:
+        return a.x < b.x and a.y < b.y
+
+    @staticmethod
+    def isLess(a: "Vector3", b: "Vector3") -> bool:  # TODO: Implement
+        return a.x < b.x and a.y < b.y and a.z < b.z
+
+    @staticmethod
+    def isLess(a: "Vector4", b: "Vector4") -> bool:  # TODO: Implement
+        return a.x < b.x and a.y < b.y and a.z < b.z and a.w < b.w
+
+    @staticmethod
+    def isLessEqual(a: "Vector2", b: "Vector2") -> bool:
+        return a.x <= b.x and a.y <= b.y
+
+    @staticmethod
+    def isLessEqual(a: "Vector3", b: "Vector3") -> bool:  # TODO: Implement
+        return a.x <= b.x and a.y <= b.y and a.z <= b.z
+
+    @staticmethod
+    def isLessEqual(a: "Vector4", b: "Vector4") -> bool:  # TODO: Implement
+        return a.x <= b.x and a.y <= b.y and a.z <= b.z and a.w <= b.w
+
+    @staticmethod
+    def isZero(v: "Vector2") -> bool:
+        return isEqual(v, ZERO)
+
+    @staticmethod
+    def isZero(v: "Vector3") -> bool:
+        return isEqual(v, ZERO3)
+
+    @staticmethod
+    def isZero(v: "Vector4") -> bool:
+        return isEqual(v, ZERO4)
+
+    @staticmethod
+    def isNotZero(v: "Vector2") -> bool:
+        return not isZero(v)
+
+    @staticmethod
+    def isNotZero(v: "Vector3") -> bool:
+        return not isZero(v)
+
+    @staticmethod
+    def isNotZero(v: "Vector4") -> bool:
+        return not isZero(v)
+
+    @staticmethod
+    def isPositive(v: "Vector2") -> bool:
+        return v.x > 0 and v.y > 0
+
+    @staticmethod
+    def isPositive(v: "Vector3") -> bool:
+        return v.x > 0 and v.y > 0 and v.z > 0
+
+    @staticmethod
+    def isPositive(v: "Vector4") -> bool:
+        return v.x > 0 and v.y > 0 and v.z > 0 and v.w > 0
+
+    @staticmethod
+    def isNegative(v: "Vector2") -> bool:
+        return v.x < 0 and v.y < 0
+
+    @staticmethod
+    def isNegative(v: "Vector3") -> bool:
+        return v.x < 0 and v.y < 0 and v.z < 0
+
+    @staticmethod
+    def isNegative(v: "Vector4") -> bool:
+        return v.x < 0 and v.y < 0 and v.z < 0 and v.w < 0
+
+    @staticmethod
+    def random() -> float:
+        return rand() / (float) RAND_MAX
+
+    @staticmethod
+    def random(min: float, max: float) -> float:
+        return min + (max - min) * random()
+
+    @staticmethod
+    def abs(value: float) -> float:
+        return value < 0 ? -value : value
+
+    @staticmethod
+    def sign(value: float) -> float:
+        return value < 0 ? -1 : 1
+
+    @staticmethod
+    def floor(value: float) -> float:
+        return (float) floor(value)
+
+    @staticmethod
+    def ceil(value: float) -> float:
+        return (float) ceil(value)
+
+    @staticmethod
+    def round(value: float) -> float:
+        return (float) round(value)
+
+    @staticmethod
+    def frac(value: float) -> float:
+        return value - floor(value)
+
+    @staticmethod
+    def mod(x: float, y: float) -> float:
+        return x - y * floor(x / y)
+
+    @staticmethod
+    def min(a: float, b: float) -> float:
+        return a < b ? a : b
+
+    @staticmethod
+    def max(a: float, b: float) -> float:
+        return a > b ? a : b
+
+    @staticmethod
+    def pow(x: float, y: float) -> float:
+        return powf(x, y)
+
+    @staticmethod
+    def sqrt(x: float) -> float:
+        return sqrtf(x)
+
+    @staticmethod
+    def sin(x: float) -> float:
+        return sinf(x)
+
+    @staticmethod
+    def cos(x: float) -> float:
+        return cosf(x)
+
+    @staticmethod
+    def tan(x: float) -> float:
+        return tanf(x)
+
+    @staticmethod
+    def asin(x: float) -> float:
+        return asinf(x)
+
+    @staticmethod
+    def acos(x: float) -> float:
+        return acosf(x)
+
+    @staticmethod
+    def atan(x: float) -> float:
+        return atanf(x)
+
+    @staticmethod
+    def atan2(y: float, x: float) -> float:
+        return atan2f(y, x)
+
+    @staticmethod
+    def exp(x: float) -> float:
+        return expf(x)
+
+    @staticmethod
+    def log(x: float) -> float:
+        return logf(x)
+
+    @staticmethod
+    def log2(x: float) -> float:
+        return log2f(x)
+
+    @staticmethod
+    def log10(x: float) -> float:
+        return log10f(x)
+
+    @staticmethod
+    def deg2rad(degrees: float) -> float:
+        return degrees * DEG2RAD
+
+    @staticmethod
+    def rad2deg(radians: float) -> float:
+        return radians * RAD2DEG
+
+    @staticmethod
+    def lerp(a: float, b: float, t: float) -> float:
+        return a * (1 - t) + b * t
+
+    @staticmethod
+    def clamp(value: float, min: float, max: float) -> float:
+        return value < min ? min : value > max ? max : value
+
+    @staticmethod
+    def smoothstep(edge0: float, edge1: float, x: float) -> float:
+        t = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f)
+        return t * t * (3 - 2 * t)
+
+    @staticmethod
+    def smootherstep(edge0: float, edge1: float, x: float) -> float:
+        x = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f)
+        return x * x * x * (x * (x * 6 - 15) + 10)
 
 ZERO = Vector2(0, 0)
 ONE = Vector2(1, 1)

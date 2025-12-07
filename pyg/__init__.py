@@ -38,6 +38,12 @@ Vector3.back = Vector3(0.0, 0.0, -1.0)
 
 Vector4.zero = Vector4(0.0, 0.0, 0.0, 0.0)
 Vector4.one = Vector4(1.0, 1.0, 1.0, 1.0)
+Vector4.up = Vector4(0.0, 1.0, 0.0, 1.0)
+Vector4.down = Vector4(0.0, -1.0, 0.0, 1.0)
+Vector4.left = Vector4(-1.0, 0.0, 0.0, 1.0)
+Vector4.right = Vector4(1.0, 0.0, 0.0, 1.0)
+Vector4.forward = Vector4(0.0, 0.0, 1.0, 1.0)
+Vector4.back = Vector4(0.0, 0.0, -1.0, 1.0)
 
 # Math Constants
 PI           = math.pi
@@ -86,6 +92,11 @@ def log_trace(message):
     """Log a message using the engine's logger with LogType.Trace"""
     _native.log_type(LogType.Trace, str(message))
 
+# """
+#     , "dot", "cross", "length", "distance", "normalize", "isNaN", "isInfinity", "isFinite", "isEqual", "isGreater", "isGreaterEqual", "isLess", "isLessEqual", "isZero", "isNotZero", "isPositive", "isNegative", "random", "abs", "sign", "floor", "ceil", "round", "frac", "mod", "min",
+#     "max", "pow", "sqrt", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "exp", "log", "log2", "log10", "deg2rad", "rad2deg", "lerp", "clamp", "smoothstep", "smootherstep",
+# """
+
 __all__ = [
     # Classes
     "Engine", "Logger", "LogType", "Window", "Input",
@@ -93,6 +104,11 @@ __all__ = [
 
     # Functions
     "log", "log_type", "log_error", "log_warning", "log_info", "log_debug", "log_trace",
+
+    # Math
+    "Math",
+
+
 
     # Scalar Constants
     "PI", "TAU", "EPSILON", "DEG2RAD", "RAD2DEG", "INFINITY", "NAN",
