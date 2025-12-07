@@ -58,9 +58,33 @@ LN2          = math.log(2)
 LN10         = math.log(10)
 
 # Module-level log function
-def log(message: str):
+def log(message):
     """Log a message using the engine's logger."""
-    _native.log(message)
+    _native.log(str(message))
+
+def log_type(log_type: LogType, message):
+    """Log a message using the engine's logger with LogType enum"""
+    _native.log_type(log_type, str(message))
+
+def log_error(message):
+    """Log a message using the engine's logger with LogType.Error"""
+    _native.log_type(LogType.Error, str(message))
+
+def log_warning(message):
+    """Log a message using the engine's logger with LogType.Warning"""
+    _native.log_type(LogType.Warning, str(message))
+
+def log_info(message):
+    """Log a message using the engine's logger with LogType.Info"""
+    _native.log_type(LogType.Info, str(message))
+
+def log_debug(message):
+    """Log a message using the engine's logger with LogType.Debug"""
+    _native.log_type(LogType.Debug, str(message))
+
+def log_trace(message):
+    """Log a message using the engine's logger with LogType.Trace"""
+    _native.log_type(LogType.Trace, str(message))
 
 __all__ = [
     # Classes
@@ -68,7 +92,7 @@ __all__ = [
     "Vector2", "Vector3", "Vector4",
 
     # Functions
-    "log",
+    "log", "log_type", "log_error", "log_warning", "log_info", "log_debug", "log_trace",
 
     # Scalar Constants
     "PI", "TAU", "EPSILON", "DEG2RAD", "RAD2DEG", "INFINITY", "NAN",

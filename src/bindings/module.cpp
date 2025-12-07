@@ -1,9 +1,8 @@
-#include <stdlib.h>
-#include <pybind11/pybind11.h>
 #include <pybind11/native_enum.h>
 #include <pybind11/operators.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <stdlib.h>
 
 #include "core/Engine.h"
 #include "core/Math.h"
@@ -19,12 +18,12 @@ void bind_vector(py::module &m, const std::string &name) {
   using Vec = pyg::Vector<N, T>;
 
   auto class_def = py::class_<Vec>(m, name.c_str())
-      .def(py::init<>())
-      .def(py::init([](const std::array<T, N> &args) {
-        Vec v;
-        v.components = args;
-        return v;
-      }));
+                       .def(py::init<>())
+                       .def(py::init([](const std::array<T, N> &args) {
+                         Vec v;
+                         v.components = args;
+                         return v;
+                       }));
 
   // Add constructors with individual arguments based on dimension
   if constexpr (N == 2) {
@@ -111,24 +110,18 @@ PYBIND11_MODULE(_native, m) {
                   py::arg("logFile") = "")
       .def_static("shutdown", &pyg::Logger::shutdown)
       .def_static("set_level", &pyg::Logger::setLevel)
-      .def_static("info", [](const std::string& msg) {
-          pyg::Logger::info(msg);
-      })
-      .def_static("debug", [](const std::string& msg) {
-          pyg::Logger::debug(msg);
-      })
-      .def_static("warn", [](const std::string& msg) {
-          pyg::Logger::warn(msg);
-      })
-      .def_static("error", [](const std::string& msg) {
-          pyg::Logger::error(msg);
-      })
-      .def_static("trace", [](const std::string& msg) {
-          pyg::Logger::trace(msg);
-      })
-      .def_static("critical", [](const std::string& msg) {
-          pyg::Logger::critical(msg);
-      });
+      .def_static("info",
+                  [](const std::string &msg) { pyg::Logger::info(msg); })
+      .def_static("debug",
+                  [](const std::string &msg) { pyg::Logger::debug(msg); })
+      .def_static("warn",
+                  [](const std::string &msg) { pyg::Logger::warn(msg); })
+      .def_static("error",
+                  [](const std::string &msg) { pyg::Logger::error(msg); })
+      .def_static("trace",
+                  [](const std::string &msg) { pyg::Logger::trace(msg); })
+      .def_static("critical",
+                  [](const std::string &msg) { pyg::Logger::critical(msg); });
 
   py::native_enum<pyg::Logger::Type>(m, "LogType", "enum.Enum")
       .value("Trace", pyg::Logger::Type::Trace)
@@ -151,8 +144,11 @@ PYBIND11_MODULE(_native, m) {
       .def("clear", &pyg::Window::clear)
       .def("set_title", &pyg::Window::setTitle)
       .def("get_title", &pyg::Window::getTitle)
-      .def("set_icon", static_cast<void (pyg::Window::*)(const std::string&)>(&pyg::Window::setIcon))
-      .def("set_icon", static_cast<void (pyg::Window::*)(unsigned int, unsigned int, const unsigned char*)>(&pyg::Window::setIcon))
+      .def("set_icon", static_cast<void (pyg::Window::*)(const std::string &)>(
+                           &pyg::Window::setIcon))
+      .def("set_icon", static_cast<void (pyg::Window::*)(
+                           unsigned int, unsigned int, const unsigned char *)>(
+                           &pyg::Window::setIcon))
       .def("set_size", &pyg::Window::setSize)
       .def("get_size", &pyg::Window::getSize)
       .def("set_position", &pyg::Window::setPosition)
@@ -193,8 +189,10 @@ PYBIND11_MODULE(_native, m) {
       .def_static("is_nan", &pyg::Math::isNaN)
       .def_static("is_infinity", &pyg::Math::isInfinity)
       .def_static("is_finite", &pyg::Math::isFinite)
-      .def_static("is_equal", static_cast<bool (*)(float, float)>(&pyg::Math::isEqual))
-      .def_static("is_equal", static_cast<bool (*)(float, float, float)>(&pyg::Math::isEqual))
+      .def_static("is_equal",
+                  static_cast<bool (*)(float, float)>(&pyg::Math::isEqual))
+      .def_static("is_equal", static_cast<bool (*)(float, float, float)>(
+                                  &pyg::Math::isEqual))
       .def_static("is_greater", &pyg::Math::isGreater)
       .def_static("is_greater_equal", &pyg::Math::isGreaterEqual)
       .def_static("is_less", &pyg::Math::isLess)
@@ -205,7 +203,8 @@ PYBIND11_MODULE(_native, m) {
       .def_static("is_negative", &pyg::Math::isNegative)
       // Random functions
       .def_static("random", static_cast<float (*)()>(&pyg::Math::random))
-      .def_static("random", static_cast<float (*)(float, float)>(&pyg::Math::random))
+      .def_static("random",
+                  static_cast<float (*)(float, float)>(&pyg::Math::random))
       // Basic math functions
       .def_static("abs", &pyg::Math::abs)
       .def_static("sign", &pyg::Math::sign)
@@ -247,11 +246,25 @@ PYBIND11_MODULE(_native, m) {
   bind_vector<4, float>(m, "Vec4");
 
   // Module-level log function
-  m.def("log", [](const std::string& msg) {
-      // Ensure logger is initialized
-      if (!pyg::Logger::getCoreLogger()) {
+  m.def(
+      "log",
+      [](const std::string &msg) {
+        // Ensure logger is initialized
+        if (!pyg::Logger::getCoreLogger()) {
           pyg::Logger::init("pyg_engine");
-      }
-      pyg::Logger::info(msg);
-  }, "Log a message using the engine's logger");
+        }
+        pyg::Logger::info(msg);
+      },
+      "Log a message using the engine's logger");
+
+  m.def(
+      "log_type",
+      [](const pyg::Logger::Type type, const std::string &msg) {
+        // Ensure logger is initialized
+        if (!pyg::Logger::getCoreLogger()) {
+          pyg::Logger::init("pyg_engine");
+        }
+        pyg::Logger::print(type, msg);
+      },
+      "Log a message using the engine's logger with LogType enum");
 }

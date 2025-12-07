@@ -42,11 +42,33 @@ class Engine:
     def get_window_title(self) -> str:
         return self._engine.get_window_title()
 
-    def log(self, message: str):
-        self._engine.log(message)
+    def log(self, message):
+        # Log to the engine
+        self._engine.log(str(message))
 
-    def log_type(self, log_type: LogType, message: str):
-        self._engine.log_type(log_type, message)
+    def log_type(self, log_type: LogType, message):
+        # Log to the engine with LogType enum
+        self._engine.log_type(log_type, str(message))
+
+    def log_error(self, message):
+        # Log to the engine with LogType.Error
+        self._engine.log_type(LogType.Error, str(message))
+
+    def log_warning(self, message):
+        # Log to the engine with LogType.Warning
+        self._engine.log_type(LogType.Warning, str(message))
+
+    def log_info(self, message):
+        # Log to the engine with LogType.Info
+        self._engine.log_type(LogType.Info, str(message))
+
+    def log_debug(self, message):
+        # Log to the engine with LogType.Debug
+        self._engine.log_type(LogType.Debug, str(message))
+
+    def log_trace(self, message):
+        # Log to the engine with LogType.Trace
+        self._engine.log_type(LogType.Trace, str(message))
 
     @property
     def name(self) -> str:

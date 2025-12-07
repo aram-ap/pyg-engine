@@ -32,12 +32,12 @@ void Logger::init(const std::string& name, const std::string& logFile) {
     spdlog::register_logger(s_CoreLogger);
     spdlog::set_default_logger(s_CoreLogger);
 
-    PYG_INFO("Logger initialized: {}", name);
+    // PYG_INFO("Logger initialized: {}", name);
 }
 
 void Logger::shutdown() {
     if (s_CoreLogger) {
-        PYG_INFO("Logger shutting down");
+        // PYG_INFO("Logger shutting down");
         s_CoreLogger->flush();
         spdlog::shutdown();
     }
