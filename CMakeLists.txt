@@ -80,7 +80,6 @@ set(CORE_SOURCES
         src/core/Engine.cpp
         src/rendering/Window.cpp
         src/core/Math.cpp
-        src/DataTypes/Vector.h
     src/logging/Logger.cpp
 )
 
