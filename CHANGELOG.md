@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0a6] - 2025-12-6
+**NOTE:**
+
+This is likely the last release using pure Python.
+
+Currently, the engine is being rewritten in C++ using PyBind11 and SFML.
+It will bring a lot of changes in writing conventions and syntax but will be
+much more efficient, easier to write, and stil compatible with Python.
+
+I'm putting a lot of work into improving the architecture of this project.
+Im reducing the amount of AI-made code and use of other dependencies.
+
+### Added
+- Added the sprite class to the pyg engine
+- Added audio manager
+- Added a new debugging system (WIP) that can be used to see gameobject variables in realtime
+    - Built with PyQt6
+- Added a variety of new examples
+- Added a new event system
+
+### Changed
+- Updated the documentation
+- Updated the examples
+- Updated the structure of the engine
+
+## [1.0.0a5] - 2025-8-2
+### Added
+- Created jekyll pages for documentation
+
+### Changed
+- Updated readme (added logo)
+
 ### Added
 - Added new `Mouse` class to input system for cleaner mouse input handling
   - `get_pos()` returns mouse position as tuple (x, y)
@@ -22,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Legacy mouse system remains available as alternative
 - Updated documentation to include Mouse class usage examples
 
-## [1.0.0a4] - 2025-01-XX
+## [1.0.0a4] - 2025-07-31
 
 ### Added
 - **Event System**: Comprehensive event-driven communication system
