@@ -7,6 +7,7 @@
 #include "core/Engine.h"
 #include "core/Math.h"
 #include "datatypes/Vector.h"
+#include "datatypes/Color.h"
 #include "logging/Logger.h"
 #include "rendering/Window.h"
 
@@ -213,6 +214,8 @@ PYBIND11_MODULE(_native, m) {
       .def_static("floor", &pyg::Math::floor)
       .def_static("ceil", &pyg::Math::ceil)
       .def_static("round", &pyg::Math::round)
+      .def_static("clamp_float", &pyg::Math::clamp_float)
+      .def_static("clamp_int", &pyg::Math::clamp_int)
       .def_static("frac", &pyg::Math::frac)
       .def_static("mod", &pyg::Math::mod)
       .def_static("min", &pyg::Math::min)
@@ -246,6 +249,47 @@ PYBIND11_MODULE(_native, m) {
   bind_vector<2, float>(m, "Vec2");
   bind_vector<3, float>(m, "Vec3");
   bind_vector<4, float>(m, "Vec4");
+
+    py::class_<pyg::Color>(m, "Color")
+        .def(py::init<>())
+        .def(py::init<uint8_t, uint8_t, uint8_t, uint8_t>(),
+             py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255)
+        // Arithmetic Operators
+        .def(py::self += py::self)
+        .def(py::self -= py::self)
+        .def(py::self *= py::self)
+        .def(py::self *= float())
+        .def(
+            "__rmul__", [](const pyg::Color &c, const float s) { return c * s; },
+            py::is_operator())
+        // Color Space Conversions
+        .def("to_srgb", &pyg::Color::SRGB)
+        .def("to_hsv", &pyg::Color::HSV)
+        .def("to_cmyk", &pyg::Color::CMYK)
+        // Static Utility
+        .def_static("lerp", &pyg::Color::lerp)
+        // String representation
+        .def("__repr__", &pyg::Color::toString)
+        // Properties
+        .def_property("r",
+                        [](const pyg::Color &c) { return c.r; },
+                        [](pyg::Color &c, const uint8_t val) { c.r = val; })
+        .def_property("g",
+                        [](const pyg::Color &c) { return c.g; },
+                        [](pyg::Color &c, const uint8_t val) { c.g = val; })
+        .def_property("b",
+                        [](const pyg::Color &c) { return c.b; },
+                        [](pyg::Color &c, const uint8_t val) { c.b = val; })
+        .def_property("a",
+                        [](const pyg::Color &c) { return c.a; },
+                        [](pyg::Color &c, const uint8_t val) { c.a = val; })
+        .def(py::self + py::self)
+        .def(py::self - py::self)
+        .def(py::self * py::self)
+        .def(py::self / py::self)
+        .def(py::self / float())
+        .def(py::self * float());
+
 
   // Module-level log function
   m.def(

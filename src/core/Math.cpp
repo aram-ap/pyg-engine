@@ -34,6 +34,14 @@ namespace pyg {
         return std::round(value);
     }
 
+    int Math::clamp_int(int value, int min, int max) {
+        return value < min ? min : value > max ? max : value;
+    }
+
+    float Math::clamp_float(float value, float min, float max) {
+        return value < min ? min : value > max ? max : value;
+    }
+
     float Math::frac(float value) {
         return value - floor(value);
     }

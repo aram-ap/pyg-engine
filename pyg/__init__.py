@@ -14,6 +14,7 @@ Math     = _native.Math
 
 # from .core.engine import Engine, LogType
 from .input.input_manager import Input
+from .types.color import Color
 
 Vector2  = _native.Vec2
 Vector3  = _native.Vec3
@@ -108,7 +109,8 @@ __all__ = [
     # Math
     "Math",
 
-
+    # Types
+    "Color",
 
     # Scalar Constants
     "PI", "TAU", "EPSILON", "DEG2RAD", "RAD2DEG", "INFINITY", "NAN",

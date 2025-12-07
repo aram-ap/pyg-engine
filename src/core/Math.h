@@ -54,6 +54,8 @@ class Math {
         static float floor(float value);
         static float ceil(float value);
         static float round(float value);
+        static float clamp_float(float value, float min, float max);
+        static int clamp_int(int value, int min, int max);
         static float frac(float value);
         static float mod(float x, float y);
         static float min(float a, float b);
