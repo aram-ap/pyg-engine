@@ -92,7 +92,7 @@ brew install sfml cmake pybind11
 - Install Visual Studio with C++ support
 - Install CMake from https://cmake.org/download/
 
-### Install from PyPI
+### Install from PyPI -- ONCE THIS IS RELEASED TO MAIN
 
 ```bash
 pip install pyg-engine
@@ -127,9 +127,80 @@ The project uses a hybrid build system:
 ```python
 import pyg
 
+class TestObject(GameObject):
+    def __init__(self, engine: Engine):
+        # You can create a game object like this
+        super().__init__("TestObject", engine)
+        self.position = Vector2(100, 100)
+        self.size = Vector2(50, 50)
+        self.color = Color(255, 0, 0)
+
+    def start(self):
+        # This function is called when the game object is created
+        pyg.log("Started TestObject")
+
+
+    def update(self, deltatime: DeltaTime):
+        # This function is called every frame
+        pass
+
+    def fixed_update(self, deltatime: DeltaTime):
+        # This function is called at a fixed rate (i.e., 60 times a second)
+        # Helpful if you wanted to create your own physics implementation
+        pass
+
+    def on_destroyed(self):
+        # This function is called when the game object is destroyed
+        pyg.log("Destroyed test object")
+
+
 def main():
+    # Create the engine
     engine = pyg.Engine()
-    print(f"Pyg-Engine Version: {engine.version}")
+
+    # Logging through the engine (optional)
+    pyg.log(f"Pyg-Engine Version: {engine.version}")
+
+    # Set the window size
+    engine.window.size = (700, 700)
+
+    # Disable the resize function
+    # (disabled by default but if you wanted to change it, here it is)
+    engine.window.resize = False
+
+    # Set FPS cap, default is uncapped (any value < 0)
+    engine.fps = 60
+
+    # Create our scene, this is where all game objects will exist
+    scene = Scene()
+
+    # The scene object has a camera object we can change to fit our needs
+    # - CameraType.Screenspace (default) indicates that the window serves as
+    # - the canvas for everything. (0,0) will always be at the center of the
+    # - worldspace
+    scene.camera.type = CameraType.Screenspace
+
+    # Screenspace.Center (default) specifies that our (0,0) point is at the
+    # - center of the screen. This can be changed to Screenspace.TopLeft,
+    # - TopCenter, TopRight, Left, Right, BottomLeft, BottomCenter, BottomRight
+    # - depending on your needs. The Screenspace location type is used only for
+    # - the Screenspace camera and/or canvas
+    scene.camera.screenspace_anchor = Screenspace.Center
+
+    # - CameraType.Worldspace would act as if the camera was a game object-
+    # - containing its own location (that can be changed), rotation, size, etc.
+    # - This would be more helpful with things like 2D platformers
+    # - scene.camera.type = CameraType.Worldspace
+
+    scene.camera.background = Color("#101010")
+
+    # The scene contains all our game information, so we need to add this to
+    # the engine. The scene object lets us easily swap out game scenes.
+    # I.e., helpful for platformers with multiple levels and others
+    engine.set_scene(scene)
+
+    # Start the scene
+    engine.begin()
 
 if __name__ == "__main__":
     main()

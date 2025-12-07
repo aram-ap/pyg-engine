@@ -1,3 +1,4 @@
+import pyg
 from pyg import *
 import numpy as np
 from enum import Enum
@@ -39,6 +40,10 @@ class Snake(GameObject):
 
     def update(self, deltatime: DeltaTime):
         # This function is called every frame
+
+        canvas = self.engine.window.canvas
+        # We can draw onto the window's canvas
+
         # Here, we do all rendering
 
         # With pyg-engine, there's two modes of drawing,
@@ -52,9 +57,6 @@ class Snake(GameObject):
         # the gameobject class such as side scrollers or other more complex
         # programs / games where you have multiple moving components,
         # visible game objects, etc. Think Unity Engine
-
-        # We can draw onto the window's canvas
-        canvas = self.engine.window.canvas
 
         # Clears everything on the screen (Sets to the camera background color)
         canvas.clear()
@@ -105,10 +107,10 @@ class Snake(GameObject):
 
 
 def main():
-    print("Starting Snake!")
+    pyg.log("Starting Snake!")
 
     # Initialize the pyg-engine core
-    engine = Engine()
+    engine = pyg.Engine()
 
     # Set the window size
     engine.window.size = (700, 700)
