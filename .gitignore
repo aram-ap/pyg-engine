@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Plans
+_plans/
+
 # C extensions
 *.so
 *.pyd
