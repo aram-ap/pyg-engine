@@ -194,6 +194,10 @@ def main():
 
     scene.camera.background = Color("#101010")
 
+    # Create a game object
+    test_object = TestObject(engine)
+    scene.add_gameobject(test_object)
+
     # The scene contains all our game information, so we need to add this to
     # the engine. The scene object lets us easily swap out game scenes.
     # I.e., helpful for platformers with multiple levels and others
