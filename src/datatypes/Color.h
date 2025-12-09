@@ -110,6 +110,23 @@ struct Color {
                ", " + std::to_string(b) + ", " + std::to_string(a) + ")";
     }
 
+    /**
+     * @brief Returns the RGBA value as a hex string (e.g., "#RRGGBBAA").
+     *
+     * @return std::string The color represented as a hex string.
+     */
+    [[nodiscard]] std::string toHex() const {
+        char buf[10]; // Enough for "#RRGGBBAA" + null terminator
+        snprintf(buf, sizeof(buf), "#%02X%02X%02X%02X", r, g, b, a);
+        return std::string(buf);
+    }
+
+    [[nodiscard]] std::string toRGBHex() const {
+        char buf[10]; // Enough for "#RRGGBB" + null terminator
+        snprintf(buf, sizeof(buf), "#%02X%02X%02X", r, g, b);
+        return std::string(buf);
+    }
+
     static Color lerp(const Color& a, const Color& b, float t) {
         t = std::clamp(t, 0.0f, 1.0f);
         return Color(

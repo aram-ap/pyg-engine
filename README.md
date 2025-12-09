@@ -6,9 +6,12 @@ A Python game engine with a high-performance C++ backend using SFML.
 
 ## What is Pyg-Engine?
 
-Pyg-Engine is a hybrid game engine designed to bridge the gap between Python's ease of use and C++'s raw performance. It allows developers to write gameplay logic, define scenes, and manage game objects entirely in Python, while the heavy lifting—rendering, physics integration, and input handling—is executed by a compiled C++ core.
+Pyg-Engine is a hybrid game engine designed to bridge the gap between Python's ease of use and C++'s raw performance.
+It allows developers to write gameplay logic, define scenes, and manage game objects entirely in Python, while the heavy lifting—rendering, physics integration, and input handling—is executed by a compiled C++ core.
 
 The engine is built around a Component-Entity-System (ECS) inspired architecture, making it modular and easy to extend. Whether you are building a simple 2D arcade game or a complex simulation, Pyg-Engine provides the tools to do so efficiently.
+
+> Note: While pyg-engine is designed with a C++ backend, I can't guarentee that it will be fast nor efficient. However, if you care more about usability, pyg-engine is for you.
 
 ### Core Components
 

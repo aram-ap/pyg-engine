@@ -266,6 +266,8 @@ PYBIND11_MODULE(_native, m) {
         .def("to_srgb", &pyg::Color::SRGB)
         .def("to_hsv", &pyg::Color::HSV)
         .def("to_cmyk", &pyg::Color::CMYK)
+        .def("to_hex", &pyg::Color::toHex)
+        .def("to_rgb_hex", &pyg::Color::toRGBHex)
         // Static Utility
         .def_static("lerp", &pyg::Color::lerp)
         // String representation
