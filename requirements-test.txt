@@ -1,0 +1,13 @@
+# Testing dependencies for pyg-engine
+# Install with: pip install -r requirements-test.txt
+
+# Core testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# Optional but recommended
+pytest-xdist>=3.0.0  # Run tests in parallel
+pytest-timeout>=2.1.0  # Timeout support for tests
+pytest-benchmark>=4.0.0  # Benchmark support
+

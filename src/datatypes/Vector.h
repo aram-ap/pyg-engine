@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include "core/Math.h"
 
 namespace pyg {
 // A generic fixed-size vector class
@@ -91,10 +92,25 @@ public:
     for (size_t i = 0; i < N; ++i) {
         if (other.components[i] == 0) {
             throw std::runtime_error("Division by zero");
-        }
-      result.components[i] = components[i] / other.components[i];
+        }      
+        result.components[i] = components[i] / other.components[i];
     }
     return result;
+  }
+
+  // Equality
+  bool operator==(const Vector &other) const {
+    for (size_t i = 0; i < N; ++i) {
+      if (std::abs(components[i] - other.components[i]) > Math::EPSILON) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Inequality
+  bool operator!=(const Vector &other) const {
+    return !(*this == other);
   }
 
   // Dot product: \( a \cdot b = \sum a_i b_i \)

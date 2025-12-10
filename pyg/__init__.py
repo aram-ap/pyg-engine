@@ -16,9 +16,9 @@ Math     = _native.Math
 from .input.input_manager import Input
 from .types.color import Color
 
-Vector2  = _native.Vec2
-Vector3  = _native.Vec3
-Vector4  = _native.Vec4
+Vector2  = _native.Vector2
+Vector3  = _native.Vector3
+Vector4  = _native.Vector4
 
 # Add Vector constants as class attributes
 Vector2.zero = Vector2(0.0, 0.0)

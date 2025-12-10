@@ -41,10 +41,52 @@ void bind_vector(py::module &m, const std::string &name) {
       .def(py::self - py::self)
       .def(py::self * T())
       .def(py::self / T())
+      .def(py::self * py::self)  // Vector multiplication
+      .def(py::self / py::self)  // Vector division
       .def(
           "__rmul__", [](const Vec &v, T s) { return v * s; },
           py::is_operator())
 
+      // Comparison Operators
+      .def(py::self == py::self)
+      .def(py::self != py::self)
+      .def("__lt__", [](const Vec &a, const Vec &b) {
+        for (size_t i = 0; i < N; ++i) {
+          if (a.components[i] >= b.components[i]) return false;
+        }
+        return true;
+      })
+      .def("__le__", [](const Vec &a, const Vec &b) {
+        for (size_t i = 0; i < N; ++i) {
+          if (a.components[i] > b.components[i]) return false;
+        }
+        return true;
+      })
+      .def("__gt__", [](const Vec &a, const Vec &b) {
+        for (size_t i = 0; i < N; ++i) {
+          if (a.components[i] <= b.components[i]) return false;
+        }
+        return true;
+      })
+      .def("__ge__", [](const Vec &a, const Vec &b) {
+        for (size_t i = 0; i < N; ++i) {
+          if (a.components[i] < b.components[i]) return false;
+        }
+        return true;
+      })
+
+      // Hash support
+      .def("__hash__", [](const Vec &v) {
+        size_t hash = 0;
+        for (size_t i = 0; i < N; ++i) {
+          hash ^= std::hash<T>{}(v.components[i]) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        }
+        return hash;
+      })
+
+      // Copy support
+      .def("__copy__", [](const Vec &v) { return Vec(v); })
+      .def("__deepcopy__", [](const Vec &v, py::dict) { return Vec(v); })
 
       // Common Vector Functions
       .def("dot", &Vec::dot)
@@ -55,7 +97,30 @@ void bind_vector(py::module &m, const std::string &name) {
       .def("__setitem__", [](Vec &v, size_t i, T val) { v[i] = val; })
 
       // String representation
-      .def("__repr__", &Vec::toString)
+      .def("__repr__", [name](const Vec &v) {
+        std::stringstream ss;
+        ss << name << "(";
+        for (size_t i = 0; i < N; ++i) {
+          if (i == 0) ss << "x=" << v.components[i];
+          else if (i == 1) ss << ", y=" << v.components[i];
+          else if (i == 2) ss << ", z=" << v.components[i];
+          else if (i == 3) ss << ", w=" << v.components[i];
+        }
+        ss << ")";
+        return ss.str();
+      })
+      .def("__str__", [name](const Vec &v) {
+        std::stringstream ss;
+        ss << name << "(";
+        for (size_t i = 0; i < N; ++i) {
+          if (i == 0) ss << "x=" << v.components[i];
+          else if (i == 1) ss << ", y=" << v.components[i];
+          else if (i == 2) ss << ", z=" << v.components[i];
+          else if (i == 3) ss << ", w=" << v.components[i];
+        }
+        ss << ")";
+        return ss.str();
+      })
 
       // Properties
       .def_property(
@@ -246,9 +311,9 @@ PYBIND11_MODULE(_native, m) {
       .def_static("smootherstep", &pyg::Math::smootherstep);
 
   // Vector Bindings
-  bind_vector<2, float>(m, "Vec2");
-  bind_vector<3, float>(m, "Vec3");
-  bind_vector<4, float>(m, "Vec4");
+  bind_vector<2, float>(m, "Vector2");
+  bind_vector<3, float>(m, "Vector3");
+  bind_vector<4, float>(m, "Vector4");
 
     py::class_<pyg::Color>(m, "Color")
         .def(py::init<>())
