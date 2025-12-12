@@ -49,16 +49,20 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(SFML)
 
 # GLFW
-find_package(glfw3 3.4 REQUIRED)
 find_package(OpenGL REQUIRED)
 
 FetchContent_Declare(
-    GLFW
+    glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG 3.4
 )
 
-set(GLFW)
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(glfw)
 
 # ImGui - keeping declared but not used for this minimal example to preserve build setup
 FetchContent_Declare(
@@ -102,6 +106,7 @@ set(CORE_SOURCES
         src/core/Engine.cpp
         src/rendering/Window.cpp
         src/core/Math.cpp
+            src/gl.c
     src/logging/Logger.cpp
 )
 
