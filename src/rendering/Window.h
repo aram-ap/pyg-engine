@@ -15,8 +15,22 @@ public:
                         const std::string& title = "Pyg-Engine");
     virtual bool isOpen() const;
     virtual void pollEvents();
-    virtual void display();
+
+    /** Renders the window, full pipeline
+     *  @return frame time
+     */
+    virtual sf::Time display();
+
+    /**
+     * Clears the screen, filling it with a single color (Default black)
+     * @param color Color to fill the screen
+     */
     virtual void clear(const sf::Color& color = sf::Color::Black);
+
+    /**
+     * The window name
+     * @param title display title
+     */
     virtual void setTitle(const std::string& title);
     virtual std::string getTitle() const;
     virtual void setIcon(const std::string& iconPath);
@@ -48,6 +62,7 @@ private:
     bool _vsyncEnabled;
     bool _cursorVisible;
     bool _cursorGrabbed;
+    sf::Clock _lastFrameTime;
 };
 
 } // namespace pyg

@@ -5,7 +5,19 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <string>
+#include <SFML/Graphics/Color.hpp>
+#include <SFML/Graphics/RenderTexture.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/Graphics/View.hpp>
+#include <SFML/System/Vector2.hpp>
+
 namespace pyg {
+
+// Forward declarations for undefined types
+class View;
+class Projection;
+class RenderTarget;
 
 class Renderer {
 

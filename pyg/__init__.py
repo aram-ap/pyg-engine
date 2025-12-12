@@ -1,10 +1,32 @@
 import math
 import sys
+import os
 
+# Import the native C++ extension module
 try:
     from pyg import _native
-except ImportError:
-    import _native # Fallback?
+except ImportError as e:
+    # Fallback for development builds where _native might be in the same directory
+    try:
+        import _native
+    except ImportError:
+        # Provide helpful error message with debugging information
+        pyg_dir = os.path.dirname(os.path.abspath(__file__))
+        files_in_pyg = os.listdir(pyg_dir) if os.path.exists(pyg_dir) else []
+        native_files = [f for f in files_in_pyg if '_native' in f.lower()]
+        
+        error_msg = (
+            f"Failed to import _native module.\n"
+            f"Original error: {e}\n"
+            f"pyg directory: {pyg_dir}\n"
+            f"Files matching '_native': {native_files if native_files else 'None found'}\n"
+            f"All files in pyg/: {files_in_pyg}\n\n"
+            f"Please ensure you've built the extension with:\n"
+            f"  python setup.py build_ext --inplace -j 10\n"
+            f"Or install the package:\n"
+            f"  pip install -e ."
+        )
+        raise ImportError(error_msg) from e
 
 Engine   = _native.Engine
 Logger   = _native.Logger

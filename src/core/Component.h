@@ -8,9 +8,8 @@
 #ifndef COMPONENT_H
 #define COMPONENT_H
 #include <string>
-#include <objc/objc.h>
+#include <vector>
 
-#include "../../.venv/lib/python3.12/site-packages/pybind11/include/pybind11/typing.h"
 #include "SFML/Graphics/Color.hpp"
 #include "SFML/Graphics/Sprite.hpp"
 #include "SFML/Graphics/Texture.hpp"

@@ -1,6 +1,11 @@
 include CMakeLists.txt
 include install_deps.py
+include LICENSE
+include README.md
 recursive-include src *
 recursive-include include *
 recursive-include external *
+recursive-include pyg *.pyd
+recursive-include pyg *.so
+recursive-include pyg *.dylib
 

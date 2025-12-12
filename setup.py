@@ -125,6 +125,10 @@ if __name__ == "__main__":
         packages=find_packages(include=['pyg', 'pyg.*']),
         ext_modules=[CMakeExtension("pyg._native")],
         cmdclass={"build_ext": CMakeBuild},
+        package_data={
+            'pyg': ['*.pyd', '*.so', '*.dylib', '_native.*'],
+        },
+        include_package_data=True,
         zip_safe=False,
     )
 

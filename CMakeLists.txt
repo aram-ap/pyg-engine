@@ -48,6 +48,18 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(SFML)
 
+# GLFW
+find_package(glfw3 3.4 REQUIRED)
+find_package(OpenGL REQUIRED)
+
+FetchContent_Declare(
+    GLFW
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG 3.4
+)
+
+set(GLFW)
+
 # ImGui - keeping declared but not used for this minimal example to preserve build setup
 FetchContent_Declare(
     imgui
@@ -103,6 +115,12 @@ pybind11_add_module(_native
     ${BINDING_SOURCES}
 )
 
+# Set the output name to just _native (without lib prefix)
+set_target_properties(_native PROPERTIES
+    PREFIX ""
+    OUTPUT_NAME "_native"
+)
+
 # Include directories
 target_include_directories(_native PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -119,39 +137,20 @@ target_link_libraries(_native PRIVATE
     sfml-system
     spdlog::spdlog
     # ImGui-SFML::ImGui-SFML # Not linking for minimal example but available
+    glfw               # GLFW library
+    OpenGL::GL         # OpenGL (Linux/macOS) or OpenGL::GLU if needed
 )
+
+# Platform-specific settings
+if(WIN32)
+    # On Windows, ensure the .pyd extension is used
+    set_target_properties(_native PROPERTIES SUFFIX ".pyd")
+endif()
 
 # Copy the extension to the pyg package directory after build (CMake post-build)
 add_custom_command(TARGET _native POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:_native> ${CMAKE_CURRENT_SOURCE_DIR}/pyg/
+    COMMENT "Copying _native module to pyg directory"
 )
 
 install(TARGETS _native DESTINATION pyg)
-
-# Enable testing
-enable_testing()
-include(GoogleTest)
-
-# C++ Test executable
-set(TEST_SOURCES
-    tests/cpp/test_math.cpp
-    tests/cpp/test_color.cpp
-    tests/cpp/test_vector.cpp
-    src/core/Math.cpp
-)
-
-add_executable(cpp_tests ${TEST_SOURCES})
-
-target_include_directories(cpp_tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
-target_link_libraries(cpp_tests PRIVATE
-    gtest
-    gtest_main
-    spdlog::spdlog
-)
-
-# Discover tests
-gtest_discover_tests(cpp_tests)

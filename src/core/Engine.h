@@ -2,6 +2,7 @@
 #include <SFML/System.hpp>
 #include "logging/Logger.h"
 #include <string>
+#include "GameObject.h"
 #include "../rendering/Window.h"
 
 namespace pyg {
@@ -17,6 +18,7 @@ public:
     virtual int getTickRate() const;
     virtual void setTickRate(int tickRate);
     virtual void update(sf::Time deltaTime);
+    virtual void fixedUpdate(sf::Time deltaTime);
     virtual void render();
     virtual void on_destroy();
     virtual void logType(Logger::Type type, std::string msg);
@@ -27,6 +29,16 @@ public:
     virtual void pause();
     virtual void resume();
     virtual void restart();
+
+    // Game Object Items
+    virtual void addGameObject(GameObject* gameObject);
+    virtual GameObject* searchGameObjectByName(std::string name);
+    virtual void removeGameObject(GameObject* gameObject);
+    virtual void removeAllGameObjects();
+
+
+    // Window things
+
     virtual void setWindowTitle(std::string title);
     virtual std::string getWindowTitle() const;
     virtual void setWindowIcon(std::string icon);
@@ -48,18 +60,23 @@ public:
     virtual bool isWindowVisible() const;
     virtual void setWindow(Window* window);
     virtual Window* getWindow() const;
+    /**
+     * @return The total engine runtime
+     */
+    virtual sf::Time getElapsedTime() const;
     virtual void exit();
 
 private:
     int tickRate;
-
     Window* _window;
     bool _ownsWindow;
     bool _windowVisible;
-    sf::Clock _clock;
+    sf::Clock _clock;       //
+    sf::Clock _systemClock;     // Basically don't restart this unless the engine is fully restarted
     bool _isPaused;
     bool _isRunning;
     std::string _windowIconPath;
+    std::vector<pyg::GameObject*> _gameObjects;
 };
 
 

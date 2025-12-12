@@ -7,6 +7,7 @@
 #include <vector>
 #include "Component.h"
 #include "logging/Logger.h"
+#include "SFML/System/Time.hpp"
 
 #ifndef GAMEOBJECT_H
 #define GAMEOBJECT_H
@@ -39,6 +40,8 @@ public:
     virtual GameObject* clone();
     virtual std::vector<GameObject*> getChildren();
     virtual void removeAllChildren();
+    virtual void update(const sf::Time deltaTime);
+    virtual void fixedUpdate(const sf::Time deltaTime);
 
 private:
     long id;

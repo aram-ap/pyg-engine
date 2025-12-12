@@ -4,6 +4,7 @@
 #pragma once
 #include "GameObject.h"
 #include "Component.h"
+#include "SFML/System/Time.hpp"
 
 namespace pyg {
 
@@ -100,6 +101,25 @@ namespace pyg {
     }
 
     std::vector<GameObject *> GameObject::getChildren() {
+    }
+
+    Component * GameObject::getComponentByName(const std::string &name) {
+    }
+
+    Component * GameObject::getComponentById(const long id) {
+    }
+
+    std::vector<Component *> GameObject::getAllComponents() {
+    }
+
+    void GameObject::addComponent(Component *component) {
+    }
+
+    void GameObject::update(const sf::Time deltaTime) {
+    }
+
+    void GameObject::fixedUpdate(const sf::Time deltaTime) {
+
     }
 
     void GameObject::removeAllChildren() {

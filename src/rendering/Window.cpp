@@ -44,8 +44,10 @@ void Window::pollEvents() {
     }
 }
 
-void Window::display() {
+sf::Time Window::display() {
+    _lastFrameTime.restart();
     _window.display();
+    return _lastFrameTime.restart();
 }
 
 void Window::clear(const sf::Color& color) {

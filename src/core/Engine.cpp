@@ -3,7 +3,10 @@
 #include "rendering/Window.h"
 #include "logging/Logger.h"
 #include <SFML/System/Sleep.hpp>
+#include <algorithm>
 #include <cstdlib>
+#include <filesystem>
+#include <vector>
 
 namespace pyg {
     const std::string Engine::VERSION = "0.1.0";
@@ -30,6 +33,14 @@ namespace pyg {
     }
 
     Engine::~Engine() {
+        // Free any GameObjects
+        for (const GameObject* child : _gameObjects) {
+            if (child == nullptr)
+                continue;
+            delete child;
+            child = nullptr;
+        }
+
         if (_ownsWindow) {
             delete _window;
         }
@@ -41,6 +52,15 @@ namespace pyg {
             return;
         }
         PYG_INFO("Engine stopping");
+
+        for (const GameObject* child : _gameObjects) {
+            if (child == nullptr)
+                continue;
+
+            delete child;
+            child = nullptr;
+        }
+
         _isRunning = false;
         if (_window) {
             _window->close();
@@ -59,6 +79,7 @@ namespace pyg {
             _window->create();
             _ownsWindow = true;
         }
+        _clock.restart();
 
         PYG_INFO("Engine starting");
         _isRunning = true;
@@ -66,13 +87,12 @@ namespace pyg {
         // If no window was created (visibility is false), run without window
         if (!_window) {
             while (_isRunning) {
-                sf::Time frameTime = _clock.restart();
+                const sf::Time frameTime = _clock.restart();
                 update(frameTime);
-                render();
             }
         } else {
             while (_isRunning && _window->isOpen()) {
-                sf::Time frameTime = _clock.restart();
+                const sf::Time frameTime = _clock.restart();
                 update(frameTime);
                 render();
             }
@@ -85,21 +105,40 @@ namespace pyg {
     /* @param deltaTime: The time elapsed since the last frame
      *
      */
-    void Engine::update(sf::Time deltaTime) {
+    void Engine::update(const sf::Time deltaTime) {
         if (_isPaused) {
+            _clock.restart();
             return;
         }
 
-        if (tickRate > 0) {
-            const float targetSeconds = 1.0f / static_cast<float>(tickRate);
-            if (deltaTime.asSeconds() < targetSeconds) {
-                sf::sleep(sf::seconds(targetSeconds - deltaTime.asSeconds()));
-                deltaTime = _clock.restart();
-            }
+        for (GameObject* _child : _gameObjects) {
+            if (_child == nullptr)
+                continue;
+
+            _child->update(deltaTime);
         }
 
         if (_window) {
             _window->pollEvents();
+        }
+    }
+
+    void Engine::fixedUpdate(sf::Time deltaTime) {
+        if (tickRate > 0) {
+            const float targetSeconds = 1.0f / static_cast<float>(tickRate);
+            if (deltaTime.asSeconds() >= targetSeconds) {
+                return;
+            }
+
+            sf::sleep(sf::seconds(targetSeconds - deltaTime.asSeconds()));
+            deltaTime = _clock.restart();
+        }
+
+        for (GameObject* _child : _gameObjects) {
+            if (_child == nullptr)
+                continue;
+
+            _child->fixedUpdate(deltaTime);
         }
     }
 
@@ -312,4 +351,40 @@ namespace pyg {
         }
         return _windowVisible;
     }
+
+    sf::Time Engine::getElapsedTime() const {
+        return _systemClock.getElapsedTime();
+    }
+
+    // GameObject management methods
+    void Engine::addGameObject(GameObject* gameObject) {
+        if (gameObject != nullptr) {
+            _gameObjects.push_back(gameObject);
+        }
+    }
+
+    GameObject* Engine::searchGameObjectByName(std::string name) {
+        for (GameObject* obj : _gameObjects) {
+            if (obj != nullptr && obj->getName() == name) {
+                return obj;
+            }
+        }
+        return nullptr;
+    }
+
+    void Engine::removeGameObject(GameObject* gameObject) {
+        if (gameObject == nullptr) {
+            return;
+        }
+        
+        auto it = std::find(_gameObjects.begin(), _gameObjects.end(), gameObject);
+        if (it != _gameObjects.end()) {
+            _gameObjects.erase(it);
+        }
+    }
+
+    void Engine::removeAllGameObjects() {
+        _gameObjects.clear();
+    }
+
 } // namespace pyg

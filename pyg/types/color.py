@@ -2,7 +2,7 @@ try:
     from pyg import _native
 except ImportError:
     # Fallback for direct import or weird paths
-    import _native
+    import _native # pyright: ignore[reportMissingImports]
 
 # Use _native.Math to avoid circular import issues
 Math = _native.Math
