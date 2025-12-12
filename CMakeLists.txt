@@ -120,11 +120,9 @@ pybind11_add_module(_native
     ${BINDING_SOURCES}
 )
 
-# Set the output name to just _native (without lib prefix)
-set_target_properties(_native PROPERTIES
-    PREFIX ""
-    OUTPUT_NAME "_native"
-)
+# Note: pybind11_add_module automatically sets the correct naming with ABI tags
+# e.g., _native.cp312-win_amd64.pyd on Windows, _native.cpython-312-x86_64-linux-gnu.so on Linux
+# Do not override PREFIX, OUTPUT_NAME, or SUFFIX unless you have a specific reason
 
 # Include directories
 target_include_directories(_native PRIVATE
@@ -147,15 +145,15 @@ target_link_libraries(_native PRIVATE
 )
 
 # Platform-specific settings
-if(WIN32)
-    # On Windows, ensure the .pyd extension is used
-    set_target_properties(_native PROPERTIES SUFFIX ".pyd")
-endif()
+# Note: pybind11_add_module automatically handles platform-specific extensions
+# (.pyd on Windows, .so on Linux/macOS)
 
 # Copy the extension to the pyg package directory after build (CMake post-build)
-add_custom_command(TARGET _native POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:_native> ${CMAKE_CURRENT_SOURCE_DIR}/pyg/
-    COMMENT "Copying _native module to pyg directory"
-)
+# NOTE: Disabled when using pip install, as pip manages file placement via CMAKE_LIBRARY_OUTPUT_DIRECTORY
+# For manual builds with cmake directly, you may need to manually copy the built .pyd/.so file
+# add_custom_command(TARGET _native POST_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:_native> ${CMAKE_CURRENT_SOURCE_DIR}/pyg/
+#     COMMENT "Copying _native module to pyg directory"
+# )
 
 install(TARGETS _native DESTINATION pyg)

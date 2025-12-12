@@ -2,6 +2,12 @@ import math
 import sys
 import os
 
+# On Windows, add the package directory to DLL search path
+# This ensures that any DLLs the _native module depends on can be found
+if sys.platform == 'win32' and hasattr(os, 'add_dll_directory'):
+    pyg_dir = os.path.dirname(os.path.abspath(__file__))
+    os.add_dll_directory(pyg_dir)
+
 # Import the native C++ extension module
 try:
     from pyg import _native
