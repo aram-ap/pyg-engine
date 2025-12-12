@@ -3,8 +3,11 @@ project(pyg_engine C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# This is for OpenGL (If we decide to move towards it)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Detect platform
@@ -51,39 +54,39 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(SFML)
 
 # GLFW
-find_package(OpenGL REQUIRED)
-
-FetchContent_Declare(
-    glfw
-    GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG 3.4
-)
-
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-
-FetchContent_MakeAvailable(glfw)
+#find_package(OpenGL REQUIRED)
+#
+#FetchContent_Declare(
+#    glfw
+#    GIT_REPOSITORY https://github.com/glfw/glfw.git
+#    GIT_TAG 3.4
+#)
+#
+#set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+#set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+#set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+#set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+#
+#FetchContent_MakeAvailable(glfw)
 
 # ImGui - keeping declared but not used for this minimal example to preserve build setup
-FetchContent_Declare(
-    imgui
-    GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.89.9
-)
-FetchContent_MakeAvailable(imgui)
-
-set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "Path to ImGui source" FORCE)
-set(IMGUI_SFML_FIND_SFML OFF CACHE BOOL "" FORCE)
-set(IMGUI_SFML_IMGUI_DEMO OFF CACHE BOOL "" FORCE)
-
-FetchContent_Declare(
-    imgui-sfml
-    GIT_REPOSITORY https://github.com/SFML/imgui-sfml.git
-    GIT_TAG v2.6
-)
-FetchContent_MakeAvailable(imgui-sfml)
+#FetchContent_Declare(
+#    imgui
+#    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+#    GIT_TAG v1.89.9
+#)
+#FetchContent_MakeAvailable(imgui)
+#
+#set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "Path to ImGui source" FORCE)
+#set(IMGUI_SFML_FIND_SFML OFF CACHE BOOL "" FORCE)
+#set(IMGUI_SFML_IMGUI_DEMO OFF CACHE BOOL "" FORCE)
+#
+#FetchContent_Declare(
+#    imgui-sfml
+#    GIT_REPOSITORY https://github.com/SFML/imgui-sfml.git
+#    GIT_TAG v2.6
+#)
+#FetchContent_MakeAvailable(imgui-sfml)
 
 # spdlog
 FetchContent_Declare(
@@ -108,7 +111,6 @@ set(CORE_SOURCES
         src/core/Engine.cpp
         src/rendering/Window.cpp
         src/core/Math.cpp
-            src/gl.c
     src/logging/Logger.cpp
 )
 
@@ -130,8 +132,8 @@ pybind11_add_module(_native
 target_include_directories(_native PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${imgui_SOURCE_DIR}
-    ${imgui-sfml_SOURCE_DIR}
+#    ${imgui_SOURCE_DIR}
+#    ${imgui-sfml_SOURCE_DIR}
 )
 
 # Link libraries
@@ -142,8 +144,8 @@ target_link_libraries(_native PRIVATE
     sfml-system
     spdlog::spdlog
     # ImGui-SFML::ImGui-SFML # Not linking for minimal example but available
-    glfw               # GLFW library
-    OpenGL::GL         # OpenGL (Linux/macOS) or OpenGL::GLU if needed
+#    glfw               # GLFW library
+#    OpenGL::GL         # OpenGL (Linux/macOS) or OpenGL::GLU if needed
 )
 
 # Platform-specific settings

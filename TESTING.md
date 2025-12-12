@@ -419,23 +419,6 @@ TEST_F(ColorTest, TestColorAddition) {
 
 Use `ASSERT_*` instead of `EXPECT_*` to abort the test on failure.
 
-## Test Organization
-
-### Directory Structure
-
-```
-tests/
-├── __init__.py              # Test package initialization
-├── conftest.py             # Pytest configuration and shared fixtures
-├── test_color.py           # Color class tests
-├── test_math.py            # Math utilities tests
-├── test_native_bindings.py # C++ binding tests
-└── cpp/                    # C++ tests
-    ├── test_math.cpp       # Math class tests
-    ├── test_color.cpp      # Color class tests
-    └── test_vector.cpp     # Vector class tests
-```
-
 ### Test Markers
 
 Available pytest markers:
