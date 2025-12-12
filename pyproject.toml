@@ -7,7 +7,7 @@ name = "pyg-engine"
 version = "1.1.0"
 description = "A Python game engine with C++/SFML backend"
 authors = [{name = "Aram Aprahamian", email = "aram@apra.dev"}]
-license = "MIT"
+license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
