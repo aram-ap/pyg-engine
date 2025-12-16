@@ -25,6 +25,13 @@ struct Color {
     constexpr Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
         : r(r), g(g), b(b), a(a) {}
 
+    constexpr Color(Color* color) {
+        r = color->r;
+        g = color->g;
+        b = color->b;
+        a = color->a;
+    }
+
     // --- Arithmetic Operators (Color vs Color) ---
 
     constexpr Color& operator+=(const Color& other) {

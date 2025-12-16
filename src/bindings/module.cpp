@@ -14,17 +14,17 @@
 namespace py = pybind11;
 
 // --- Helper to bind Vector<N, T> instantiations ---
-template <size_t N, typename T>
+template<size_t N, typename T>
 void bind_vector(py::module &m, const std::string &name) {
   using Vec = pyg::Vector<N, T>;
 
   auto class_def = py::class_<Vec>(m, name.c_str())
-                       .def(py::init<>())
-                       .def(py::init([](const std::array<T, N> &args) {
-                         Vec v;
-                         v.components = args;
-                         return v;
-                       }));
+      .def(py::init<>())
+      .def(py::init([](const std::array<T, N> &args) {
+        Vec v;
+        v.components = args;
+        return v;
+      }));
 
   // Add constructors with individual arguments based on dimension
   if constexpr (N == 2) {
@@ -41,11 +41,11 @@ void bind_vector(py::module &m, const std::string &name) {
       .def(py::self - py::self)
       .def(py::self * T())
       .def(py::self / T())
-      .def(py::self * py::self)  // Vector multiplication
-      .def(py::self / py::self)  // Vector division
+      .def(py::self * py::self) // Vector multiplication
+      .def(py::self / py::self) // Vector division
       .def(
-          "__rmul__", [](const Vec &v, T s) { return v * s; },
-          py::is_operator())
+        "__rmul__", [](const Vec &v, T s) { return v * s; },
+        py::is_operator())
 
       // Comparison Operators
       .def(py::self == py::self)
@@ -124,25 +124,25 @@ void bind_vector(py::module &m, const std::string &name) {
 
       // Properties
       .def_property(
-          "x", [](Vec &v) { return v[0]; }, [](Vec &v, T val) { v[0] = val; })
+        "x", [](Vec &v) { return v[0]; }, [](Vec &v, T val) { v[0] = val; })
       .def_property(
-          "y", [](Vec &v) { return N > 1 ? v[1] : 0; },
-          [](Vec &v, T val) {
-            if (N > 1)
-              v[1] = val;
-          })
+        "y", [](Vec &v) { return N > 1 ? v[1] : 0; },
+        [](Vec &v, T val) {
+          if (N > 1)
+            v[1] = val;
+        })
       .def_property(
-          "z", [](Vec &v) { return N > 2 ? v[2] : 0; },
-          [](Vec &v, T val) {
-            if (N > 2)
-              v[2] = val;
-          })
+        "z", [](Vec &v) { return N > 2 ? v[2] : 0; },
+        [](Vec &v, T val) {
+          if (N > 2)
+            v[2] = val;
+        })
       .def_property(
-          "w", [](Vec &v) { return N > 3 ? v[3] : 0; },
-          [](Vec &v, T val) {
-            if (N > 3)
-              v[3] = val;
-          });
+        "w", [](Vec &v) { return N > 3 ? v[3] : 0; },
+        [](Vec &v, T val) {
+          if (N > 3)
+            v[3] = val;
+        });
 }
 
 PYBIND11_MODULE(_native, m) {
@@ -151,9 +151,9 @@ PYBIND11_MODULE(_native, m) {
   // Engine Bindings
   py::class_<pyg::Engine>(m, "Engine")
       .def(py::init<>())
-      .def_property("tick_rate", &pyg::Engine::getTickRate,
-                    &pyg::Engine::setTickRate)
-      .def("get_version", &pyg::Engine::getVersion)
+      .def_property("tick_rate", &pyg::Engine::get_tick_rate,
+                    &pyg::Engine::set_tick_rate)
+      .def("get_version", &pyg::Engine::get_version)
       .def("update", &pyg::Engine::update)
       .def("render", &pyg::Engine::render)
       .def("on_destroy", &pyg::Engine::on_destroy)
@@ -161,16 +161,16 @@ PYBIND11_MODULE(_native, m) {
            static_cast<void (pyg::Engine::*)(std::string)>(&pyg::Engine::log))
       .def("log_type",
            static_cast<void (pyg::Engine::*)(pyg::Logger::Type, std::string)>(
-               &pyg::Engine::logType))
-      .def("is_running", &pyg::Engine::isRunning)
+             &pyg::Engine::log_type))
+      .def("is_running", &pyg::Engine::is_running)
       .def("start", &pyg::Engine::start)
       .def("stop", &pyg::Engine::stop)
       .def("pause", &pyg::Engine::pause)
       .def("resume", &pyg::Engine::resume)
       .def("restart", &pyg::Engine::restart)
       .def("exit", &pyg::Engine::exit)
-      .def("set_window", &pyg::Engine::setWindow)
-      .def("get_window", &pyg::Engine::getWindow);
+      .def("set_window", &pyg::Engine::set_window)
+      .def("get_window", &pyg::Engine::get_window);
 
   // Logger Bindings
   py::class_<pyg::Logger>(m, "Logger")
@@ -201,6 +201,19 @@ PYBIND11_MODULE(_native, m) {
       .export_values()
       .finalize();
 
+  py::native_enum<pyg::Input::axis>(m, "Axis", "enum.Enum")
+      .value("Horizontal", pyg::Input::axis::horizontal)
+      .value("Vertical", pyg::Input::axis::vertical)
+      .value("Left", pyg::Input::axis::left)
+      .value("Right", pyg::Input::axis::right)
+      .value("Jump", pyg::Input::axis::jump)
+      .value("Sprint", pyg::Input::axis::sprint)
+      .value("Crouch", pyg::Input::axis::crouch)
+      .value("Fire1", pyg::Input::axis::fire1)
+      .value("Fire2", pyg::Input::axis::fire2)
+      .value("Fire3", pyg::Input::axis::fire3)
+      .value("Escape", pyg::Input::axis::escape);
+
   // Window Bindings
   py::class_<pyg::Window>(m, "Window")
       .def("create", &pyg::Window::create)
@@ -213,10 +226,10 @@ PYBIND11_MODULE(_native, m) {
       .def("set_title", &pyg::Window::setTitle)
       .def("get_title", &pyg::Window::getTitle)
       .def("set_icon", static_cast<void (pyg::Window::*)(const std::string &)>(
-                           &pyg::Window::setIcon))
+             &pyg::Window::setIcon))
       .def("set_icon", static_cast<void (pyg::Window::*)(
-                           unsigned int, unsigned int, const unsigned char *)>(
-                           &pyg::Window::setIcon))
+             unsigned int, unsigned int, const unsigned char *)>(
+             &pyg::Window::setIcon))
       .def("set_size", &pyg::Window::setSize)
       .def("get_size", &pyg::Window::getSize)
       .def("set_position", &pyg::Window::setPosition)
@@ -260,7 +273,7 @@ PYBIND11_MODULE(_native, m) {
       .def_static("is_equal",
                   static_cast<bool (*)(float, float)>(&pyg::Math::isEqual))
       .def_static("is_equal", static_cast<bool (*)(float, float, float)>(
-                                  &pyg::Math::isEqual))
+                    &pyg::Math::isEqual))
       .def_static("is_greater", &pyg::Math::isGreater)
       .def_static("is_greater_equal", &pyg::Math::isGreaterEqual)
       .def_static("is_less", &pyg::Math::isLess)
@@ -315,69 +328,147 @@ PYBIND11_MODULE(_native, m) {
   bind_vector<3, float>(m, "Vector3");
   bind_vector<4, float>(m, "Vector4");
 
-    py::class_<pyg::Color>(m, "Color")
-        .def(py::init<>())
-        .def(py::init<uint8_t, uint8_t, uint8_t, uint8_t>(),
-             py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255)
-        // Arithmetic Operators
-        .def(py::self += py::self)
-        .def(py::self -= py::self)
-        .def(py::self *= py::self)
-        .def(py::self *= float())
-        .def(
-            "__rmul__", [](const pyg::Color &c, const float s) { return c * s; },
-            py::is_operator())
-        // Color Space Conversions
-        .def("to_srgb", &pyg::Color::SRGB)
-        .def("to_hsv", &pyg::Color::HSV)
-        .def("to_cmyk", &pyg::Color::CMYK)
-        .def("to_hex", &pyg::Color::toHex)
-        .def("to_rgb_hex", &pyg::Color::toRGBHex)
-        // Static Utility
-        .def_static("lerp", &pyg::Color::lerp)
-        // String representation
-        .def("__repr__", &pyg::Color::toString)
-        // Properties
-        .def_property("r",
-                        [](const pyg::Color &c) { return c.r; },
-                        [](pyg::Color &c, const uint8_t val) { c.r = val; })
-        .def_property("g",
-                        [](const pyg::Color &c) { return c.g; },
-                        [](pyg::Color &c, const uint8_t val) { c.g = val; })
-        .def_property("b",
-                        [](const pyg::Color &c) { return c.b; },
-                        [](pyg::Color &c, const uint8_t val) { c.b = val; })
-        .def_property("a",
-                        [](const pyg::Color &c) { return c.a; },
-                        [](pyg::Color &c, const uint8_t val) { c.a = val; })
-        .def(py::self + py::self)
-        .def(py::self - py::self)
-        .def(py::self * py::self)
-        .def(py::self / py::self)
-        .def(py::self / float())
-        .def(py::self * float());
+  py::class_<pyg::Color>(m, "Color")
+      .def(py::init<>())
+      .def(py::init<uint8_t, uint8_t, uint8_t, uint8_t>(),
+           py::arg("r"), py::arg("g"), py::arg("b"), py::arg("a") = 255)
+      // Arithmetic Operators
+      .def(py::self += py::self)
+      .def(py::self -= py::self)
+      .def(py::self *= py::self)
+      .def(py::self *= float())
+      .def(
+        "__rmul__", [](const pyg::Color &c, const float s) { return c * s; },
+        py::is_operator())
+      // .def(py::self + py::self)
+      // .def(py::self - py::self)
+      // Color Space Conversions
+      .def("to_srgb", &pyg::Color::SRGB)
+      .def("to_hsv", &pyg::Color::HSV)
+      .def("to_cmyk", &pyg::Color::CMYK)
+      .def("to_hex", &pyg::Color::toHex)
+      .def("to_rgb_hex", &pyg::Color::toRGBHex)
+      // Static Utility
+      .def_static("lerp", &pyg::Color::lerp)
+      // String representation
+      .def("__repr__", &pyg::Color::toString)
+      // Properties
+      .def_property("r",
+                    [](const pyg::Color &c) { return c.r; },
+                    [](pyg::Color &c, const uint8_t val) { c.r = val; })
+      .def_property("g",
+                    [](const pyg::Color &c) { return c.g; },
+                    [](pyg::Color &c, const uint8_t val) { c.g = val; })
+      .def_property("b",
+                    [](const pyg::Color &c) { return c.b; },
+                    [](pyg::Color &c, const uint8_t val) { c.b = val; })
+      .def_property("a",
+                    [](const pyg::Color &c) { return c.a; },
+                    [](pyg::Color &c, const uint8_t val) { c.a = val; })
+      .def(py::self + py::self)
+      .def(py::self - py::self)
+      .def(py::self * py::self)
+      .def(py::self / py::self)
+      .def(py::self / float())
+      .def(py::self * float());
 
 
   // Module-level log function
   m.def(
-      "log",
-      [](const std::string &msg) {
-        // Ensure logger is initialized
-        if (!pyg::Logger::getCoreLogger()) {
-          pyg::Logger::init("pyg_engine");
-        }
-        pyg::Logger::info(msg);
-      },
-      "Log a message using the engine's logger");
+    "log",
+    [](const std::string &msg) {
+      // Ensure logger is initialized
+      if (!pyg::Logger::getCoreLogger()) {
+        pyg::Logger::init("pyg_engine");
+      }
+      pyg::Logger::info(msg);
+    },
+    "Log a message using the engine's logger");
 
   m.def(
-      "log_type",
-      [](const pyg::Logger::Type type, const std::string &msg) {
-        // Ensure logger is initialized
-        if (!pyg::Logger::getCoreLogger()) {
-          pyg::Logger::init("pyg_engine");
-        }
-        pyg::Logger::print(type, msg);
-      },
-      "Log a message using the engine's logger with LogType enum");
+    "log_type",
+    [](const pyg::Logger::Type type, const std::string &msg) {
+      // Ensure logger is initialized
+      if (!pyg::Logger::getCoreLogger()) {
+        pyg::Logger::init("pyg_engine");
+      }
+      pyg::Logger::print(type, msg);
+    },
+    "Log a message using the engine's logger with LogType enum");
+
+  py::native_enum<pyg::Input::KB>(m, "KB", "enum.Enum")
+      .value("A", pyg::Input::KB::A)
+      .value("B", pyg::Input::KB::B)
+      .value("C", pyg::Input::KB::C)
+      .value("D", pyg::Input::KB::D)
+      .value("E", pyg::Input::KB::E)
+      .value("F", pyg::Input::KB::F)
+      .value("G", pyg::Input::KB::G)
+      .value("H", pyg::Input::KB::H)
+      .value("I", pyg::Input::KB::I)
+      .value("J", pyg::Input::KB::J)
+      .value("K", pyg::Input::KB::K)
+      .value("L", pyg::Input::KB::L)
+      .value("M", pyg::Input::KB::M)
+      .value("N", pyg::Input::KB::N)
+      .value("O", pyg::Input::KB::O)
+      .value("P", pyg::Input::KB::P)
+      .value("Q", pyg::Input::KB::Q)
+      .value("R", pyg::Input::KB::R)
+      .value("S", pyg::Input::KB::S)
+      .value("T", pyg::Input::KB::T)
+      .value("U", pyg::Input::KB::U)
+      .value("V", pyg::Input::KB::V)
+      .value("W", pyg::Input::KB::W)
+      .value("X", pyg::Input::KB::X)
+      .value("Y", pyg::Input::KB::Y)
+      .value("Z", pyg::Input::KB::Z)
+      .value("ZERO", pyg::Input::KB::ZERO)
+      .value("ONE", pyg::Input::KB::ONE)
+      .value("TWO", pyg::Input::KB::TWO)
+      .value("THREE", pyg::Input::KB::THREE)
+      .value("FOUR", pyg::Input::KB::FOUR)
+      .value("FIVE", pyg::Input::KB::FIVE)
+      .value("SIX", pyg::Input::KB::SIX)
+      .value("SEVEN", pyg::Input::KB::SEVEN)
+      .value("EIGHT", pyg::Input::KB::EIGHT)
+      .value("NINE", pyg::Input::KB::NINE)
+      .value("MINUS", pyg::Input::KB::MINUS)
+      .value("PLUS", pyg::Input::KB::PLUS)
+      .value("L_BRKT", pyg::Input::KB::L_BRKT)
+      .value("R_BRKT", pyg::Input::KB::R_BRKT)
+      .value("SPACE", pyg::Input::KB::SPACE)
+      .value("ENTER", pyg::Input::KB::ENTER)
+      .value("BK_SLASH", pyg::Input::KB::BK_SLASH)
+      .value("FWD_SLASH", pyg::Input::KB::FWD_SLASH)
+      .value("SLASH", pyg::Input::KB::SLASH)
+      .value("BK_SPACE", pyg::Input::KB::BK_SPACE)
+      .value("SEMI_COLON", pyg::Input::KB::SEMI_COLON)
+      .value("QUOTE", pyg::Input::KB::QUOTE)
+      .value("LESS_THAN", pyg::Input::KB::LESS_THAN)
+      .value("GREATER_THAN", pyg::Input::KB::GREATER_THAN)
+      .value("L_CARROT", pyg::Input::KB::L_CARROT)
+      .value("R_CARROT", pyg::Input::KB::R_CARROT)
+      .value("L_ARROW", pyg::Input::KB::L_ARROW)
+      .value("R_ARROW", pyg::Input::KB::R_ARROW)
+      .value("UP_ARROW", pyg::Input::KB::UP_ARROW)
+      .value("DOWN_ARROW", pyg::Input::KB::DOWN_ARROW)
+      .value("L_CTRL", pyg::Input::KB::L_CTRL)
+      .value("R_CTRL", pyg::Input::KB::R_CTRL)
+      .value("L_ALT", pyg::Input::KB::L_ALT)
+      .value("R_ALT", pyg::Input::KB::R_ALT)
+      .value("L_SHIFT", pyg::Input::KB::L_SHIFT)
+      .value("R_SHIFT", pyg::Input::KB::R_SHIFT)
+      .value("LEFT_SHIFT", pyg::Input::KB::LEFT_SHIFT)
+      .value("RIGHT_SHIFT", pyg::Input::KB::RIGHT_SHIFT)
+      .value("TAB", pyg::Input::KB::TAB)
+      .value("ESCAPE", pyg::Input::KB::ESCAPE);
+
+  py::native_enum<pyg::Input::MB>(m, "MB", "enum.Enum")
+      .value("LEFT_CLICK", pyg::Input::MB::LEFT_CLICK)
+      .value("RIGHT_CLICK", pyg::Input::MB::RIGHT_CLICK)
+      .value("MIDDLE_CLICK", pyg::Input::MB::MIDDLE_CLICK)
+      .value("L_CLK", pyg::Input::MB::L_CLK)
+      .value("R_CLK", pyg::Input::MB::R_CLK)
+      .value("M_CLK", pyg::Input::MB::M_CLK);
 }

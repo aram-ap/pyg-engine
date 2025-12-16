@@ -9,38 +9,52 @@
 #include <SFML/Window/Event.hpp>
 
 namespace pyg {
-    InputManager::InputManager() {
-        mousePosition = sf::Vector2i(0, 0);
-        for (int i = 0; i < 3; i++) {
-            mouseButtonPressed[i] = false;
-            mouseButtonReleased[i] = false;
-            mouseButtonDown[i] = false;
-            mouseButtonUp[i] = false;
-        }
-        for (int i = 0; i < 512; i++) {
-            keyPressed[i] = false;
-            keyReleased[i] = false;
-            keyDown[i] = false;
-            keyUp[i] = false;
-        }
+    int Input::get_mouse_x() {
     }
 
-    InputManager::~InputManager() {
+    int Input::get_mouse_y() {
     }
 
-    void InputManager::update() {
-        mousePosition = sf::Mouse::getPosition();
+    bool Input::isMouseButtonPressed(MB mouse_button) {
+    }
+
+    bool Input::is_mouse_button_released(MB mouse_button) {
+    }
+
+    bool Input::is_mouse_button_down(MB mouse_button) {
+    }
+
+    bool Input::is_mouse_button_up(MB mouse_button) {
+    }
+
+    bool Input::is_key_pressed(KB key) {
+    }
+
+    bool Input::is_key_released(KB key) {
+    }
+
+    bool Input::is_key_down(KB key) {
+    }
+
+    bool Input::is_key_up(KB key) {
+    }
+
+    float Input::getAxis(axis axis) {
+    }
+
+    void Input::update() {
+        mouse_position_ = sf::Mouse::getPosition();
         for (int i = 0; i < 3; i++) {
-            mouseButtonPressed[i] = sf::Mouse::isButtonPressed(static_cast<sf::Mouse::Button>(i));
-            mouseButtonReleased[i] = sf::Mouse::isButtonReleased(static_cast<sf::Mouse::Button>(i));
-            mouseButtonDown[i] = sf::Mouse::isButtonDown(static_cast<sf::Mouse::Button>(i));
-            mouseButtonUp[i] = sf::Mouse::isButtonUp(static_cast<sf::Mouse::Button>(i));
+            mouse_button_pressed_[i] = sf::Mouse::isButtonPressed(static_cast<sf::Mouse::Button>(i));
+            // mouseButtonReleased[i] = sf::Mouse::isButtonReleased(static_cast<sf::Mouse::Button>(i));
+            // mouseButtonDown[i] = sf::Mouse::isButtonDown(static_cast<sf::Mouse::Button>(i));
+            // mouseButtonUp[i] = sf::Mouse::isButtonUp(static_cast<sf::Mouse::Button>(i));
         }
         for (int i = 0; i < 512; i++) {
-            keyPressed[i] = sf::Keyboard::isKeyPressed(static_cast<sf::Keyboard::Key>(i));
-            keyReleased[i] = sf::Keyboard::isKeyReleased(static_cast<sf::Keyboard::Key>(i));
-            keyDown[i] = sf::Keyboard::isKeyDown(static_cast<sf::Keyboard::Key>(i));
-            keyUp[i] = sf::Keyboard::isKeyUp(static_cast<sf::Keyboard::Key>(i));
+            key_pressed_[i] = sf::Keyboard::isKeyPressed(static_cast<sf::Keyboard::Key>(i));
+            // keyReleased[i] = sf::Keyboard::isKeyReleased(static_cast<sf::Keyboard::Key>(i));
+            // keyDown[i] = sf::Keyboard::isKeyDown(static_cast<sf::Keyboard::Key>(i));
+            // keyUp[i] = sf::Keyboard::isKeyUp(static_cast<sf::Keyboard::Key>(i));
         }
 
         // TODO: Handle other input events
@@ -52,52 +66,13 @@ namespace pyg {
         // }
     }
 
-    void InputManager::setMousePosition(int x, int y) {
-        mousePosition = sf::Vector2i(x, y);
+    static int getMouseX() {
+        // return mousePosition->x;
+        return 0;
     }
 
-    int InputManager::getMouseX() {
-        return mousePosition.x;
-    }
-
-    int InputManager::getMouseY() {
-        return mousePosition.y;
-    }
-
-    bool InputManager::isMouseButtonPressed(int button) {
-        return mouseButtonPressed[button];
-    }
-
-    bool InputManager::isMouseButtonReleased(int button) {
-        return mouseButtonReleased[button];
-    }
-
-    bool InputManager::isMouseButtonDown(int button) {
-        return mouseButtonDown[button];
-    }
-
-    bool InputManager::isMouseButtonUp(int button) {
-        return mouseButtonUp[button];
-    }
-
-    bool InputManager::isKeyPressed(int key) {
-        return keyPressed[key];
-    }
-
-    bool InputManager::isKeyReleased(int key) {
-        return keyReleased[key];
-    }
-
-    bool InputManager::isKeyDown(int key) {
-        return keyDown[key];
-    }
-
-    bool InputManager::isKeyUp(int key) {
-        return keyUp[key];
-    }
-
-    InputManager& InputManager::getInstance() {
-        static InputManager instance;
-        return instance;
+    static int getMouseY() {
+        // return mousePosition.y;
+        return 0;
     }
 } // pyg

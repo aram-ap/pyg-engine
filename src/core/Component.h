@@ -16,11 +16,12 @@
 #include "SFML/System/String.hpp"
 #include "SFML/System/Vector2.hpp"
 #include "SFML/System/Vector3.hpp"
+#include "spdlog/fmt/bundled/chrono.h"
 
 namespace pyg {
     class Component {
     public:
-        union PropertyValue {
+        union property_value {
             int intValue;
             float floatValue;
             bool boolValue;
@@ -35,10 +36,11 @@ namespace pyg {
             sf::String sfStringValue;
         };
 
-        struct Property {
+        struct property {
             std::string name;
+            int id;
 
-            enum Type {
+            enum type {
                 INT,
                 FLOAT,
                 BOOL,
@@ -55,14 +57,14 @@ namespace pyg {
             } type;
 
             bool isEditable;
-            PropertyValue value;
+            property_value value;
         };
 
         Component() = default;
+        ~Component() = default;
 
         explicit Component(long id = 0, const std::string &name = "");
 
-        virtual ~Component() = default;
 
         virtual void start();
 
@@ -73,24 +75,40 @@ namespace pyg {
         virtual void update();
 
         // Serialized properties
-        virtual Property getProperty(const std::string &propertyName) const;
+        virtual property* get_property(const std::string &property_name) const;
 
-        virtual Property getPropertyById(long propertyId) const;
+        virtual property* get_property_by_id(long property_id) const;
 
-        virtual void setProperty(const std::string &propertyName, const Property &value);
+        virtual void set_property(const std::string &property_name, const property &value);
 
-        virtual std::vector<std::string> getAllPropertyNames() const;
+        virtual std::vector<std::string> get_all_property_names() const {
+            std::vector<std::string> names;
+            for (const auto prop : properties_) {
+                if (prop == nullptr) {
+                    continue;
+                }
 
-        virtual std::string getName() const;
+                names.push_back(prop->name);
+            }
+            return names;
+        }
 
-        virtual void setName(const std::string &name);
+        virtual std::string get_name() const {
+            return name_;
+        }
 
-        virtual long getId() const;
+        virtual void set_name(const std::string &name) {
+            this->name_ = name;
+        }
+
+        virtual long get_id() const {
+            return id_;
+        }
 
     private:
-        long id;
-        std::string name;
-        std::vector<Property> properties;
+        long id_ = 0;
+        std::string name_ = std::string();
+        std::vector<property*> properties_ = std::vector<property*>();
     };
 } // pyg
 

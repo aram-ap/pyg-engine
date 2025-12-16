@@ -26,7 +26,7 @@ add_executable(MyGLFWApp
 # GLAD – header‑only loader (glad.h lives in include/glad/)
 # ------------------------------------------------------------------
 # Add the directory that contains the GLAD header to the target’s include path
-target_include_directories(MyGLFWApp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(MyGLFWApp PRIVATE "include")
 
 # If you also have a compiled glad.c, you can build it as a static library:
 #   add_library(glad STATIC src/glad.c)
@@ -41,4 +41,4 @@ target_link_libraries(MyGLFWApp PRIVATE glfw)   # “glfw” is the imported tar
 # ------------------------------------------------------------------
 # Optional: make the include directory visible for IDE code‑completion
 # ------------------------------------------------------------------
-target_include_directories(MyGLFWApp PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_include_directories(MyGLFWApp PRIVATE "include")

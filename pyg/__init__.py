@@ -39,9 +39,10 @@ Logger   = _native.Logger
 LogType  = _native.LogType
 Window   = _native.Window
 Math     = _native.Math
+Input    = _native.Input
 
 # from .core.engine import Engine, LogType
-from .input.input_manager import Input
+# from .input.input_manager import Input
 from .types.color import Color
 
 Vector2  = _native.Vector2
@@ -142,6 +143,9 @@ __all__ = [
 
     # Scalar Constants
     "PI", "TAU", "EPSILON", "DEG2RAD", "RAD2DEG", "INFINITY", "NAN",
-    "SQRT2", "SQRT3", "E", "GOLDEN_RATIO", "PHI", "LOG2E", "LOG10E", "LN2", "LN10"
+    "SQRT2", "SQRT3", "E", "GOLDEN_RATIO", "PHI", "LOG2E", "LOG10E", "LN2", "LN10",
+
+    # Input enums
+    "KB"
 ]
 

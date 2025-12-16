@@ -108,10 +108,14 @@ FetchContent_MakeAvailable(googletest)
 
 # Source definitions
 set(CORE_SOURCES
+        src/core/GameObject.cpp
         src/core/Engine.cpp
         src/rendering/Window.cpp
         src/core/Math.cpp
-    src/logging/Logger.cpp
+        src/logging/Logger.cpp
+        src/input/InputManager.cpp
+        src/core/Component.cpp
+        src/core/Time.cpp
 )
 
 set(BINDING_SOURCES

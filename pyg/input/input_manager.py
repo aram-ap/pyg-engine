@@ -8,7 +8,7 @@ LogType = _native.LogType
 
 class Input:
     def __init__(self):
-        self._input_manager = _native.InputManager()
+        self._input_manager = _native.Input()
 
     def update(self):
         self._input_manager.update()

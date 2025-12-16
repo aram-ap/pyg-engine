@@ -45,7 +45,7 @@ void Window::pollEvents() {
 }
 
 sf::Time Window::display() {
-    _lastFrameTime.restart();
+    (void)_lastFrameTime.restart();
     _window.display();
     return _lastFrameTime.restart();
 }

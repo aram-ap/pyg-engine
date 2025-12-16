@@ -119,6 +119,17 @@ cd pyg-engine
 pip install .
 ```
 
+### Install and Build with Setup Script
+
+```bash
+git clone https://github.com/aram-ap/pyg-engine
+cd pyg-engine
+python setup.py build_ext --inplace
+# WITH PARALLEL:
+python setup.py build_ext --inplace -j 8 # Threads
+```
+
+
 ## Build System
 
 The project uses a hybrid build system:

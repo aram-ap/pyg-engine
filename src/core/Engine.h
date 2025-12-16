@@ -1,84 +1,92 @@
 #pragma once
+
+#ifndef ENGINE_H
+#define ENGINE_H
+
 #include <SFML/System.hpp>
 #include "logging/Logger.h"
+#include "input/InputManager.h"
 #include <string>
-#include "GameObject.h"
+#include "core/GameObject.h"
 #include "../rendering/Window.h"
 
 namespace pyg {
 
-class Engine {
+class Engine final {
 public:
     static const std::string VERSION;
 
     Engine();
-    virtual ~Engine();
+    ~Engine();
 
-    virtual std::string getVersion() const;
-    virtual int getTickRate() const;
-    virtual void setTickRate(int tickRate);
-    virtual void update(sf::Time deltaTime);
-    virtual void fixedUpdate(sf::Time deltaTime);
-    virtual void render();
-    virtual void on_destroy();
-    virtual void logType(Logger::Type type, std::string msg);
-    virtual void log(std::string msg);
-    virtual bool isRunning() const;
-    virtual void start();
-    virtual void stop();
-    virtual void pause();
-    virtual void resume();
-    virtual void restart();
+    std::string get_version() const;
+    int get_tick_rate() const;
+    void set_tick_rate(int tick_rate);
+    void update(sf::Time delta_time);
+    void fixed_update(sf::Time delta_time);
+    void render();
+    void on_destroy();
+    void log_type(Logger::Type type, std::string msg);
+    void log(std::string msg);
+    bool is_running() const;
+    void start();
+    void stop();
+    void pause();
+    void resume();
+    void restart();
 
     // Game Object Items
-    virtual void addGameObject(GameObject* gameObject);
-    virtual GameObject* searchGameObjectByName(std::string name);
-    virtual void removeGameObject(GameObject* gameObject);
-    virtual void removeAllGameObjects();
-
+    // void add_game_object(GameObject* game_object);
+    void add_game_object(GameObject* game_object);
+    GameObject* search_game_object_by_name(const std::string &name) const;
+    void remove_game_object(GameObject* game_object) const;
+    void remove_all_game_objects();
 
     // Window things
 
-    virtual void setWindowTitle(std::string title);
-    virtual std::string getWindowTitle() const;
-    virtual void setWindowIcon(std::string icon);
-    virtual std::string getWindowIcon() const;
-    virtual void setWindowIcon(int width, int height, const unsigned char* data);
-    virtual void setWindowPosition(int x, int y);
+    void set_window_title(std::string title);
+    std::string get_window_title() const;
+    void set_window_icon(std::string icon);
+    std::string get_window_icon() const;
+    void set_window_icon(int width, int height, const unsigned char* data);
+    void set_window_position(int x, int y);
     // virtual void setWindowStyle(Window::Style style);
     // virtual Window::Style getWindowStyle() const;
-    virtual void setWindowVerticalSyncEnabled(bool enabled);
-    virtual bool isWindowVerticalSyncEnabled() const;
-    virtual void setWindowFramerateLimit(unsigned int limit);
-    virtual unsigned int getWindowFramerateLimit() const;
-    virtual void setWindowMouseCursorVisible(bool visible);
-    virtual bool isWindowMouseCursorVisible() const;
-    virtual void setWindowMouseCursorGrabbed(bool grabbed);
-    virtual bool isWindowMouseCursorGrabbed() const;
-    virtual void setWindowSize(int width, int height);
-    virtual void setWindowVisible(bool visible);
-    virtual bool isWindowVisible() const;
-    virtual void setWindow(Window* window);
-    virtual Window* getWindow() const;
+    void set_window_vertical_sync_enabled(bool enabled);
+    bool is_window_vertical_sync_enabled() const;
+    void set_window_framerate_limit(unsigned int limit);
+    unsigned int get_window_framerate_limit() const;
+    void set_window_mouse_cursor_visible(bool visible);
+    bool is_window_mouse_cursor_visible() const;
+    void set_window_mouse_cursor_grabbed(bool grabbed);
+    bool is_window_mouse_cursor_grabbed() const;
+    void set_window_size(int width, int height);
+    void set_window_visible(bool visible);
+    bool is_window_visible() const;
+    void set_window(Window* window);
+
+
+    Window* get_window() const;
     /**
      * @return The total engine runtime
      */
-    virtual sf::Time getElapsedTime() const;
-    virtual void exit();
+    sf::Time get_elapsed_time() const;
+    void exit();
 
 private:
-    int tickRate;
-    Window* _window;
-    bool _ownsWindow;
-    bool _windowVisible;
-    sf::Clock _clock;       //
-    sf::Clock _systemClock;     // Basically don't restart this unless the engine is fully restarted
-    bool _isPaused;
-    bool _isRunning;
-    std::string _windowIconPath;
-    std::vector<pyg::GameObject*> _gameObjects;
+    int tick_rate_ = 0;
+    Window* window_ = nullptr;
+    bool owns_window_ = false;
+    bool window_visible_ = false;
+    sf::Clock clock_ = sf::Clock();       //
+    sf::Clock system_clock_ = sf::Clock();     // Basically don't restart this unless the engine is fully restarted
+    bool is_paused_ = false;
+    bool is_running_;
+    std::string window_icon_path_ = std::string();
+    std::vector<GameObject*> game_objects_ = std::vector<GameObject*>();
 };
 
 
 } // namespace pyg
+#endif
 

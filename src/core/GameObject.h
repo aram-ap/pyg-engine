@@ -2,7 +2,6 @@
 // Created by Aram Aprahamian on 11/22/25.
 //
 #pragma once
-
 #include <string>
 #include <vector>
 #include "Component.h"
@@ -13,42 +12,67 @@
 #define GAMEOBJECT_H
 
 namespace pyg {
-
-class GameObject {
+class GameObject final {
 public:
     // Constructor with optional id and name (id=0 means auto-generate id)
-    GameObject(long id = 0, const std::string& name = "");
-    virtual ~GameObject();
+    explicit GameObject(const std::string& name = "");
+    explicit GameObject(const GameObject& obj) {
+        const auto game_object = new GameObject(obj);
+        game_object->set_name(this->name_);
+        game_object->set_parent(this->parent_);
+    }
+    ~GameObject();
 
-    virtual long getId();
-    virtual bool isEnabled();
-    virtual void setEnabled(bool enabled);
-    virtual std::string getName();
-    virtual void setName(const std::string& name);
-    virtual void addChild(GameObject* child);
-    virtual GameObject* removeChild(GameObject* child);
-    virtual GameObject* removeChildByName(const std::string& name);
-    virtual GameObject* removeChildById(const long id);
-    virtual GameObject* getChildByName(const std::string& name);
-    virtual GameObject* getChildById(const long id);
-    virtual GameObject* getParent();
-    virtual void setParent(GameObject* parent);
-    virtual Component* getComponentByName(const std::string& name);
-    virtual Component* getComponentById(const long id);
-    virtual std::vector<Component *> getAllComponents();
-    virtual void addComponent(Component* component);
-    virtual GameObject* clone();
-    virtual std::vector<GameObject*> getChildren();
-    virtual void removeAllChildren();
-    virtual void update(const sf::Time deltaTime);
-    virtual void fixedUpdate(const sf::Time deltaTime);
+    void destroy() {
+        delete this;
+    }
+
+    long get_id();
+    bool is_enabled();
+    void set_enabled(bool enabled);
+    std::string get_name();
+    void set_name(const std::string& name);
+    void add_child(GameObject* child);
+    GameObject* remove_child(GameObject* child);
+    GameObject* remove_child_by_name(const std::string& name);
+    GameObject* remove_child_by_id(const long id);
+    GameObject* get_child_by_name(const std::string& name);
+
+    static GameObject* get_object_by_id(const long id);
+    GameObject* get_parent();
+    bool contains_child(GameObject* child);
+    void set_parent(GameObject* parent);
+    Component* get_component_by_name(const std::string& name);
+    Component* get_component_by_id(const long id);
+    std::vector<Component *>* get_all_components();
+    void add_component(Component* component);
+    GameObject* clone();
+    std::vector<GameObject*>* get_children();
+    void remove_all_children();
+    void remove_all_components();
+    void update(const sf::Time delta_time);
+    void fixed_update(const sf::Time delta_time);
+
+    static long generate_uid() {
+        auto rng = static_cast<uint32_t>(std::rand());
+        while (get_object_map()[rng] != nullptr) {
+            rng = std::rand();
+        }
+        return rng;
+    }
 
 private:
-    long id;
-    bool enabled;
-    std::string name;
-    std::vector<GameObject*> children;
-    GameObject* parent = nullptr;
+    long id_ = 0;
+    bool enabled_ = true;
+    std::string name_;
+    std::vector<GameObject*> children_;
+    GameObject* parent_ = nullptr;
+    std::vector<Component*> components_;
+
+    static std::unordered_map<long, GameObject*> get_object_map() {
+        static std::unordered_map<long, GameObject*> game_object_map;
+        return game_object_map;
+    }
 };
 
 } // pyg
