@@ -9,7 +9,9 @@ title: PyG Engine
 
 # PyG Engine
 
-A Python game engine built on Pygame and Pymunk for 2D physics, rendering, and game development. Built around scriptable game objects, rigidbody and collider system. Contains physics materials, update system, event system and mouse+keyboard input system
+A Python game engine built on native Rust and OpenGL bindings. 
+Created for 2D physics, rendering, and game development. 
+Built around scriptable game objects, rigidbody and collider system. Contains physics materials, update system, event system and mouse+keyboard input system
 
 <div class="callout warning">
   <b>NOTE: This is in alpha development stage. Everything is under active development and large changes will likely be made.
@@ -20,13 +22,18 @@ A Python game engine built on Pygame and Pymunk for 2D physics, rendering, and g
 
 <div class="features-grid">
   <div class="feature-card">
+    <h4>🏎️ Performance</h4>
+    <p>A game engine built on Rust and OpenGL</p>
+  </div>
+
+  <div class="feature-card">
     <h4>🎮 OOP Model</h4>
     <p>Simple game object implementation system</p>
   </div>
   
   <div class="feature-card">
     <h4>⚡ 2D Physics</h4>
-    <p>Built-in physics via Pymunk</p>
+    <p>Built-in physics engine and rigidbody simulations</p>
   </div>
   
   <div class="feature-card">
@@ -63,38 +70,24 @@ A Python game engine built on Pygame and Pymunk for 2D physics, rendering, and g
 ## Quick Start
 
 ```python
-from pyg_engine import Engine, GameObject, Size
-from pygame import Color, Vector2
+import pyg_engine as pyg
 
 # Create the engine
-engine = Engine(
-    size=Size(w=800, h=600),
-    backgroundColor=Color(0, 0, 0),
-    windowName="My Game"
-)
+engine = pyg.Engine()
 
 # Create a game object
-player = GameObject(
-    name="Player",
-    position=(400, 300),
-    size=(50, 50),
-    color=Color(255, 0, 0)
-)
+player = pyg.GameObject("Player")
 
 # Add to engine
-engine.addGameObject(player)
+engine.addObject(player)
 
 # Start the game loop
-engine.start()
+engine.begin()
 ```
 
 ## 🚀 Installation
 
 **Requires Python 3.7+**
-
-### Dependencies:
-- pygame >= 2.5.0
-- pymunk >= 6.4.0
 
 ### Install via pip:
 

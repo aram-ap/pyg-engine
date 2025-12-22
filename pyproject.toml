@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=65.0", "setuptools-rust>=1.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyg-engine"
+version = "1.2.0"
+description = "A Python game engine with Rust-powered native performance"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Aram Aprahamian"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Games/Entertainment",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "pygame>=2.5.0",
+    "pymunk>=6.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+]
+dev-tools = [
+    "PyQt6>=6.5.0",
+]
+
+[project.scripts]
+pyg-engine = "pyg_engine.utilities.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pyg_engine = ["etc/*.png"]

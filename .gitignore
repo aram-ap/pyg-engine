@@ -6,6 +6,17 @@ __pycache__/
 # C extensions
 *.so
 
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# CMake (legacy - project now uses Rust)
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+
 # Distribution / packaging
 .Python
 build/

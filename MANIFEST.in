@@ -1,8 +1,12 @@
 include README.md
 include requirements.txt
 include LICENSE
+include Cargo.toml
+include Cargo.lock
 recursive-include src *.py
 recursive-include src/etc *.png
+recursive-include rust *.rs
+recursive-include rust *.toml
 recursive-include examples *.py
 recursive-include docs *.md
 recursive-include tests *.py
