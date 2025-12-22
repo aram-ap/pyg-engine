@@ -3,8 +3,8 @@ include requirements.txt
 include LICENSE
 include Cargo.toml
 include Cargo.lock
-recursive-include src *.py
-recursive-include src/etc *.png
+recursive-include python *.py
+recursive-include python/etc *.png
 recursive-include rust *.rs
 recursive-include rust *.toml
 recursive-include examples *.py

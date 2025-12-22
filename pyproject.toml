@@ -48,7 +48,7 @@ dev-tools = [
 pyg-engine = "pyg_engine.utilities.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["python"]
 
 [tool.setuptools.package-data]
 pyg_engine = ["etc/*.png"]

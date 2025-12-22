@@ -13,8 +13,8 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    packages=find_packages(where="python"),
+    package_dir={"": "python"},
     rust_extensions=[
         RustExtension(
             "pyg_engine.pyg_engine_native",
