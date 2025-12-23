@@ -5,8 +5,8 @@ use crate::core::game_object::GameObject as RustGameObject;
 use crate::core::component::{ComponentTrait, TransformComponent};
 
 // Import bindings from separate modules
-use super::vector::{PyVec2, PyVec3};
-use super::color::PyColor;
+use super::vector_bind::{PyVec2, PyVec3};
+use super::color_bind::PyColor;
 
 // ========== Engine Bindings ==========
 

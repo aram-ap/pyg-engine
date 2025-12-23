@@ -1,8 +1,8 @@
-mod engine;
-mod vector;
-mod color;
+mod engine_bind;
+mod vector_bind;
+mod color_bind;
 
-pub use engine::*;
-pub use vector::*;
-pub use color::*;
+pub use engine_bind::*;
+pub use vector_bind::*;
+pub use color_bind::*;
 
