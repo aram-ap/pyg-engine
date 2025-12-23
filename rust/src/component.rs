@@ -9,7 +9,13 @@ pub trait ComponentTrait {
         Creates a new component.
         @return: The new component.
     */
-    fn new(name: String) -> Self;
+    fn new(name: String) -> Self where Self: Sized;
+
+    /**
+        Gets the name of the component.
+        @return: The name of the component.
+    */
+    fn name(&self) -> &str;
 
     /**
         Updates the component.
@@ -37,6 +43,10 @@ impl ComponentTrait for TransformComponent {
             rotation: 0.0,
             scale: Vec2::new(1.0, 1.0),
         }
+    }
+
+    fn name(&self) -> &str {
+        &self.name
     }
 
     fn update(&self, _time: &Time) {}

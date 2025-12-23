@@ -1,4 +1,5 @@
 ﻿use std::sync::atomic::{AtomicU32, Ordering};
+use crate::component::ComponentTrait;
 
 // Keep track of the next game object id.
 static GO_ID: AtomicU32 = AtomicU32::new(0);
@@ -7,6 +8,7 @@ struct GameObject {
     id: u32,
     name: Option<String>,
     children: Vec<GameObject>,
+    components: Vec<Box<dyn ComponentTrait>>,
 }
 
 impl GameObject {
@@ -20,6 +22,7 @@ impl GameObject {
             id,
             name: Some("GameObject".to_string()),
             children: Vec::new(),
+            components: Vec::new(),
         }
     }
 
@@ -34,6 +37,7 @@ impl GameObject {
             id,
             name: Some(name),
             children: Vec::new(),
+            components: Vec::new(),
         }
     }
 
@@ -51,6 +55,14 @@ impl GameObject {
     */
     pub fn add_child(&mut self, child: GameObject) {
         self.children.push(child);
+    }
+
+    /**
+        Adds a component to the game object.
+        @param component: The component to add.
+    */
+    pub fn add_component(&mut self, component: Box<dyn ComponentTrait>) {
+        self.components.push(component);
     }
 
     /**
@@ -101,6 +113,31 @@ impl GameObject {
         self.children
             .iter()
             .find(|c| c.name.as_deref() == Some(name))
+    }
+
+    /**
+        Removes a component by name.
+        @param name: The name of the component to remove.
+        @return: The removed component.
+    */
+    pub fn remove_component_by_name(&mut self, name: &str) -> Option<Box<dyn ComponentTrait>> {
+        if let Some(index) = self.components.iter().position(|c| c.name() == name) {
+            Some(self.components.remove(index))
+        } else {
+            None
+        }
+    }
+
+    /**
+        Gets a component by name.
+        @param name: The name of the component to get.
+        @return: The component.
+    */
+    pub fn get_component_by_name(&self, name: &str) -> Option<&dyn ComponentTrait> {
+        self.components
+            .iter()
+            .find(|c| c.name() == name)
+            .map(|c| c.as_ref())
     }
 
     /**
