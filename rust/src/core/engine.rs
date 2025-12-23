@@ -1,5 +1,5 @@
 /// Core engine functionality
-use crate::logging;
+use super::logging;
 use std::path::PathBuf;
 use tracing::Level;
 

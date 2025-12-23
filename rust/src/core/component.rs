@@ -1,5 +1,5 @@
-use crate::time::Time;
-use crate::vector::Vec2;
+use super::time::Time;
+use crate::types::vector::Vec2;
 
 // Game objects contain components.
 // Components are used to add functionality to game objects.

@@ -1,5 +1,5 @@
 ﻿use std::sync::atomic::{AtomicU32, Ordering};
-use crate::component::ComponentTrait;
+use super::component::ComponentTrait;
 
 // Keep track of the next game object id.
 static GO_ID: AtomicU32 = AtomicU32::new(0);
