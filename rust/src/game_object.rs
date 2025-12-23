@@ -4,7 +4,7 @@ use crate::component::ComponentTrait;
 // Keep track of the next game object id.
 static GO_ID: AtomicU32 = AtomicU32::new(0);
 
-struct GameObject {
+pub struct GameObject {
     id: u32,
     name: Option<String>,
     children: Vec<GameObject>,

@@ -35,4 +35,12 @@ impl Time {
         self.delta_time = self.system_time.elapsed().unwrap().as_secs_f32();
         self.elapsed_time = SystemTime::now().duration_since(self.system_time).unwrap_or_default().as_secs_f32();
     }
+
+    pub fn delta_time(&self) -> f32 {
+        self.delta_time
+    }
+
+    pub fn elapsed_time(&self) -> f32 {
+        self.elapsed_time
+    }
 }

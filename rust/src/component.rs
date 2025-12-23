@@ -1,4 +1,3 @@
-use crate::logging;
 use crate::time::Time;
 use crate::vector::Vec2;
 
@@ -54,4 +53,30 @@ impl ComponentTrait for TransformComponent {
     fn on_destroy(&self) {}
     fn on_enable(&self) {}
     fn on_disable(&self) {}
+}
+
+impl TransformComponent {
+    pub fn position(&self) -> &Vec2 {
+        &self.position
+    }
+
+    pub fn set_position(&mut self, position: Vec2) {
+        self.position = position;
+    }
+
+    pub fn rotation(&self) -> f32 {
+        self.rotation
+    }
+
+    pub fn set_rotation(&mut self, rotation: f32) {
+        self.rotation = rotation;
+    }
+
+    pub fn scale(&self) -> &Vec2 {
+        &self.scale
+    }
+
+    pub fn set_scale(&mut self, scale: Vec2) {
+        self.scale = scale;
+    }
 }
