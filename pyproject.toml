@@ -28,10 +28,7 @@ classifiers = [
     "Topic :: Multimedia :: Graphics",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = [
-    "pygame>=2.5.0",
-    "pymunk>=6.4.0",
-]
+dependencies = [ ]
 
 [project.optional-dependencies]
 dev = [
@@ -40,9 +37,7 @@ dev = [
     "black>=22.0.0",
     "flake8>=5.0.0",
 ]
-dev-tools = [
-    "PyQt6>=6.5.0",
-]
+dev-tools = [ ]
 
 [project.scripts]
 pyg-engine = "pyg_engine.utilities.cli:main"

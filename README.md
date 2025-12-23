@@ -2,7 +2,7 @@
 ![Logo](images/1_lower-res.png)
 # PyG Engine
 
-A Python game engine built on Rust and OpenGL. 
+A Python game engine built on Rust and WebGPU. 
 Inspired by the Unity game engine's Monobehavior system with scriptable game objects, rigidbody and collider system.
 Built-in physics materials, update system, event system and mouse+keyboard input system. Built-in window resizing.
 
