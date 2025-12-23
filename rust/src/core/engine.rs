@@ -62,6 +62,32 @@ impl Engine {
         logging::log_info("Closing window");
     }
 
+    /*
+    Runs at every frame
+     */
+    fn update(&self) {
+        // Input (collect raw input + build an input snapshot)
+
+        // Event System - enqueue input events
+
+        // UI - input handling / hit-testing (UI gets first right of refusal)
+
+        // Event System - dispatch "unconsumed" gameplay input events
+
+        // GameObjects + Components - pre-physics (gameplay/AI/scripts)
+
+        // Physics (often fixed-timestep; may run 0..N steps)
+
+        // Event System - enqueue physics events (collisions/triggers)
+
+        // GameObjects + Components - post-physics / late update (react, sync transforms, camera, attachments)
+
+        // UI - update layout/animations/data-binding (using final game state)
+
+        // Rendering - world
+
+        // Rendering - UI (overlay last)
+    }
 
     /// Log a message at INFO level
     pub fn log(&self, message: &str) {
