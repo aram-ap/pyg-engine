@@ -54,6 +54,15 @@ impl Engine {
         }
     }
 
+    pub fn open_window(&self, title: &str, width: u32, height: u32) {
+        logging::log_info(&format!("Opening window: {} ({}x{})", title, width, height));
+    }
+
+    pub fn close_window(&self) {
+        logging::log_info("Closing window");
+    }
+
+
     /// Log a message at INFO level
     pub fn log(&self, message: &str) {
         logging::log_info(message);
