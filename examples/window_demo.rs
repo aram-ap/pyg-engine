@@ -24,14 +24,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Create window configuration using the builder pattern
     let window_config = WindowConfig::new()
-        .with_title("PyG Engine - Window Demo")
-        .with_size(1920, 1080)
-        .with_resizable(true)
-        .with_fullscreen(FullscreenMode::None)
-        .with_min_size(640, 480)
-        .with_max_size(3840, 2160)
-        .with_background_color(Color::DARK_GRAY)
-        .with_vsync(true); // Enable VSync (default: true)
+        .with_title("PyG Engine - Window Demo")     // Will be displayed in the title bar
+        .with_size(1920, 1080)                      // Will be the initial size of the window
+        .with_resizable(true)                       // Allows the window to be resized
+        .with_fullscreen(FullscreenMode::None)      // Will start in windowed mode
+        .with_min_size(640, 480)                    // Minimum size of the window
+        .with_max_size(3840, 2160)                  // Maximum size of the window
+        .with_background_color(Color::DARK_GRAY)    // Sets the default background color
+        .with_vsync(false);                         // Control VSync (default: true)
     
     // Run the engine with the window
     // This will:

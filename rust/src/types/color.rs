@@ -8,26 +8,38 @@ pub struct Color {
 
 impl Color {
     pub fn new(r: f32, g: f32, b: f32, a: f32) -> Self {
-        Self { r, g, b, a }
+        Self {
+            r: r.clamp(0.0, 1.0),
+            g: g.clamp(0.0, 1.0),
+            b: b.clamp(0.0, 1.0),
+            a: a.clamp(0.0, 1.0),
+        }
     }
 
     /// Create a color from RGB values in the range 0-255
     pub fn rgb(r: u8, g: u8, b: u8) -> Self {
+        let r_clamped = r.clamp(0, 255);
+        let g_clamped = g.clamp(0, 255);
+        let b_clamped = b.clamp(0, 255);
         Self {
-            r: r as f32 / 255.0,
-            g: g as f32 / 255.0,
-            b: b as f32 / 255.0,
+            r: r_clamped as f32 / 255.0,
+            g: g_clamped as f32 / 255.0,
+            b: b_clamped as f32 / 255.0,
             a: 1.0,
         }
     }
 
     /// Create a color from RGBA values in the range 0-255
     pub fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+        let r_clamped = r.clamp(0, 255);
+        let g_clamped = g.clamp(0, 255);
+        let b_clamped = b.clamp(0, 255);
+        let a_clamped = a.clamp(0, 255);
         Self {
-            r: r as f32 / 255.0,
-            g: g as f32 / 255.0,
-            b: b as f32 / 255.0,
-            a: a as f32 / 255.0,
+            r: r_clamped as f32 / 255.0,
+            g: g_clamped as f32 / 255.0,
+            b: b_clamped as f32 / 255.0,
+            a: a_clamped as f32 / 255.0,
         }
     }
 
@@ -39,6 +51,39 @@ impl Color {
         let b = u8::from_str_radix(&hex[4..6], 16).unwrap_or(0);
         Self::rgb(r, g, b)
     }
+
+    /// Create a color from HSV values
+    /// - h: hue in degrees (0-360), will be wrapped
+    /// - s: saturation (0.0-1.0), will be clamped
+    /// - v: value/brightness (0.0-1.0), will be clamped
+    /// - a: alpha (0.0-1.0), will be clamped
+    pub fn from_hsv(h: f32, s: f32, v: f32, a: f32) -> Self {
+        let h = h % 360.0;
+        let s = s.clamp(0.0, 1.0);
+        let v = v.clamp(0.0, 1.0);
+
+        let a_clamped = a.clamp(0.0, 1.0);
+        
+        let c = v * s;
+        let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+        let m = v - c;
+        
+        let (r, g, b) = if h < 60.0 {
+            (c, x, 0.0)
+        } else if h < 120.0 {
+            (x, c, 0.0)
+        } else if h < 180.0 {
+            (0.0, c, x)
+        } else if h < 240.0 {
+            (0.0, x, c)
+        } else if h < 300.0 {
+            (x, 0.0, c)
+        } else {
+            (c, 0.0, x)
+        };
+        
+        Self::new(r + m, g + m, b + m, a_clamped)
+    }
     
     // Getters
     pub fn r(&self) -> f32 { self.r }
@@ -46,17 +91,48 @@ impl Color {
     pub fn b(&self) -> f32 { self.b }
     pub fn a(&self) -> f32 { self.a }
     
+    // Setters
+    pub fn set_r(&self, r: f32) -> Self {
+        Self { r: r.clamp(0.0, 1.0), ..*self }
+    }
+    
+    pub fn set_g(&self, g: f32) -> Self {
+        Self { g: g.clamp(0.0, 1.0), ..*self }
+    }
+    
+    pub fn set_b(&self, b: f32) -> Self {
+        Self { b: b.clamp(0.0, 1.0), ..*self }
+    }
+    
+    pub fn set_a(&self, a: f32) -> Self {
+        Self { a: a.clamp(0.0, 1.0), ..*self }
+    }
+    
     pub fn with_alpha(&self, a: f32) -> Self {
-        Self { a, ..*self }
+        Self { a: a.clamp(0.0, 1.0), ..*self }
     }
     
     pub fn lerp(&self, other: &Color, t: f32) -> Self {
-        Self {
-            r: self.r + (other.r - self.r) * t,
-            g: self.g + (other.g - self.g) * t,
-            b: self.b + (other.b - self.b) * t,
-            a: self.a + (other.a - self.a) * t,
-        }
+        Self::new(
+            self.r + (other.r - self.r) * t,
+            self.g + (other.g - self.g) * t,
+            self.b + (other.b - self.b) * t,
+            self.a + (other.a - self.a) * t,
+        )
+    }
+
+    /// Check if two colors are approximately equal within an epsilon tolerance
+    /// Default epsilon is 1e-5 (0.00001)
+    pub fn approx_eq(&self, other: &Color, epsilon: f32) -> bool {
+        (self.r - other.r).abs() < epsilon &&
+        (self.g - other.g).abs() < epsilon &&
+        (self.b - other.b).abs() < epsilon &&
+        (self.a - other.a).abs() < epsilon
+    }
+
+    /// Check if two colors are approximately equal with default epsilon (1e-5)
+    pub fn approx_eq_default(&self, other: &Color) -> bool {
+        self.approx_eq(other, 1e-5)
     }
 
     pub fn to_string(&self) -> String {
@@ -66,12 +142,12 @@ impl Color {
     #[allow(dead_code)]
     pub fn from_string(string: &str) -> Self {
         let parts = string.split(',').collect::<Vec<&str>>();
-        Self {
-            r: parts[0].parse().unwrap(),
-            g: parts[1].parse().unwrap(),
-            b: parts[2].parse().unwrap(),
-            a: parts[3].parse().unwrap(),
-        }
+        Self::new(
+            parts[0].parse().unwrap_or(0.0),
+            parts[1].parse().unwrap_or(0.0),
+            parts[2].parse().unwrap_or(0.0),
+            parts[3].parse().unwrap_or(1.0),
+        )
     }
 
     /// Convert this Color to a wgpu::Color
@@ -255,4 +331,60 @@ impl Color {
     pub const TOMATO: Color = Color { r: 1.0, g: 0.388, b: 0.278, a: 1.0 };
     #[allow(dead_code)]
     pub const WHEAT: Color = Color { r: 0.961, g: 0.871, b: 0.702, a: 1.0 };
+}
+
+// ========== Operator Overloads ==========
+
+use std::ops::{Add, Sub, Mul, Div};
+
+impl Add for Color {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self::new(
+            self.r + other.r,
+            self.g + other.g,
+            self.b + other.b,
+            self.a + other.a
+        )
+    }
+}
+
+impl Sub for Color {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        Self::new(
+            self.r - other.r,
+            self.g - other.g,
+            self.b - other.b,
+            self.a - other.a
+        )
+    }
+}
+
+impl Mul for Color {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        Self::new(
+            self.r * other.r,
+            self.g * other.g,
+            self.b * other.b,
+            self.a * other.a
+        )
+    }
+}
+
+impl Div for Color {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        Self::new(
+            if other.r != 0.0 { self.r / other.r } else { 0.0 },
+            if other.g != 0.0 { self.g / other.g } else { 0.0 },
+            if other.b != 0.0 { self.b / other.b } else { 0.0 },
+            if other.a != 0.0 { self.a / other.a } else { 0.0 },
+        )
+    }
 }

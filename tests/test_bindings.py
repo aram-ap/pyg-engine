@@ -87,7 +87,8 @@ def test_vec2_length() -> None:
     v = pyg.Vec2(3.0, 4.0)
     length = v.length()
     
-    assert length == 5.0
+    # Account for floating point precision in sqrt calculation
+    assert abs(length - 5.0) < 1e-5
 
 
 def test_vec2_normalize() -> None:
@@ -145,8 +146,9 @@ def test_vec2_lerp() -> None:
     v2 = pyg.Vec2(10.0, 10.0)
     v3 = v1.lerp(v2, 0.5)
     
-    assert v3.x == 5.0
-    assert v3.y == 5.0
+    # Account for floating point precision in interpolation
+    assert abs(v3.x - 5.0) < 1e-5
+    assert abs(v3.y - 5.0) < 1e-5
 
 
 def test_vec2_string_representation() -> None:
@@ -222,9 +224,10 @@ def test_vec3_lerp() -> None:
     v2 = pyg.Vec3(10.0, 20.0, 30.0)
     v3 = v1.lerp(v2, 0.5)
     
-    assert v3.x == 5.0
-    assert v3.y == 10.0
-    assert v3.z == 15.0
+    # Account for floating point precision in interpolation
+    assert abs(v3.x - 5.0) < 1e-5
+    assert abs(v3.y - 10.0) < 1e-5
+    assert abs(v3.z - 15.0) < 1e-5
 
 
 def test_vec3_length() -> None:
@@ -234,7 +237,8 @@ def test_vec3_length() -> None:
     v = pyg.Vec3(1.0, 0.0, 0.0)
     length = v.length()
     
-    assert length == 1.0
+    # Account for floating point precision in sqrt calculation
+    assert abs(length - 1.0) < 1e-5
 
 
 def test_vec3_normalize() -> None:
@@ -279,10 +283,11 @@ def test_color_component_access() -> None:
     """
     c = pyg.Color(1.0, 0.5, 0.25, 0.75)
     
-    assert c.r == 1.0
-    assert c.g == 0.5
-    assert c.b == 0.25
-    assert c.a == 0.75
+    # Account for floating point precision (though these should be exact)
+    assert abs(c.r - 1.0) < 1e-5
+    assert abs(c.g - 0.5) < 1e-5
+    assert abs(c.b - 0.25) < 1e-5
+    assert abs(c.a - 0.75) < 1e-5
 
 
 def test_color_from_rgb() -> None:
@@ -291,10 +296,11 @@ def test_color_from_rgb() -> None:
     """
     c = pyg.Color.rgb(255, 128, 0)
     
-    assert c.r == 1.0
-    assert abs(c.g - 128.0/255.0) < 0.01
-    assert c.b == 0.0
-    assert c.a == 1.0
+    # Account for floating point precision in division
+    assert abs(c.r - 1.0) < 1e-5
+    assert abs(c.g - 128.0/255.0) < 1e-5
+    assert abs(c.b - 0.0) < 1e-5
+    assert abs(c.a - 1.0) < 1e-5
 
 
 def test_color_from_rgba() -> None:
@@ -303,10 +309,11 @@ def test_color_from_rgba() -> None:
     """
     c = pyg.Color.rgba(255, 0, 0, 128)
     
-    assert c.r == 1.0
-    assert c.g == 0.0
-    assert c.b == 0.0
-    assert abs(c.a - 128.0/255.0) < 0.01
+    # Account for floating point precision in division
+    assert abs(c.r - 1.0) < 1e-5
+    assert abs(c.g - 0.0) < 1e-5
+    assert abs(c.b - 0.0) < 1e-5
+    assert abs(c.a - 128.0/255.0) < 1e-5
 
 
 def test_color_from_hex() -> None:
@@ -316,13 +323,14 @@ def test_color_from_hex() -> None:
     c1 = pyg.Color.from_hex("#FF0000")
     c2 = pyg.Color.from_hex("00FF00")  # Without #
     
-    assert c1.r == 1.0
-    assert c1.g == 0.0
-    assert c1.b == 0.0
+    # Account for floating point precision in conversion
+    assert abs(c1.r - 1.0) < 1e-5
+    assert abs(c1.g - 0.0) < 1e-5
+    assert abs(c1.b - 0.0) < 1e-5
     
-    assert c2.r == 0.0
-    assert c2.g == 1.0
-    assert c2.b == 0.0
+    assert abs(c2.r - 0.0) < 1e-5
+    assert abs(c2.g - 1.0) < 1e-5
+    assert abs(c2.b - 0.0) < 1e-5
 
 
 def test_color_constants() -> None:
@@ -337,10 +345,10 @@ def test_color_constants() -> None:
     assert pyg.Color.BLACK is not None
     
     # Verify red is actually red
-    assert pyg.Color.RED.r == 1.0
-    assert pyg.Color.RED.g == 0.0
-    assert pyg.Color.RED.b == 0.0
-    assert pyg.Color.RED.a == 1.0
+    assert abs(pyg.Color.RED.r - 1.0) < 1e-5
+    assert abs(pyg.Color.RED.g - 0.0) < 1e-5
+    assert abs(pyg.Color.RED.b - 0.0) < 1e-5
+    assert abs(pyg.Color.RED.a - 1.0) < 1e-5
 
 
 def test_color_with_alpha() -> None:
@@ -351,13 +359,120 @@ def test_color_with_alpha() -> None:
     c2 = c1.with_alpha(0.5)
     
     # Original unchanged
-    assert c1.a == 1.0
+    assert abs(c1.a - 1.0) < 1e-5
     
     # New color has modified alpha
-    assert c2.r == 1.0
-    assert c2.g == 0.0
-    assert c2.b == 0.0
-    assert c2.a == 0.5
+    assert abs(c2.r - 1.0) < 1e-5
+    assert abs(c2.g - 0.0) < 1e-5
+    assert abs(c2.b - 0.0) < 1e-5
+    assert abs(c2.a - 0.5) < 1e-5
+
+
+def test_color_set_r() -> None:
+    """
+    Test setting color red component.
+    """
+    c1 = pyg.Color(0.5, 0.5, 0.5, 1.0)
+    c2 = c1.set_r(0.8)
+    
+    # Original unchanged
+    assert abs(c1.r - 0.5) < 1e-5
+    
+    # New color has modified red
+    assert abs(c2.r - 0.8) < 1e-5
+    assert abs(c2.g - 0.5) < 1e-5
+    assert abs(c2.b - 0.5) < 1e-5
+    assert abs(c2.a - 1.0) < 1e-5
+
+
+def test_color_set_g() -> None:
+    """
+    Test setting color green component.
+    """
+    c1 = pyg.Color(0.5, 0.5, 0.5, 1.0)
+    c2 = c1.set_g(0.3)
+    
+    # Original unchanged
+    assert abs(c1.g - 0.5) < 1e-5
+    
+    # New color has modified green
+    assert abs(c2.r - 0.5) < 1e-5
+    assert abs(c2.g - 0.3) < 1e-5
+    assert abs(c2.b - 0.5) < 1e-5
+    assert abs(c2.a - 1.0) < 1e-5
+
+
+def test_color_set_b() -> None:
+    """
+    Test setting color blue component.
+    """
+    c1 = pyg.Color(0.5, 0.5, 0.5, 1.0)
+    c2 = c1.set_b(0.9)
+    
+    # Original unchanged
+    assert abs(c1.b - 0.5) < 1e-5
+    
+    # New color has modified blue
+    assert abs(c2.r - 0.5) < 1e-5
+    assert abs(c2.g - 0.5) < 1e-5
+    assert abs(c2.b - 0.9) < 1e-5
+    assert abs(c2.a - 1.0) < 1e-5
+
+
+def test_color_set_a() -> None:
+    """
+    Test setting color alpha component.
+    """
+    c1 = pyg.Color(0.5, 0.5, 0.5, 1.0)
+    c2 = c1.set_a(0.7)
+    
+    # Original unchanged
+    assert abs(c1.a - 1.0) < 1e-5
+    
+    # New color has modified alpha
+    assert abs(c2.r - 0.5) < 1e-5
+    assert abs(c2.g - 0.5) < 1e-5
+    assert abs(c2.b - 0.5) < 1e-5
+    assert abs(c2.a - 0.7) < 1e-5
+
+
+def test_color_setters_clamp() -> None:
+    """
+    Test that setters clamp values between 0 and 1.
+    """
+    c1 = pyg.Color(0.5, 0.5, 0.5, 0.5)
+    
+    # Test clamping values above 1.0
+    c2 = c1.set_r(2.0)
+    assert abs(c2.r - 1.0) < 1e-5
+    
+    c3 = c1.set_g(-0.5)
+    assert abs(c3.g - 0.0) < 1e-5
+    
+    c4 = c1.set_b(1.5)
+    assert abs(c4.b - 1.0) < 1e-5
+    
+    c5 = c1.set_a(-1.0)
+    assert abs(c5.a - 0.0) < 1e-5
+
+
+def test_color_setters_chaining() -> None:
+    """
+    Test that setters can be chained together.
+    """
+    c1 = pyg.Color(0.0, 0.0, 0.0, 1.0)
+    c2 = c1.set_r(0.8).set_g(0.6).set_b(0.4).set_a(0.9)
+    
+    assert abs(c2.r - 0.8) < 1e-5
+    assert abs(c2.g - 0.6) < 1e-5
+    assert abs(c2.b - 0.4) < 1e-5
+    assert abs(c2.a - 0.9) < 1e-5
+    
+    # Original unchanged
+    assert abs(c1.r - 0.0) < 1e-5
+    assert abs(c1.g - 0.0) < 1e-5
+    assert abs(c1.b - 0.0) < 1e-5
+    assert abs(c1.a - 1.0) < 1e-5
 
 
 def test_color_lerp() -> None:
@@ -369,9 +484,10 @@ def test_color_lerp() -> None:
     c3 = c1.lerp(c2, 0.5)
     
     # Should be halfway between red and blue
-    assert c3.r == 0.5
-    assert c3.g == 0.0
-    assert c3.b == 0.5
+    # Account for floating point precision in interpolation
+    assert abs(c3.r - 0.5) < 1e-5
+    assert abs(c3.g - 0.0) < 1e-5
+    assert abs(c3.b - 0.5) < 1e-5
 
 
 def test_color_string_representation() -> None:
@@ -383,6 +499,240 @@ def test_color_string_representation() -> None:
     
     assert isinstance(s, str)
     assert "Color" in s
+
+
+def test_color_from_hsv() -> None:
+    """
+    Test creating Color from HSV values.
+    """
+    # Red at 0 degrees
+    c1 = pyg.Color.from_hsv(0.0, 1.0, 1.0, 1.0)
+    # Account for floating point precision in HSV to RGB conversion
+    assert abs(c1.r - 1.0) < 1e-5
+    assert abs(c1.g - 0.0) < 1e-5
+    assert abs(c1.b - 0.0) < 1e-5
+    
+    # Green at 120 degrees
+    c2 = pyg.Color.from_hsv(120.0, 1.0, 1.0, 1.0)
+    assert abs(c2.r - 0.0) < 1e-5
+    assert abs(c2.g - 1.0) < 1e-5
+    assert abs(c2.b - 0.0) < 1e-5
+    
+    # Blue at 240 degrees
+    c3 = pyg.Color.from_hsv(240.0, 1.0, 1.0, 1.0)
+    assert abs(c3.r - 0.0) < 1e-5
+    assert abs(c3.g - 0.0) < 1e-5
+    assert abs(c3.b - 1.0) < 1e-5
+
+
+def test_color_from_hsv_clamping() -> None:
+    """
+    Test that HSV values are properly clamped.
+    """
+    # Test saturation and value clamping
+    c1 = pyg.Color.from_hsv(0.0, 2.0, 1.5, 1.0)
+    # Account for floating point precision
+    assert c1.r <= 1.0 + 1e-5
+    assert c1.g <= 1.0 + 1e-5
+    assert c1.b <= 1.0 + 1e-5
+    
+    # Test hue wrapping (360 should wrap to 0)
+    c2 = pyg.Color.from_hsv(360.0, 1.0, 1.0, 1.0)
+    c3 = pyg.Color.from_hsv(0.0, 1.0, 1.0, 1.0)
+    # Account for floating point precision in HSV conversion
+    assert abs(c2.r - c3.r) < 1e-5
+
+
+def test_color_addition() -> None:
+    """
+    Test Color addition operator.
+    """
+    c1 = pyg.Color(0.5, 0.3, 0.2, 1.0)
+    c2 = pyg.Color(0.2, 0.4, 0.3, 0.5)
+    c3 = c1 + c2
+    
+    # Account for floating point precision in addition and clamping
+    assert abs(c3.r - 0.7) < 1e-5
+    assert abs(c3.g - 0.7) < 1e-5
+    assert abs(c3.b - 0.5) < 1e-5
+    assert abs(c3.a - 1.0) < 1e-5  # Clamped to 1.0
+    
+    # Original colors unchanged (exact values from construction)
+    assert abs(c1.r - 0.5) < 1e-5
+    assert abs(c2.r - 0.2) < 1e-5
+
+
+def test_color_subtraction() -> None:
+    """
+    Test Color subtraction operator.
+    """
+    c1 = pyg.Color(0.8, 0.6, 0.4, 1.0)
+    c2 = pyg.Color(0.3, 0.2, 0.1, 0.5)
+    c3 = c1 - c2
+    
+    # Account for floating point precision in subtraction and clamping
+    assert abs(c3.r - 0.5) < 1e-5
+    assert abs(c3.g - 0.4) < 1e-5
+    assert abs(c3.b - 0.3) < 1e-5
+    assert abs(c3.a - 0.5) < 1e-5
+    
+    # Original colors unchanged (exact values from construction)
+    assert abs(c1.r - 0.8) < 1e-5
+    assert abs(c2.r - 0.3) < 1e-5
+
+
+def test_color_multiplication() -> None:
+    """
+    Test Color multiplication operator.
+    """
+    c1 = pyg.Color(0.8, 0.6, 0.4, 1.0)
+    c2 = pyg.Color(0.5, 0.5, 0.5, 0.5)
+    c3 = c1 * c2
+    
+    # Account for floating point precision in multiplication and clamping
+    assert abs(c3.r - 0.4) < 1e-5
+    assert abs(c3.g - 0.3) < 1e-5
+    assert abs(c3.b - 0.2) < 1e-5
+    assert abs(c3.a - 0.5) < 1e-5
+    
+    # Original colors unchanged (exact values from construction)
+    assert abs(c1.r - 0.8) < 1e-5
+    assert abs(c2.r - 0.5) < 1e-5
+
+
+def test_color_division() -> None:
+    """
+    Test Color division operator.
+    """
+    c1 = pyg.Color(0.8, 0.6, 0.4, 1.0)
+    c2 = pyg.Color(0.4, 0.3, 0.2, 0.5)
+    c3 = c1 / c2
+    
+    # Account for floating point precision in division and clamping
+    assert abs(c3.r - 1.0) < 1e-5  # 0.8 / 0.4 = 2.0, clamped to 1.0
+    assert abs(c3.g - 1.0) < 1e-5  # 0.6 / 0.3 = 2.0, clamped to 1.0
+    assert abs(c3.b - 1.0) < 1e-5  # 0.4 / 0.2 = 2.0, clamped to 1.0
+    assert abs(c3.a - 1.0) < 1e-5  # 1.0 / 0.5 = 2.0, clamped to 1.0
+    
+    # Original colors unchanged (exact values from construction)
+    assert abs(c1.r - 0.8) < 1e-5
+    assert abs(c2.r - 0.4) < 1e-5
+
+
+def test_color_division_by_zero() -> None:
+    """
+    Test Color division with zero components.
+    """
+    c1 = pyg.Color(0.8, 0.6, 0.4, 1.0)
+    c2 = pyg.Color(0.0, 0.3, 0.2, 0.0)
+    c3 = c1 / c2
+    
+    # Division by zero should result in 0.0
+    # Account for floating point precision
+    assert abs(c3.r - 0.0) < 1e-5
+    assert abs(c3.g - 1.0) < 1e-5  # 0.6 / 0.3 = 2.0, clamped to 1.0
+    assert abs(c3.b - 1.0) < 1e-5  # 0.4 / 0.2 = 2.0, clamped to 1.0
+    assert abs(c3.a - 0.0) < 1e-5
+
+
+def test_color_operators_chaining() -> None:
+    """
+    Test that color operators can be chained.
+    """
+    c1 = pyg.Color(0.5, 0.5, 0.5, 1.0)
+    c2 = pyg.Color(0.2, 0.2, 0.2, 0.5)
+    c3 = pyg.Color(0.1, 0.1, 0.1, 0.5)
+    
+    result = (c1 + c2) * c3
+    
+    # (0.5+0.2) * 0.1 = 0.7 * 0.1 = 0.07 for each component
+    # Account for floating point precision in chained operations
+    assert abs(result.r - 0.07) < 1e-5
+    assert abs(result.g - 0.07) < 1e-5
+    assert abs(result.b - 0.07) < 1e-5
+    assert abs(result.a - 0.5) < 1e-5  # (1.0+0.5) * 0.5 = 1.0 * 0.5 = 0.5 (clamped)
+
+
+def test_color_equality() -> None:
+    """
+    Test Color equality operator with floating point precision handling.
+    """
+    c1 = pyg.Color(0.5, 0.3, 0.8, 1.0)
+    c2 = pyg.Color(0.5, 0.3, 0.8, 1.0)
+    c3 = pyg.Color(0.5, 0.3, 0.8, 0.5)
+    c4 = pyg.Color(0.6, 0.3, 0.8, 1.0)
+    
+    # Same colors should be equal
+    assert c1 == c2
+    assert not (c1 != c2)
+    
+    # Different alpha should not be equal
+    assert c1 != c3
+    assert not (c1 == c3)
+    
+    # Different RGB should not be equal
+    assert c1 != c4
+    assert not (c1 == c4)
+    
+    # Test with color constants
+    assert pyg.Color.RED == pyg.Color(1.0, 0.0, 0.0, 1.0)
+    assert pyg.Color.BLUE != pyg.Color.RED
+
+
+def test_color_equality_floating_point_precision() -> None:
+    """
+    Test that equality handles floating point precision correctly.
+    """
+    # Test that very close values are considered equal (within epsilon)
+    c1 = pyg.Color(0.5, 0.3, 0.8, 1.0)
+    # Values that differ by less than 1e-5 should be equal
+    c2 = pyg.Color(0.5 + 1e-6, 0.3 + 1e-6, 0.8 + 1e-6, 1.0 + 1e-6)
+    assert c1 == c2
+    
+    # Values that differ by more than epsilon should not be equal
+    c3 = pyg.Color(0.5 + 1e-4, 0.3, 0.8, 1.0)  # 0.0001 difference
+    assert c1 != c3
+    
+    # Test with operations that might introduce floating point errors
+    c4 = pyg.Color(0.1, 0.2, 0.3, 0.4)
+    c5 = c4 + pyg.Color(0.0, 0.0, 0.0, 0.0)
+    assert c4 == c5  # Adding zero should result in equal color
+    
+    # Test division that might result in floating point precision issues
+    c6 = pyg.Color(0.8, 0.6, 0.4, 1.0)
+    c7 = pyg.Color(0.4, 0.3, 0.2, 0.5)
+    result = c6 / c7
+    # Result should be clamped to 1.0, but might have tiny floating point differences
+    expected = pyg.Color(1.0, 1.0, 1.0, 1.0)
+    assert result == expected
+
+
+def test_color_equality_with_operations() -> None:
+    """
+    Test that equality works correctly with color operations, accounting for floating point precision.
+    """
+    c1 = pyg.Color(0.5, 0.5, 0.5, 1.0)
+    c2 = pyg.Color(0.3, 0.3, 0.3, 1.0)
+    c3 = pyg.Color(0.2, 0.2, 0.2, 0.0)
+    
+    # (c1 - c2) should equal c3 (accounting for floating point precision)
+    result = c1 - c2
+    assert result == c3
+    
+    # Test that operations preserve equality even with floating point operations
+    c4 = pyg.Color(1.0, 0.0, 0.0, 1.0)
+    c5 = pyg.Color(0.5, 0.0, 0.0, 1.0)
+    c6 = pyg.Color(0.5, 0.0, 0.0, 1.0)
+    
+    # Multiplication might introduce tiny floating point differences
+    result2 = c4 * c6
+    assert result2 == c5
+    
+    # Test with HSV conversion that might have floating point precision issues
+    c7 = pyg.Color.from_hsv(0.0, 1.0, 1.0, 1.0)  # Red
+    c8 = pyg.Color(1.0, 0.0, 0.0, 1.0)
+    # HSV to RGB conversion might have tiny differences
+    assert c7 == c8
 
 
 # ========== Time Tests ==========

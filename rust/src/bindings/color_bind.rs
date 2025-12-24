@@ -41,6 +41,13 @@ impl PyColor {
         }
     }
 
+    #[staticmethod]
+    fn from_hsv(h: f32, s: f32, v: f32, a: f32) -> PyColor {
+        PyColor {
+            inner: RustColor::from_hsv(h, s, v, a),
+        }
+    }
+
     #[getter]
     fn r(&self) -> f32 {
         self.inner.r()
@@ -61,6 +68,30 @@ impl PyColor {
         self.inner.a()
     }
 
+    fn set_r(&self, r: f32) -> PyColor {
+        PyColor {
+            inner: self.inner.set_r(r),
+        }
+    }
+
+    fn set_g(&self, g: f32) -> PyColor {
+        PyColor {
+            inner: self.inner.set_g(g),
+        }
+    }
+
+    fn set_b(&self, b: f32) -> PyColor {
+        PyColor {
+            inner: self.inner.set_b(b),
+        }
+    }
+
+    fn set_a(&self, a: f32) -> PyColor {
+        PyColor {
+            inner: self.inner.set_a(a),
+        }
+    }
+
     fn with_alpha(&self, a: f32) -> PyColor {
         PyColor {
             inner: self.inner.with_alpha(a),
@@ -79,6 +110,38 @@ impl PyColor {
 
     fn __repr__(&self) -> String {
         self.inner.to_string()
+    }
+
+    fn __add__(&self, other: &PyColor) -> PyColor {
+        PyColor {
+            inner: self.inner + other.inner,
+        }
+    }
+
+    fn __sub__(&self, other: &PyColor) -> PyColor {
+        PyColor {
+            inner: self.inner - other.inner,
+        }
+    }
+
+    fn __mul__(&self, other: &PyColor) -> PyColor {
+        PyColor {
+            inner: self.inner * other.inner,
+        }
+    }
+
+    fn __truediv__(&self, other: &PyColor) -> PyColor {
+        PyColor {
+            inner: self.inner / other.inner,
+        }
+    }
+
+    fn __eq__(&self, other: &PyColor) -> bool {
+        self.inner.approx_eq_default(&other.inner)
+    }
+
+    fn __ne__(&self, other: &PyColor) -> bool {
+        !self.inner.approx_eq_default(&other.inner)
     }
 
     // Color constants as class attributes
