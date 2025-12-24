@@ -72,14 +72,6 @@ impl PyEngine {
     }
 }
 
-// ========== Vector Bindings ==========
-// Moved to vector_bindings.rs
-
-// ========== Color Bindings ==========
-// Moved to color_bindings.rs
-
-// ========== Time Bindings ==========
-
 /// Python wrapper for Time
 #[pyclass(name = "Time")]
 pub struct PyTime {
@@ -197,11 +189,20 @@ impl PyTransformComponent {
     }
 }
 
+// ========== Module Functions ==========
+
+/// Get the engine version (module-level function)
+#[pyfunction]
+fn version() -> String {
+    crate::core::engine::VERSION.to_string()
+}
+
 // ========== Module Initialization ==========
 
 /// Module initialization function
 #[pymodule]
 fn pyg_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(version, m)?)?;
     m.add_class::<PyEngine>()?;
     m.add_class::<PyVec2>()?;
     m.add_class::<PyVec3>()?;

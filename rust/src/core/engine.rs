@@ -8,7 +8,7 @@ pub struct Engine {
     logging_initialized: bool,
 }
 
-const VERSION: &str = "1.2.0";
+pub const VERSION: &str = "1.2.0";
 
 impl Engine {
     /// Create a new Engine instance with default logging (console only)
@@ -63,9 +63,15 @@ impl Engine {
     }
 
     /*
-    Runs at every frame
+    Engine update loop
      */
     fn update(&self) {
+        // ------------------------------------------------------------
+        // IF NOT HEADLESS, DO THE FOLLOWING:
+        // ------------------------------------------------------------
+
+        // Time step/tick management
+
         // Input (collect raw input + build an input snapshot)
 
         // Event System - enqueue input events
@@ -76,7 +82,8 @@ impl Engine {
 
         // GameObjects + Components - pre-physics (gameplay/AI/scripts)
 
-        // Physics (often fixed-timestep; may run 0..N steps)
+        // **Fixed update:**
+            // Physics (often fixed-timestep; may run 0..N steps)
 
         // Event System - enqueue physics events (collisions/triggers)
 
@@ -84,9 +91,25 @@ impl Engine {
 
         // UI - update layout/animations/data-binding (using final game state)
 
-        // Rendering - world
+        // **Frame rate limiting (optional)**
+            // Rendering - world
+            // Rendering - UI
 
-        // Rendering - UI (overlay last)
+        // ------------------------------------------------------------
+        // IF HEADLESS, DO THE FOLLOWING:
+        // ------------------------------------------------------------
+
+        // Time step/tick management, (i.e., delta time is not based on system time, but rather a fixed timestep)
+        // Input ("virtual" input: network commands, bots, scripted tests)
+        // Event system - enqueue input events
+        // GameObjects + Components - pre-physics (gameplay/AI/scripts)
+        // Physics (often fixed-timestep; may run 0..N steps)
+        // Event System - enqueue physics events (collisions/triggers)
+        // GameObjects + Components - post-physics / late update
+        // Event System - dispatch deffered events (end-of-tick)
+        // Networking/persistance (optional but common): replicate state, process outgoing packets, write snapshots
+
+        // ^^^ Note: Key differences are no rendering, UI is disabled, simulation runs at fixed timestep 
     }
 
     /// Log a message at INFO level
