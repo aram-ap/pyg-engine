@@ -24,11 +24,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create window configuration using the builder pattern
     let window_config = WindowConfig::new()
         .with_title("PyG Engine - Window Demo")
-        .with_size(1280, 720)
+        .with_size(1920, 1080)
         .with_resizable(true)
         .with_fullscreen(FullscreenMode::None)
         .with_min_size(640, 480)
-        .with_max_size(1920, 1080);
+        .with_max_size(3840, 2160);
     
     // Run the engine with the window
     // This will:
