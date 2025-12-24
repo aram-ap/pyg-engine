@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use winit::event::{ElementState, MouseButton, MouseScrollDelta, WindowEvent};
 use winit::keyboard::{Key, NamedKey};
 
 /// Represents a mouse button state
@@ -185,6 +186,60 @@ impl InputManager {
         manager.axis_bindings = Self::default_axis_bindings();
 
         manager
+    }
+
+    /// Process a winit `WindowEvent` and update the internal input state.
+    ///
+    /// This method should be called from your window event loop for each event.
+    pub fn handle_window_event(&mut self, event: &WindowEvent) {
+        match event {
+            WindowEvent::KeyboardInput { event, .. } => {
+                let key = event.logical_key.clone();
+                let pressed = event.state == ElementState::Pressed;
+                self.keys_current.insert(key.clone(), pressed);
+
+                if pressed {
+                    self.event_queue.push_back(InputEvent::KeyPressed { key });
+                } else {
+                    self.event_queue.push_back(InputEvent::KeyReleased { key });
+                }
+            }
+            WindowEvent::MouseInput { state, button, .. } => {
+                let mapped = Self::map_mouse_button(*button);
+                let pressed = *state == ElementState::Pressed;
+                self.mouse_buttons_current.insert(mapped, pressed);
+
+                if pressed {
+                    self.event_queue
+                        .push_back(InputEvent::MouseButtonPressed { button: mapped });
+                } else {
+                    self.event_queue
+                        .push_back(InputEvent::MouseButtonReleased { button: mapped });
+                }
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                self.mouse_position = (position.x, position.y);
+                self.event_queue.push_back(InputEvent::MouseMoved {
+                    x: position.x,
+                    y: position.y,
+                });
+            }
+            WindowEvent::MouseWheel { delta, .. } => {
+                let (dx, dy) = match delta {
+                    MouseScrollDelta::LineDelta(x, y) => (*x as f64, *y as f64),
+                    MouseScrollDelta::PixelDelta(pos) => (pos.x, pos.y),
+                };
+
+                self.mouse_wheel_delta.0 += dx;
+                self.mouse_wheel_delta.1 += dy;
+
+                self.event_queue.push_back(InputEvent::MouseWheel {
+                    delta_x: dx,
+                    delta_y: dy,
+                });
+            }
+            _ => {}
+        }
     }
 
     /// Build the default axis bindings used by `new`.
@@ -549,5 +604,16 @@ impl InputManager {
         }
 
         value * binding.sensitivity
+    }
+
+    /// Map a winit mouse button to the engine's `MouseButtonType`.
+    fn map_mouse_button(button: MouseButton) -> MouseButtonType {
+        match button {
+            MouseButton::Left => MouseButtonType::Left,
+            MouseButton::Right => MouseButtonType::Right,
+            MouseButton::Middle => MouseButtonType::Middle,
+            MouseButton::Other(id) => MouseButtonType::Other(id),
+            _ => MouseButtonType::Other(0),
+        }
     }
 }

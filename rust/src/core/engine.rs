@@ -151,6 +151,9 @@ impl Engine {
         self.time.tick();
 
         // Input (collect raw input + build an input snapshot)
+        if let Some(input_manager) = &mut self.input_manager {
+            input_manager.update();
+        }
 
         // Event System - enqueue input events
 
@@ -329,6 +332,11 @@ impl ApplicationHandler for EngineApp {
         _window_id: WindowId,
         event: WindowEvent,
     ) {
+        // Forward all window events to the input manager so it can update input state.
+        if let Some(input_manager) = &mut self.engine.input_manager {
+            input_manager.handle_window_event(&event);
+        }
+
         match event {
             WindowEvent::CloseRequested => {
                 logging::log_info("Close requested, shutting down engine");
