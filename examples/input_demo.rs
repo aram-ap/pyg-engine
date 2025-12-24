@@ -1,3 +1,5 @@
+/// DEPRECATION WARNING: This example is deprecated and will be removed in a future version.
+/// Reason: This example is not useful and is not a good example of how to use the InputManager.
 /// Input Demo
 ///
 /// This example demonstrates how to create and run a window using the
