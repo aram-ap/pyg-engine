@@ -10,7 +10,10 @@
 use once_cell::sync::OnceCell;
 use std::path::PathBuf;
 use tracing::{debug, error, info, trace, warn, Level};
-use tracing_appender::non_blocking::WorkerGuard;
+use tracing_appender::{
+    non_blocking::WorkerGuard,
+    rolling::{RollingFileAppender, Rotation},
+};
 use tracing_subscriber::{
     fmt::{self, time::ChronoLocal},
     layer::SubscriberExt,
@@ -40,7 +43,7 @@ impl Default for LogConfig {
     fn default() -> Self {
         Self {
             level: Level::INFO,
-            enable_file: false,
+            enable_file: true,
             log_dir: PathBuf::from("logs"),
             enable_colors: true,
             enable_json: false,
@@ -66,10 +69,14 @@ pub fn init_logging(config: LogConfig) {
         // Create log directory if it doesn't exist
         let _ = std::fs::create_dir_all(&config.log_dir);
 
-        let file_appender = tracing_appender::rolling::daily(
-            config.log_dir.clone(),
-            "pyg_engine.log",
-        );
+        // Use a daily rolling file appender with filename pattern:
+        // pyg_engine_YYYY-MM-DD.log (e.g. pyg_engine_2025-12-24.log)
+        let file_appender = RollingFileAppender::builder()
+            .rotation(Rotation::DAILY)
+            .filename_prefix("pyg_engine_")
+            .filename_suffix("log")
+            .build(&config.log_dir)
+            .expect("Failed to create RollingFileAppender");
         let (non_blocking, worker_guard) = tracing_appender::non_blocking(file_appender);
         guard = Some(worker_guard);
 
@@ -117,6 +124,7 @@ pub fn init_logging(config: LogConfig) {
     // Store the guard to keep file writer alive
     let _ = LOGGER_GUARD.set(guard);
 
+    info!("--------------------------------");
     info!("Logging system initialized with level: {}", config.level);
 }
 

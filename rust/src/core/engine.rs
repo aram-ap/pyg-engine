@@ -146,6 +146,10 @@ impl Engine {
         // Time step/tick management
         self.time.tick();
 
+        // if self.time.tick_count() % 200 == 0 {
+        //     self.time.log_info();
+        // }
+
         // Input (collect raw input + build an input snapshot)
 
         // Event System - enqueue input events
@@ -168,8 +172,6 @@ impl Engine {
         let (is_fixed_time, fixed_time) = self.time.tick_fixed();
         if is_fixed_time 
             && let Some(object_manager) = &mut self.object_manager {
-
-                self.time.log_info();
 
             for key in object_manager.get_keys() {
                 if let Some(object) = object_manager.get_object_by_id(key) {
