@@ -160,6 +160,12 @@ impl Engine {
                         render_manager.resize(window_manager.size());
                     }
                 }
+                Err(wgpu::SurfaceError::Outdated) => {
+                    // Surface is outdated, reconfigure with current size
+                    if let Some(window_manager) = &self.window_manager {
+                        render_manager.resize(window_manager.size());
+                    }
+                }
                 Err(wgpu::SurfaceError::OutOfMemory) => {
                     logging::log_error("Out of memory!");
                 }
@@ -223,13 +229,15 @@ impl ApplicationHandler for EngineApp {
         // Create window and render manager when the application resumes
         if self.engine.window_manager.is_none() {
             if let Some(config) = self.window_config.take() {
+                // Extract background color before config is moved
+                let bg_color = config.background_color;
                 match WindowManager::new(event_loop, config) {
                     Ok(window_manager) => {
                         logging::log_info("Window created successfully");
                         
                         // Create render manager with the window Arc
                         let window = window_manager.window_arc();
-                        match pollster::block_on(RenderManager::new(window)) {
+                        match pollster::block_on(RenderManager::new(window, bg_color)) {
                             Ok(render_manager) => {
                                 logging::log_info("Render manager initialized successfully");
                                 self.engine.render_manager = Some(render_manager);

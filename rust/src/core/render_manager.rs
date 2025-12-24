@@ -2,7 +2,7 @@ use winit::dpi::PhysicalSize;
 use winit::window::Window;
 use wgpu::{Device, Queue, Surface, SurfaceConfiguration, PresentMode, TextureUsages};
 use std::sync::Arc;
-use crate::types::color;
+use crate::types::Color;
 use super::logging;
 
 /// Manages the rendering pipeline using wgpu
@@ -12,8 +12,12 @@ pub struct RenderManager {
     surface: Surface<'static>,
     surface_config: SurfaceConfiguration,
     vsync_enabled: bool,
+    background_color: Color,
     // Keep a reference to the window to ensure it outlives the surface
     _window: Arc<Window>,
+    // Pending resize size - only reconfigure when actually rendering to avoid
+    // expensive reconfigurations during rapid resize events
+    pending_resize: Option<PhysicalSize<u32>>,
 }
 
 impl RenderManager {
@@ -21,7 +25,7 @@ impl RenderManager {
     /// 
     /// This is an async function because it needs to request a GPU adapter
     /// and create a device, which are async operations.
-    pub async fn new(window: Arc<Window>) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(window: Arc<Window>, background_color: Option<Color>) -> Result<Self, Box<dyn std::error::Error>> {
         let size = window.inner_size();
 
         // Create the wgpu instance
@@ -99,7 +103,9 @@ impl RenderManager {
             surface,
             surface_config,
             vsync_enabled: true,
+            background_color: background_color.unwrap_or(Color::BLACK),
             _window: window,
+            pending_resize: None,
         })
     }
 
@@ -108,6 +114,16 @@ impl RenderManager {
     /// This function acquires a surface texture, renders to it, and presents it.
     /// Returns an error if the surface needs to be reconfigured or if rendering fails.
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        // Handle pending resize before rendering to avoid reconfiguring
+        // multiple times during rapid resize events
+        if let Some(new_size) = self.pending_resize.take() {
+            if new_size.width > 0 && new_size.height > 0 {
+                self.surface_config.width = new_size.width;
+                self.surface_config.height = new_size.height;
+                self.surface.configure(&self.device, &self.surface_config);
+            }
+        }
+        
         // Acquire the next frame
         let output = self.surface.get_current_texture()?;
         
@@ -130,7 +146,7 @@ impl RenderManager {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(color::Color::BLACK.to_wgpu()),
+                        load: wgpu::LoadOp::Clear(self.background_color.to_wgpu()),
                         store: wgpu::StoreOp::Store,
                     },
                     depth_slice: None,
@@ -152,11 +168,13 @@ impl RenderManager {
     /// Resize the surface to match the new window size
     /// 
     /// Should be called when the window is resized.
+    /// The actual reconfiguration is deferred until the next render call
+    /// to avoid expensive reconfigurations during rapid resize events.
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
-            self.surface_config.width = new_size.width;
-            self.surface_config.height = new_size.height;
-            self.surface.configure(&self.device, &self.surface_config);
+            // Store the pending resize instead of immediately reconfiguring
+            // This prevents expensive surface reconfigurations during rapid resize events
+            self.pending_resize = Some(new_size);
         }
     }
 

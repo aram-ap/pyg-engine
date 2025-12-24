@@ -3,6 +3,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::{Fullscreen, Icon, Window};
 use std::sync::Arc;
 use super::logging;
+use crate::types::Color;
 
 /// Fullscreen mode options for the window
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,6 +28,7 @@ pub struct WindowConfig {
     pub max_width: Option<u32>,
     pub max_height: Option<u32>,
     pub icon: Option<Icon>,
+    pub background_color: Option<Color>,
 }
 
 impl Default for WindowConfig {
@@ -42,6 +44,7 @@ impl Default for WindowConfig {
             max_width: None,
             max_height: None,
             icon: None,
+            background_color: None,
         }
     }
 }
@@ -94,6 +97,12 @@ impl WindowConfig {
     /// Set the window icon
     pub fn with_icon(mut self, icon: Icon) -> Self {
         self.icon = Some(icon);
+        self
+    }
+
+    /// Set the background color
+    pub fn with_background_color(mut self, color: Color) -> Self {
+        self.background_color = Some(color);
         self
     }
 }

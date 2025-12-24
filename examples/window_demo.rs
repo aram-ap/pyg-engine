@@ -12,6 +12,7 @@
 /// when running standalone Rust examples.
 
 use pyg_engine_native::core::{Engine, WindowConfig, FullscreenMode};
+use pyg_engine_native::types::Color;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create engine instance with custom logging
@@ -28,7 +29,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_resizable(true)
         .with_fullscreen(FullscreenMode::None)
         .with_min_size(640, 480)
-        .with_max_size(3840, 2160);
+        .with_max_size(3840, 2160)
+        .with_background_color(Color::DARK_GRAY);
     
     // Run the engine with the window
     // This will:
