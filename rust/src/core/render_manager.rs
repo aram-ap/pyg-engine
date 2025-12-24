@@ -2,6 +2,7 @@ use winit::dpi::PhysicalSize;
 use winit::window::Window;
 use wgpu::{Device, Queue, Surface, SurfaceConfiguration, PresentMode, TextureUsages};
 use std::sync::Arc;
+use crate::types::color;
 use super::logging;
 
 /// Manages the rendering pipeline using wgpu
@@ -129,12 +130,7 @@ impl RenderManager {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
+                        load: wgpu::LoadOp::Clear(color::Color::BLACK.to_wgpu()),
                         store: wgpu::StoreOp::Store,
                     },
                     depth_slice: None,
