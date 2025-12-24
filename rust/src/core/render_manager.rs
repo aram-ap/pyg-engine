@@ -4,6 +4,9 @@ use wgpu::{Device, Queue, Surface, SurfaceConfiguration, PresentMode, TextureUsa
 use std::sync::Arc;
 use crate::types::Color;
 use super::logging;
+use crate::core::game_object::GameObject;
+use crate::core::object_manager::ObjectManager;
+use priority_queue::PriorityQueue;
 
 /// Manages the rendering pipeline using wgpu
 pub struct RenderManager {
@@ -119,7 +122,7 @@ impl RenderManager {
     /// 
     /// This function acquires a surface texture, renders to it, and presents it.
     /// Returns an error if the surface needs to be reconfigured or if rendering fails.
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, objects: &Option<ObjectManager>) -> Result<(), wgpu::SurfaceError> {
         // Handle pending resize before rendering to avoid reconfiguring
         // multiple times during rapid resize events
         if let Some(new_size) = self.pending_resize.take() {
@@ -162,7 +165,10 @@ impl RenderManager {
                 timestamp_writes: None,
                 multiview_mask: None,
             });
+
         }
+
+        // let mut sprite_objects = PriorityQueue::::new();
 
         // Submit the command buffer and present the frame
         self.queue.submit(std::iter::once(encoder.finish()));

@@ -214,7 +214,7 @@ impl Engine {
     /// Render a frame
     fn render(&mut self) {
         if let Some(render_manager) = &mut self.render_manager {
-            match render_manager.render() {
+            match render_manager.render(&self.object_manager) {
                 Ok(_) => {}
                 Err(wgpu::SurfaceError::Lost) => {
                     // Surface is lost, need to reconfigure
