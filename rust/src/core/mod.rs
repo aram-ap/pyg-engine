@@ -5,7 +5,8 @@ pub mod time;
 pub mod logging;
 pub mod window_manager;
 pub mod render_manager;
-mod input_manager;
+pub mod input_manager;
+pub mod object_manager;
 
 pub use engine::*;
 pub use game_object::*;
@@ -14,4 +15,6 @@ pub use time::*;
 pub use logging::*;
 pub use window_manager::*;
 pub use render_manager::*;
+pub use input_manager::*;
+pub use object_manager::*;
 

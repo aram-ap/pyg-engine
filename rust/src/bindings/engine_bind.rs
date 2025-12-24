@@ -127,8 +127,8 @@ impl PyGameObject {
         self.inner.set_name(name);
     }
 
-    fn update(&self) {
-        self.inner.update();
+    fn update(&self, time: &PyTime) {
+        self.inner.update(&time.inner);
     }
 }
 

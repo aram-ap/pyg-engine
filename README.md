@@ -75,7 +75,7 @@ See the `docs/` directory for detailed guides:
 Run the test suite (tests are located in the `tests/` directory):
 
 ```bash
-pytest tests/test_engine_rust.py -v
+pytest tests -v
 ```
 
 ## Development

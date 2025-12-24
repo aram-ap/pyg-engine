@@ -3,7 +3,7 @@ use crate::types::vector::Vec2;
 
 // Game objects contain components.
 // Components are used to add functionality to game objects.
-pub trait ComponentTrait {
+pub trait ComponentTrait: Send + Sync {
     /**
         Creates a new component.
         @return: The new component.
@@ -21,6 +21,7 @@ pub trait ComponentTrait {
         @param delta_time: The time since the last update.
     */
     fn update(&self, time: &Time);
+    fn fixed_update(&self, time: &Time, fixed_time: f32);
     fn on_start(&self);
     fn on_destroy(&self);
     fn on_enable(&self);
@@ -49,6 +50,8 @@ impl ComponentTrait for TransformComponent {
     }
 
     fn update(&self, _time: &Time) {}
+    fn fixed_update(&self, _time: &Time, _fixed_time: f32) {}
+
     fn on_start(&self) {}
     fn on_destroy(&self) {}
     fn on_enable(&self) {}

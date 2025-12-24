@@ -2,6 +2,9 @@
 use super::logging;
 use super::window_manager::{WindowConfig, WindowManager};
 use super::render_manager::RenderManager;
+use super::object_manager::ObjectManager;
+use super::game_object::GameObject;
+use super::time::Time;
 use std::path::PathBuf;
 use tracing::Level;
 use winit::application::ApplicationHandler;
@@ -13,6 +16,8 @@ pub struct Engine {
     version: String,
     window_manager: Option<WindowManager>,
     render_manager: Option<RenderManager>,
+    object_manager: Option<ObjectManager>,
+    time: Time,
 }
 
 pub const VERSION: &str = "1.2.0";
@@ -25,6 +30,8 @@ impl Engine {
             version: VERSION.to_string(),
             window_manager: None,
             render_manager: None,
+            object_manager: Some(ObjectManager::new()),
+            time: Time::new(),
         }
     }
 
@@ -60,6 +67,8 @@ impl Engine {
             version: VERSION.to_string(),
             window_manager: None,
             render_manager: None,
+            object_manager: Some(ObjectManager::new()),
+            time: Time::new(),
         }
     }
 
@@ -99,15 +108,43 @@ impl Engine {
         logging::log_info("Closing window");
     }
 
-    /*
-    Engine update loop
-     */
+    /// Add a game object to the engine
+    /// 
+    /// Takes ownership of the GameObject and adds it to the engine's object manager.
+    /// Returns the ID of the added object, or None if the object manager is not initialized.
+    pub fn add_game_object(&mut self, object: GameObject) -> Option<u32> {
+        if let Some(object_manager) = &mut self.object_manager {
+            object_manager.add_object(object)
+        } else {
+            logging::log_warn("Cannot add game object: object manager is not initialized");
+            None
+        }
+    }
+
+    /// Create a new GameObject and add it to the engine
+    /// 
+    /// Creates a new GameObject with a default name and adds it to the engine's object manager.
+    /// Returns the ID of the created object, or None if the object manager is not initialized.
+    pub fn create_game_object(&mut self) -> Option<u32> {
+        self.add_game_object(GameObject::new())
+    }
+
+    /// Create a new named GameObject and add it to the engine
+    /// 
+    /// Creates a new GameObject with the specified name and adds it to the engine's object manager.
+    /// Returns the ID of the created object, or None if the object manager is not initialized.
+    pub fn create_game_object_named(&mut self, name: String) -> Option<u32> {
+        self.add_game_object(GameObject::new_named(name))
+    }
+
+    /// Engine update loop
     fn update(&mut self) {
         // ------------------------------------------------------------
         // IF NOT HEADLESS, DO THE FOLLOWING:
         // ------------------------------------------------------------
 
         // Time step/tick management
+        self.time.tick();
 
         // Input (collect raw input + build an input snapshot)
 
@@ -118,9 +155,29 @@ impl Engine {
         // Event System - dispatch "unconsumed" gameplay input events
 
         // GameObjects + Components - pre-physics (gameplay/AI/scripts)
+        if let Some(object_manager) = &mut self.object_manager {
+            for key in object_manager.get_keys() {
+                if let Some(object) = object_manager.get_object_by_id(key) {
+                    object.update(&self.time);
+                }
+            }
+        }
 
         // **Fixed update:**
             // Physics (often fixed-timestep; may run 0..N steps)
+        let (is_fixed_time, fixed_time) = self.time.tick_fixed();
+        if is_fixed_time 
+            && let Some(object_manager) = &mut self.object_manager {
+
+                self.time.log_info();
+
+            for key in object_manager.get_keys() {
+                if let Some(object) = object_manager.get_object_by_id(key) {
+                    object.fixed_update(&self.time, fixed_time);
+                }
+            }
+
+        }
 
         // Event System - enqueue physics events (collisions/triggers)
 
