@@ -25,7 +25,7 @@ impl RenderManager {
     /// 
     /// This is an async function because it needs to request a GPU adapter
     /// and create a device, which are async operations.
-    pub async fn new(window: Arc<Window>, background_color: Option<Color>) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(window: Arc<Window>, background_color: Option<Color>, vsync: bool) -> Result<Self, Box<dyn std::error::Error>> {
         let size = window.inner_size();
 
         // Create the wgpu instance
@@ -84,12 +84,18 @@ impl RenderManager {
             .unwrap_or(surface_caps.formats[0]);
 
         // Configure the surface
+        let present_mode = if vsync {
+            PresentMode::Fifo // VSync on
+        } else {
+            PresentMode::Immediate // VSync off
+        };
+        
         let surface_config = SurfaceConfiguration {
             usage: TextureUsages::RENDER_ATTACHMENT,
             format: surface_format,
             width: size.width.max(1),
             height: size.height.max(1),
-            present_mode: PresentMode::Fifo, // VSync enabled by default
+            present_mode,
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
@@ -102,7 +108,7 @@ impl RenderManager {
             queue,
             surface,
             surface_config,
-            vsync_enabled: true,
+            vsync_enabled: vsync,
             background_color: background_color.unwrap_or(Color::BLACK),
             _window: window,
             pending_resize: None,

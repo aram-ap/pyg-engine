@@ -30,7 +30,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_fullscreen(FullscreenMode::None)
         .with_min_size(640, 480)
         .with_max_size(3840, 2160)
-        .with_background_color(Color::DARK_GRAY);
+        .with_background_color(Color::DARK_GRAY)
+        .with_vsync(true); // Enable VSync (default: true)
     
     // Run the engine with the window
     // This will:

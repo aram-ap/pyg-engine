@@ -229,15 +229,16 @@ impl ApplicationHandler for EngineApp {
         // Create window and render manager when the application resumes
         if self.engine.window_manager.is_none() {
             if let Some(config) = self.window_config.take() {
-                // Extract background color before config is moved
+                // Extract background color and vsync before config is moved
                 let bg_color = config.background_color;
+                let vsync = config.vsync;
                 match WindowManager::new(event_loop, config) {
                     Ok(window_manager) => {
                         logging::log_info("Window created successfully");
                         
                         // Create render manager with the window Arc
                         let window = window_manager.window_arc();
-                        match pollster::block_on(RenderManager::new(window, bg_color)) {
+                        match pollster::block_on(RenderManager::new(window, bg_color, vsync)) {
                             Ok(render_manager) => {
                                 logging::log_info("Render manager initialized successfully");
                                 self.engine.render_manager = Some(render_manager);

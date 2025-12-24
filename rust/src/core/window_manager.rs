@@ -29,6 +29,7 @@ pub struct WindowConfig {
     pub max_height: Option<u32>,
     pub icon: Option<Icon>,
     pub background_color: Option<Color>,
+    pub vsync: bool,
 }
 
 impl Default for WindowConfig {
@@ -45,6 +46,7 @@ impl Default for WindowConfig {
             max_height: None,
             icon: None,
             background_color: None,
+            vsync: true,
         }
     }
 }
@@ -103,6 +105,15 @@ impl WindowConfig {
     /// Set the background color
     pub fn with_background_color(mut self, color: Color) -> Self {
         self.background_color = Some(color);
+        self
+    }
+
+    /// Set VSync (vertical synchronization)
+    /// 
+    /// When enabled (default), the frame rate will be limited to the display's refresh rate.
+    /// When disabled, frames will be presented immediately, which may cause screen tearing.
+    pub fn with_vsync(mut self, vsync: bool) -> Self {
+        self.vsync = vsync;
         self
     }
 }
