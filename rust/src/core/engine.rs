@@ -1,11 +1,19 @@
 /// Core engine functionality
 use super::logging;
+use super::window_manager::{WindowConfig, WindowManager};
+use super::render_manager::RenderManager;
 use std::path::PathBuf;
 use tracing::Level;
+use winit::application::ApplicationHandler;
+use winit::event::WindowEvent;
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+use winit::window::WindowId;
 
 pub struct Engine {
     version: String,
     logging_initialized: bool,
+    window_manager: Option<WindowManager>,
+    render_manager: Option<RenderManager>,
 }
 
 pub const VERSION: &str = "1.2.0";
@@ -17,6 +25,8 @@ impl Engine {
         Self {
             version: VERSION.to_string(),
             logging_initialized: true,
+            window_manager: None,
+            render_manager: None,
         }
     }
 
@@ -51,13 +61,43 @@ impl Engine {
         Self {
             version: VERSION.to_string(),
             logging_initialized: true,
+            window_manager: None,
+            render_manager: None,
         }
     }
 
+    /// Run the engine with a window
+    /// 
+    /// This method takes ownership of the engine and runs the event loop.
+    /// It creates a window and render manager, then enters the main game loop.
+    pub fn run(mut self, window_config: WindowConfig) -> Result<(), Box<dyn std::error::Error>> {
+        logging::log_info(&format!(
+            "Starting PyG Engine v{} with window: {} ({}x{})",
+            self.version, window_config.title, window_config.width, window_config.height
+        ));
+
+        // Create the event loop
+        let event_loop = EventLoop::new()?;
+        event_loop.set_control_flow(ControlFlow::Poll);
+
+        // Create application handler
+        let mut app = EngineApp {
+            engine: self,
+            window_config: Some(window_config),
+        };
+
+        // Run the event loop
+        event_loop.run_app(&mut app)?;
+
+        Ok(())
+    }
+
+    /// Open a window (legacy method for backwards compatibility)
     pub fn open_window(&self, title: &str, width: u32, height: u32) {
         logging::log_info(&format!("Opening window: {} ({}x{})", title, width, height));
     }
 
+    /// Close the window (legacy method for backwards compatibility)
     pub fn close_window(&self) {
         logging::log_info("Closing window");
     }
@@ -65,7 +105,7 @@ impl Engine {
     /*
     Engine update loop
      */
-    fn update(&self) {
+    fn update(&mut self) {
         // ------------------------------------------------------------
         // IF NOT HEADLESS, DO THE FOLLOWING:
         // ------------------------------------------------------------
@@ -112,6 +152,27 @@ impl Engine {
         // ^^^ Note: Key differences are no rendering, UI is disabled, simulation runs at fixed timestep 
     }
 
+    /// Render a frame
+    fn render(&mut self) {
+        if let Some(render_manager) = &mut self.render_manager {
+            match render_manager.render() {
+                Ok(_) => {}
+                Err(wgpu::SurfaceError::Lost) => {
+                    // Surface is lost, need to reconfigure
+                    if let Some(window_manager) = &self.window_manager {
+                        render_manager.resize(window_manager.size());
+                    }
+                }
+                Err(wgpu::SurfaceError::OutOfMemory) => {
+                    logging::log_error("Out of memory!");
+                }
+                Err(e) => {
+                    logging::log_warn(&format!("Surface error: {:?}", e));
+                }
+            }
+        }
+    }
+
     /// Log a message at INFO level
     pub fn log(&self, message: &str) {
         logging::log_info(message);
@@ -151,5 +212,98 @@ impl Engine {
 impl Default for Engine {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Application handler for winit event loop
+struct EngineApp {
+    engine: Engine,
+    window_config: Option<WindowConfig>,
+}
+
+impl ApplicationHandler for EngineApp {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        // Create window and render manager when the application resumes
+        if self.engine.window_manager.is_none() {
+            if let Some(config) = self.window_config.take() {
+                match WindowManager::new(event_loop, config) {
+                    Ok(window_manager) => {
+                        logging::log_info("Window created successfully");
+                        
+                        // Create render manager with the window reference
+                        let window = window_manager.window();
+                        match pollster::block_on(RenderManager::new(window)) {
+                            Ok(render_manager) => {
+                                logging::log_info("Render manager initialized successfully");
+                                self.engine.render_manager = Some(render_manager);
+                                self.engine.window_manager = Some(window_manager);
+                                
+                                // Request initial redraw
+                                if let Some(wm) = &self.engine.window_manager {
+                                    wm.request_redraw();
+                                }
+                            }
+                            Err(e) => {
+                                logging::log_error(&format!("Failed to create render manager: {}", e));
+                                event_loop.exit();
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        logging::log_error(&format!("Failed to create window: {}", e));
+                        event_loop.exit();
+                    }
+                }
+            }
+        }
+    }
+
+    fn window_event(
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        _window_id: WindowId,
+        event: WindowEvent,
+    ) {
+        match event {
+            WindowEvent::CloseRequested => {
+                logging::log_info("Close requested, shutting down engine");
+                event_loop.exit();
+            }
+            WindowEvent::Resized(physical_size) => {
+                logging::log_debug(&format!(
+                    "Window resized to: {}x{}",
+                    physical_size.width, physical_size.height
+                ));
+                
+                if let Some(window_manager) = &mut self.engine.window_manager {
+                    window_manager.update_size(physical_size);
+                }
+                
+                if let Some(render_manager) = &mut self.engine.render_manager {
+                    render_manager.resize(physical_size);
+                }
+            }
+            WindowEvent::RedrawRequested => {
+                // Update engine state
+                self.engine.update();
+                
+                // Render the frame
+                self.engine.render();
+                
+                // Request next frame
+                if let Some(window_manager) = &self.engine.window_manager {
+                    window_manager.request_redraw();
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
+        // This is called when all events have been processed
+        // We can use this for continuous rendering
+        if let Some(window_manager) = &self.engine.window_manager {
+            window_manager.request_redraw();
+        }
     }
 }
