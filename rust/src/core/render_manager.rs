@@ -2,6 +2,7 @@ use winit::dpi::PhysicalSize;
 use winit::window::Window;
 use wgpu::{Device, Queue, Surface, SurfaceConfiguration, PresentMode, TextureUsages};
 use std::sync::Arc;
+use super::logging;
 
 /// Manages the rendering pipeline using wgpu
 pub struct RenderManager {
@@ -42,6 +43,15 @@ impl RenderManager {
                 force_fallback_adapter: false,
             })
             .await?;
+
+        // Log graphics backend information
+        let adapter_info = adapter.get_info();
+        logging::log_info(&format!(
+            "Graphics backend: {:?} ({}), device: {}",
+            adapter_info.backend,
+            adapter_info.driver_info,
+            adapter_info.name
+        ));
 
         // Request a device and command queue
         let (device, queue) = adapter

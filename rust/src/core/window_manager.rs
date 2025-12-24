@@ -2,6 +2,7 @@ use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Fullscreen, Icon, Window};
 use std::sync::Arc;
+use super::logging;
 
 /// Fullscreen mode options for the window
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -142,6 +143,15 @@ impl WindowManager {
 
         let window = event_loop.create_window(window_attrs)?;
         let current_size = window.inner_size();
+
+        // Log window creation details
+        logging::log_info(&format!(
+            "Window created: title='{}', size={}x{}, fullscreen={:?}",
+            config.title,
+            current_size.width,
+            current_size.height,
+            config.fullscreen
+        ));
 
         Ok(Self {
             window: Arc::new(window),
