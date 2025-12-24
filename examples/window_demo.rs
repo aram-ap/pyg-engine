@@ -5,8 +5,11 @@
 /// 
 /// To run this example:
 /// ```
-/// cargo run --example window_demo
+/// cargo run --example window_demo --no-default-features
 /// ```
+/// 
+/// Note: The --no-default-features flag is required to disable Python bindings
+/// when running standalone Rust examples.
 
 use pyg_engine_native::core::{Engine, WindowConfig, FullscreenMode};
 

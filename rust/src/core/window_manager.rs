@@ -1,6 +1,6 @@
 use winit::dpi::{LogicalSize, PhysicalSize};
-use winit::event_loop::EventLoop;
-use winit::window::{Fullscreen, Icon, Window, WindowBuilder};
+use winit::event_loop::ActiveEventLoop;
+use winit::window::{Fullscreen, Icon, Window};
 use std::sync::Arc;
 
 /// Fullscreen mode options for the window
@@ -105,23 +105,23 @@ pub struct WindowManager {
 
 impl WindowManager {
     /// Create a new WindowManager with the given configuration
-    pub fn new(event_loop: &EventLoop<()>, config: WindowConfig) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut window_builder = WindowBuilder::new()
+    pub fn new(event_loop: &ActiveEventLoop, config: WindowConfig) -> Result<Self, Box<dyn std::error::Error>> {
+        let mut window_attrs = Window::default_attributes()
             .with_title(&config.title)
             .with_inner_size(LogicalSize::new(config.width, config.height))
             .with_resizable(config.resizable);
 
         // Apply min/max size constraints
         if let (Some(min_w), Some(min_h)) = (config.min_width, config.min_height) {
-            window_builder = window_builder.with_min_inner_size(LogicalSize::new(min_w, min_h));
+            window_attrs = window_attrs.with_min_inner_size(LogicalSize::new(min_w, min_h));
         }
         if let (Some(max_w), Some(max_h)) = (config.max_width, config.max_height) {
-            window_builder = window_builder.with_max_inner_size(LogicalSize::new(max_w, max_h));
+            window_attrs = window_attrs.with_max_inner_size(LogicalSize::new(max_w, max_h));
         }
 
         // Apply icon if provided
         if let Some(icon) = config.icon {
-            window_builder = window_builder.with_window_icon(Some(icon));
+            window_attrs = window_attrs.with_window_icon(Some(icon));
         }
 
         // Apply fullscreen mode
@@ -137,10 +137,10 @@ impl WindowManager {
             }
         };
         if let Some(fs) = fullscreen {
-            window_builder = window_builder.with_fullscreen(Some(fs));
+            window_attrs = window_attrs.with_fullscreen(Some(fs));
         }
 
-        let window = window_builder.build(event_loop)?;
+        let window = event_loop.create_window(window_attrs)?;
         let current_size = window.inner_size();
 
         Ok(Self {

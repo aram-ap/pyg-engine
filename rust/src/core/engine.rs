@@ -11,7 +11,6 @@ use winit::window::WindowId;
 
 pub struct Engine {
     version: String,
-    logging_initialized: bool,
     window_manager: Option<WindowManager>,
     render_manager: Option<RenderManager>,
 }
@@ -24,7 +23,6 @@ impl Engine {
         logging::init_default();
         Self {
             version: VERSION.to_string(),
-            logging_initialized: true,
             window_manager: None,
             render_manager: None,
         }
@@ -60,7 +58,6 @@ impl Engine {
 
         Self {
             version: VERSION.to_string(),
-            logging_initialized: true,
             window_manager: None,
             render_manager: None,
         }
@@ -70,7 +67,7 @@ impl Engine {
     /// 
     /// This method takes ownership of the engine and runs the event loop.
     /// It creates a window and render manager, then enters the main game loop.
-    pub fn run(mut self, window_config: WindowConfig) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(self, window_config: WindowConfig) -> Result<(), Box<dyn std::error::Error>> {
         logging::log_info(&format!(
             "Starting PyG Engine v{} with window: {} ({}x{})",
             self.version, window_config.title, window_config.width, window_config.height
@@ -230,8 +227,8 @@ impl ApplicationHandler for EngineApp {
                     Ok(window_manager) => {
                         logging::log_info("Window created successfully");
                         
-                        // Create render manager with the window reference
-                        let window = window_manager.window();
+                        // Create render manager with the window Arc
+                        let window = window_manager.window_arc();
                         match pollster::block_on(RenderManager::new(window)) {
                             Ok(render_manager) => {
                                 logging::log_info("Render manager initialized successfully");

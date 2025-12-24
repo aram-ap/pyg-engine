@@ -5,11 +5,15 @@ edition = "2021"
 
 [lib]
 name = "pyg_engine_native"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 path = "rust/src/lib.rs"
 
+[features]
+default = ["python-bindings"]
+python-bindings = ["pyo3/extension-module"]
+
 [dependencies]
-pyo3 = { version = "0.27.2", features = ["extension-module"] }
+pyo3 = { version = "0.27.2", optional = false }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "ansi", "json", "chrono"] }
 tracing-appender = "0.2"
@@ -18,3 +22,8 @@ once_cell = "1.21"
 pollster = "0.4"
 wgpu = "28.0.0"
 winit = { version = "0.30.12", features = ["android-native-activity"] }
+
+[[example]]
+name = "window_demo"
+crate-type = ["bin"]
+required-features = []

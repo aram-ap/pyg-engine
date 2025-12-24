@@ -1,6 +1,7 @@
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
 use wgpu::{Device, Queue, Surface, SurfaceConfiguration, PresentMode, TextureUsages};
+use std::sync::Arc;
 
 /// Manages the rendering pipeline using wgpu
 pub struct RenderManager {
@@ -9,6 +10,8 @@ pub struct RenderManager {
     surface: Surface<'static>,
     surface_config: SurfaceConfiguration,
     vsync_enabled: bool,
+    // Keep a reference to the window to ensure it outlives the surface
+    _window: Arc<Window>,
 }
 
 impl RenderManager {
@@ -16,20 +19,20 @@ impl RenderManager {
     /// 
     /// This is an async function because it needs to request a GPU adapter
     /// and create a device, which are async operations.
-    pub async fn new(window: &Window) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(window: Arc<Window>) -> Result<Self, Box<dyn std::error::Error>> {
         let size = window.inner_size();
 
         // Create the wgpu instance
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
             ..Default::default()
         });
 
         // SAFETY: The surface must not outlive the window that created it.
-        // We store an Arc<Window> in WindowManager, ensuring the window lives
-        // for the duration of the program. The surface is owned by RenderManager
+        // We store a clone of the Arc<Window>, ensuring the window lives
+        // for as long as the surface. The surface is owned by RenderManager
         // which will be dropped when the engine shuts down.
-        let surface = instance.create_surface(window)?;
+        let surface = instance.create_surface(Arc::clone(&window))?;
 
         // Request an adapter (GPU handle)
         let adapter = instance
@@ -38,8 +41,7 @@ impl RenderManager {
                 compatible_surface: Some(&surface),
                 force_fallback_adapter: false,
             })
-            .await
-            .ok_or("Failed to find an appropriate adapter")?;
+            .await?;
 
         // Request a device and command queue
         let (device, queue) = adapter
@@ -49,8 +51,9 @@ impl RenderManager {
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
                     memory_hints: Default::default(),
+                    experimental_features: Default::default(),
+                    trace: Default::default(),
                 },
-                None,
             )
             .await?;
 
@@ -85,6 +88,7 @@ impl RenderManager {
             surface,
             surface_config,
             vsync_enabled: true,
+            _window: window,
         })
     }
 
@@ -123,10 +127,12 @@ impl RenderManager {
                         }),
                         store: wgpu::StoreOp::Store,
                     },
+                    depth_slice: None,
                 })],
                 depth_stencil_attachment: None,
                 occlusion_query_set: None,
                 timestamp_writes: None,
+                multiview_mask: None,
             });
         }
 

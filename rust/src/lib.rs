@@ -1,5 +1,5 @@
-mod core;
-mod types;
+pub mod core;
+pub mod types;
 mod bindings;
 
 // Re-export the Python module
