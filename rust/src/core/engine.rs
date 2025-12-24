@@ -3,6 +3,7 @@ use super::logging;
 use super::window_manager::{WindowConfig, WindowManager};
 use super::render_manager::RenderManager;
 use super::object_manager::ObjectManager;
+use super::input_manager::InputManager;
 use super::game_object::GameObject;
 use super::time::Time;
 use std::path::PathBuf;
@@ -17,6 +18,7 @@ pub struct Engine {
     window_manager: Option<WindowManager>,
     render_manager: Option<RenderManager>,
     object_manager: Option<ObjectManager>,
+    input_manager: Option<InputManager>,
     time: Time,
 }
 
@@ -31,6 +33,7 @@ impl Engine {
             window_manager: None,
             render_manager: None,
             object_manager: Some(ObjectManager::new()),
+            input_manager: Some(InputManager::new()),
             time: Time::new(),
         }
     }
@@ -68,6 +71,7 @@ impl Engine {
             window_manager: None,
             render_manager: None,
             object_manager: Some(ObjectManager::new()),
+            input_manager: Some(InputManager::new()),
             time: Time::new(),
         }
     }
@@ -145,10 +149,6 @@ impl Engine {
 
         // Time step/tick management
         self.time.tick();
-
-        // if self.time.tick_count() % 200 == 0 {
-        //     self.time.log_info();
-        // }
 
         // Input (collect raw input + build an input snapshot)
 
