@@ -13,7 +13,8 @@
 /// bindings when running standalone Rust examples.
 
 use pyg_engine_native::core::{
-    logging, FullscreenMode, InputManager, MouseButtonType, WindowConfig, WindowManager,
+    logging, FullscreenMode, InputManager, MouseButtonType, RenderManager, WindowConfig,
+    WindowManager,
 };
 use pyg_engine_native::types::Color;
 use winit::application::ApplicationHandler;
@@ -24,6 +25,7 @@ use winit::window::WindowId;
 struct InputApp {
     window_config: Option<WindowConfig>,
     window_manager: Option<WindowManager>,
+    render_manager: Option<RenderManager>,
     input_manager: InputManager,
 }
 
@@ -31,13 +33,33 @@ impl ApplicationHandler for InputApp {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.window_manager.is_none() {
             if let Some(config) = self.window_config.take() {
+                // Extract background color and vsync before config is moved
+                let bg_color = config.background_color;
+                let vsync = config.vsync;
+
                 match WindowManager::new(event_loop, config) {
                     Ok(window_manager) => {
                         logging::log_info("Input demo window created successfully");
-                        self.window_manager = Some(window_manager);
 
-                        if let Some(wm) = &self.window_manager {
-                            wm.request_redraw();
+                        // Create render manager with the window Arc so we get the correct clear color
+                        let window = window_manager.window_arc();
+                        match pollster::block_on(RenderManager::new(window, bg_color, vsync)) {
+                            Ok(render_manager) => {
+                                logging::log_info("Input demo render manager initialized successfully");
+                                self.render_manager = Some(render_manager);
+                                self.window_manager = Some(window_manager);
+
+                                if let Some(wm) = &self.window_manager {
+                                    wm.request_redraw();
+                                }
+                            }
+                            Err(e) => {
+                                logging::log_error(&format!(
+                                    "Failed to create input demo render manager: {}",
+                                    e
+                                ));
+                                event_loop.exit();
+                            }
                         }
                     }
                     Err(e) => {
@@ -111,6 +133,30 @@ impl ApplicationHandler for InputApp {
                     horizontal, vertical, mouse_pos.0, mouse_pos.1, left_mouse
                 ));
 
+                // Render the frame so the configured background color is visible
+                if let Some(render_manager) = &mut self.render_manager {
+                    match render_manager.render() {
+                        Ok(_) => {}
+                        Err(wgpu::SurfaceError::Lost) => {
+                            if let Some(window_manager) = &self.window_manager {
+                                render_manager.resize(window_manager.size());
+                            }
+                        }
+                        Err(wgpu::SurfaceError::Outdated) => {
+                            if let Some(window_manager) = &self.window_manager {
+                                render_manager.resize(window_manager.size());
+                            }
+                        }
+                        Err(wgpu::SurfaceError::OutOfMemory) => {
+                            logging::log_error("Out of memory in input demo!");
+                            event_loop.exit();
+                        }
+                        Err(e) => {
+                            logging::log_warn(&format!("Input demo surface error: {:?}", e));
+                        }
+                    }
+                }
+
                 // Request next frame for continuous input sampling
                 if let Some(window_manager) = &self.window_manager {
                     window_manager.request_redraw();
@@ -142,13 +188,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_resizable(true)
         .with_fullscreen(FullscreenMode::None)
         .with_min_size(640, 480)
-        .with_background_color(Color::DARK_GRAY)
+        .with_background_color(Color::BLACK)
         .with_vsync(false);
 
     // Create the application handler
     let mut app = InputApp {
         window_config: Some(window_config),
         window_manager: None,
+        render_manager: None,
         input_manager: InputManager::new(),
     };
 
