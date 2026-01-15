@@ -137,7 +137,7 @@ impl ApplicationHandler for InputApp {
 
                 // Render the frame so the configured background color is visible
                 if let Some(render_manager) = &mut self.render_manager {
-                    match render_manager.render() {
+                    match render_manager.render(&None) {
                         Ok(_) => {}
                         Err(wgpu::SurfaceError::Lost) => {
                             if let Some(window_manager) = &self.window_manager {

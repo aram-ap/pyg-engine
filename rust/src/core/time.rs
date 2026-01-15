@@ -4,36 +4,24 @@ use super::logging;
     The time class.
 */
 pub struct Time {
-    /**
-        The system time.
-    */    
+    /// System time
     system_time: SystemTime,
-    /**
-        The time since the last tick.
-    */
+    /// Time since last tick
     delta_time: f32,
-    /**
-        The total time since the start of the application.
-    */
+    /// The total time since the start of the application.
     elapsed_time: f32,
-    /**
-        The fixed timestep.
-    */
+    /// Time between each fixed update
     fixed_timestep: f32,
-
+    ///
     last_fixed_time: f32,
-
-    /**
-        The number of ticks since the start of the application.
-    */
+    /// The number of ticks since the start of the application.
     tick_count: u64,
 }
 
 impl Time {
-    /**
-        Creates a new time instance.
-        @return: The new time instance.
-    */
+
+    /// Creates a new time instance.
+    /// @return: The new time instance.
     pub fn new() -> Self {
         Self {
             system_time: SystemTime::now(),
@@ -103,6 +91,8 @@ impl Time {
         self.tick_count
     }
 
+    /// Logs time info (Delta Time, Elapsed Time, Fixed Time Step, Last Fixed Time
+    /// DEPRECATED - DEBUG USE ONLY - WILL BE REMOVED IN FUTURE
     pub fn log_info(&self) {
         logging::log_info("--------------------------------");
         logging::log_info("Engine update loop");

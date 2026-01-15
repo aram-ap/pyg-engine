@@ -21,6 +21,7 @@ pub struct RenderManager {
     // Pending resize size - only reconfigure when actually rendering to avoid
     // expensive reconfigurations during rapid resize events
     pending_resize: Option<PhysicalSize<u32>>,
+    requires_redraw: bool,
 }
 
 impl RenderManager {
@@ -115,6 +116,7 @@ impl RenderManager {
             background_color: background_color.unwrap_or(Color::BLACK),
             _window: window,
             pending_resize: None,
+            requires_redraw: true,
         })
     }
 
@@ -173,6 +175,8 @@ impl RenderManager {
         // Submit the command buffer and present the frame
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
+
+        self.requires_redraw = false;
 
         Ok(())
     }
