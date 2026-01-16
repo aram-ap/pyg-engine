@@ -7,6 +7,10 @@ pub mod window_manager;
 pub mod render_manager;
 pub mod input_manager;
 pub mod object_manager;
+mod camera;
+mod texture;
+mod geometry;
+mod entity;
 
 pub use engine::*;
 pub use game_object::*;

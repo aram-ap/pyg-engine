@@ -22,6 +22,10 @@ pollster = "0.4"
 wgpu = "28.0.0"
 winit = { version = "0.30.12", features = ["android-native-activity"] }
 priority-queue = "2.7.0"
+cgmath = "0.18"
+bytemuck = { version = "1.14", features = ["derive"] }
+image = "0.25"
+anyhow = "1.0"
 
 [[example]]
 name = "window_demo"
