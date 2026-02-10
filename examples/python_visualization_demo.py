@@ -19,7 +19,7 @@ def make_checkerboard_rgba(width: int, height: int, cell_size: int = 8) -> bytes
 
 def main() -> None:
     engine = Engine()
-    engine.initialize(title="Visualization Phase 1 Demo", width=960, height=600)
+    engine.initialize(title="Visualization/Texture Demo", width=960, height=600)
 
     texture_width = 128
     texture_height = 128
@@ -31,10 +31,10 @@ def main() -> None:
 
         # Animated corner colors show smooth gradient interpolation.
         pulse = 0.5 + 0.5 * math.sin(t * 1.4)
-        top_left = Color(0.06, 0.08, 0.15 + 0.2 * pulse, 1.0)
-        bottom_left = Color(0.08, 0.35 + 0.25 * pulse, 0.45, 1.0)
-        bottom_right = Color(0.5 + 0.25 * pulse, 0.15, 0.35, 1.0)
-        top_right = Color(0.12, 0.1 + 0.2 * pulse, 0.35 + 0.3 * pulse, 1.0)
+        top_left_color = Color(0.06, 0.08, 0.15 + 0.2 * pulse, 1.0)
+        bottom_left_color = Color(0.08, 0.35 + 0.25 * pulse, 0.45, 1.0)
+        bottom_right_color = Color(0.5 + 0.25 * pulse, 0.15, 0.35, 1.0)
+        top_right_color = Color(0.12, 0.1 + 0.2 * pulse, 0.35 + 0.3 * pulse, 1.0)
 
         image_size = 240.0
         image_x = display_width * 0.5 - image_size * 0.5
@@ -46,10 +46,10 @@ def main() -> None:
             0.0,
             float(display_width),
             float(display_height),
-            top_left,
-            bottom_left,
-            bottom_right,
-            top_right,
+            top_left_color,
+            bottom_left_color,
+            bottom_right_color,
+            top_right_color,
         )
         engine.draw_image_from_bytes(
             image_x,
