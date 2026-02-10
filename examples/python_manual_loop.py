@@ -18,7 +18,7 @@ def main() -> None:
     # Initialize engine with logging
     engine = pyg.Engine(log_level="INFO")
     
-    # Start in manual-loop mode without entering a blocking run loop.
+    # Start in manual-loop mode, lets us control the loop manually.
     engine.start_manual(
         title="PyG Engine - Manual Loop Demo",
         width=1280,

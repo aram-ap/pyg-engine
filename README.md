@@ -122,6 +122,8 @@ For fully manual loop control, use `start_manual(...)` then drive
 `poll_events()`, `update()`, and `render()` yourself.
 The callback acts as a global frame hook; planned per-GameObject scripts are
 intended to run in the engine update phase before this global callback.
+Runtime guard: calling `run(...)`/`start_manual(...)` while another loop is active
+raises `RuntimeError`.
 
 ## 🔧 Architecture & Roadmap
 

@@ -84,6 +84,36 @@ def test_engine_render_api_methods_exist() -> None:
     assert not hasattr(engine, "initialize")
 
 
+def test_start_manual_guard_raises_when_already_running() -> None:
+    """Test that start_manual fails fast when engine is already running."""
+    engine = pyg.Engine()
+    engine._runtime_state = "manual"  # type: ignore[attr-defined]
+
+    with pytest.raises(RuntimeError, match="Cannot call start_manual\\(\\)"):
+        engine.start_manual()
+
+
+def test_run_guard_raises_when_already_running() -> None:
+    """Test that run fails fast when engine is already running."""
+    engine = pyg.Engine()
+    engine._runtime_state = "running_callback"  # type: ignore[attr-defined]
+
+    with pytest.raises(RuntimeError, match="Cannot call run\\(\\)"):
+        engine.run()
+
+
+def test_is_running_reflects_runtime_state() -> None:
+    """Test Engine.is_running reflects lifecycle state transitions."""
+    engine = pyg.Engine()
+    assert engine.is_running is False
+
+    engine._runtime_state = "manual"  # type: ignore[attr-defined]
+    assert engine.is_running is True
+
+    engine._runtime_state = "idle"  # type: ignore[attr-defined]
+    assert engine.is_running is False
+
+
 def test_update_context_is_exposed() -> None:
     """Test that UpdateContext is importable from the top-level module."""
     assert hasattr(pyg, "UpdateContext")

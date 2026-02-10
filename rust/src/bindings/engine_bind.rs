@@ -412,7 +412,7 @@ impl PyEngine {
             }
         } else {
             Err(PyRuntimeError::new_err(
-                "Engine not initialized. Call initialize() first.",
+                "Engine not initialized. Call start_manual() first.",
             ))
         }
     }

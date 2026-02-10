@@ -358,6 +358,11 @@ _CALLBACK_VALUE_PROVIDERS: dict[str, _CallbackValueProvider] = {
     "user_data": lambda context: context.user_data,
 }
 
+_RUNTIME_STATE_IDLE = "idle"
+_RUNTIME_STATE_MANUAL = "manual"
+_RUNTIME_STATE_RUNNING_BLOCKING = "running_blocking"
+_RUNTIME_STATE_RUNNING_CALLBACK = "running_callback"
+
 
 def _compile_update_callback(update_callback: Callable[..., object]) -> _CallbackInvoker:
     """
@@ -538,6 +543,7 @@ class Engine:
             log_level=log_level,
         )
         self._input = Input(self)
+        self._runtime_state = _RUNTIME_STATE_IDLE
     
     @property
     def input(self) -> Input:
@@ -548,6 +554,18 @@ class Engine:
             Input: The input manager instance.
         """
         return self._input
+
+    @property
+    def is_running(self) -> bool:
+        """Return whether the engine is currently running in any loop mode."""
+        return self._runtime_state != _RUNTIME_STATE_IDLE
+
+    def _ensure_not_running(self, entrypoint_name: str) -> None:
+        if self._runtime_state != _RUNTIME_STATE_IDLE:
+            raise RuntimeError(
+                f"Cannot call {entrypoint_name} while engine is already running "
+                f"in '{self._runtime_state}' mode."
+            )
 
     def get_handle(self) -> EngineHandle:
         """
@@ -658,6 +676,9 @@ class Engine:
         This mode is for advanced use cases where Python controls the frame loop
         manually using:
         `poll_events()`, `update()`, and `render()`.
+
+        Raises:
+            RuntimeError: If the engine is already running in another loop mode.
         
         Args:
             title: Window title.
@@ -669,6 +690,7 @@ class Engine:
             redraw_on_change_only: When True (default), only redraw on scene changes.
             show_fps_in_title: When True, appends current FPS to window title.
         """
+        self._ensure_not_running("start_manual()")
         self._engine.initialize(
             title=title,
             width=width,
@@ -679,6 +701,7 @@ class Engine:
             redraw_on_change_only=redraw_on_change_only,
             show_fps_in_title=show_fps_in_title,
         )
+        self._runtime_state = _RUNTIME_STATE_MANUAL
 
     def poll_events(self) -> bool:
         """
@@ -687,7 +710,13 @@ class Engine:
         Returns:
             bool: True if the loop should continue, False if exit requested.
         """
-        return self._engine.poll_events()
+        should_continue = self._engine.poll_events()
+        if not should_continue and self._runtime_state in (
+            _RUNTIME_STATE_MANUAL,
+            _RUNTIME_STATE_RUNNING_CALLBACK,
+        ):
+            self._runtime_state = _RUNTIME_STATE_IDLE
+        return should_continue
 
     def update(self) -> None:
         """Run a single update step."""
@@ -725,6 +754,9 @@ class Engine:
         - Frame order is: poll events -> native update -> callback -> render.
           (Future GameObject script updates are intended to run in native update.)
 
+        Raises:
+            RuntimeError: If the engine is already running in another loop mode.
+
         Args:
             title: Window title.
             width: Initial window width.
@@ -741,17 +773,23 @@ class Engine:
             user_data: Arbitrary object exposed via callback context.
                 Only used in callback mode (`update` provided).
         """
+        self._ensure_not_running("run()")
+
         if update is None:
-            self._engine.run(
-                title=title,
-                width=width,
-                height=height,
-                resizable=resizable,
-                background_color=background_color,
-                vsync=vsync,
-                redraw_on_change_only=redraw_on_change_only,
-                show_fps_in_title=show_fps_in_title,
-            )
+            self._runtime_state = _RUNTIME_STATE_RUNNING_BLOCKING
+            try:
+                self._engine.run(
+                    title=title,
+                    width=width,
+                    height=height,
+                    resizable=resizable,
+                    background_color=background_color,
+                    vsync=vsync,
+                    redraw_on_change_only=redraw_on_change_only,
+                    show_fps_in_title=show_fps_in_title,
+                )
+            finally:
+                self._runtime_state = _RUNTIME_STATE_IDLE
             return
 
         if max_delta_time is not None and max_delta_time <= 0.0:
@@ -769,6 +807,7 @@ class Engine:
             redraw_on_change_only=redraw_on_change_only,
             show_fps_in_title=show_fps_in_title,
         )
+        self._runtime_state = _RUNTIME_STATE_RUNNING_CALLBACK
 
         context = UpdateContext(self, user_data=user_data)
 
@@ -777,24 +816,27 @@ class Engine:
         update_step = native_engine.update
         render_frame = native_engine.render
 
-        while True:
-            if not poll_events():
-                break
+        try:
+            while True:
+                if not poll_events():
+                    break
 
-            # Update native systems first so callback gets current dt/input.
-            update_step()
+                # Update native systems first so callback gets current dt/input.
+                update_step()
 
-            context.delta_time = native_engine.delta_time
-            if max_delta_time is not None and context.delta_time > max_delta_time:
-                context.delta_time = max_delta_time
-            context.elapsed_time = native_engine.elapsed_time
+                context.delta_time = native_engine.delta_time
+                if max_delta_time is not None and context.delta_time > max_delta_time:
+                    context.delta_time = max_delta_time
+                context.elapsed_time = native_engine.elapsed_time
 
-            callback_result = invoke_callback(context)
-            if callback_result is False or context._should_stop:
-                break
+                callback_result = invoke_callback(context)
+                if callback_result is False or context._should_stop:
+                    break
 
-            render_frame()
-            context.frame += 1
+                render_frame()
+                context.frame += 1
+        finally:
+            self._runtime_state = _RUNTIME_STATE_IDLE
 
     def add_game_object(self, game_object: Any) -> Optional[int]:
         """
