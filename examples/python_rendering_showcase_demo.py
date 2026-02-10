@@ -213,7 +213,7 @@ def main() -> None:
     engine = Engine(log_level="INFO")
     add_mesh_showcase(engine)
 
-    engine.initialize(
+    engine.start_manual(
         title="PyG Engine - Unified Rendering Showcase",
         width=1360,
         height=840,
@@ -234,7 +234,7 @@ def main() -> None:
     # - keep animation at 60 FPS max
     # - update expensive procedural texture at 24 Hz
     # - use a moderate bar count for bulk overlay
-    target_fps = 60.0
+    target_fps = 200.0
     target_frame_dt = 1.0 / target_fps
     dynamic_texture_hz = 24.0
     dynamic_texture_dt = 1.0 / dynamic_texture_hz

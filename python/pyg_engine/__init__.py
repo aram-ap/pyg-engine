@@ -2,7 +2,7 @@
 pyg_engine - A Python game engine with Rust-powered native performance.
 """
 
-from pyg_engine.engine import DrawCommand, Engine, EngineHandle, Input
+from pyg_engine.engine import DrawCommand, Engine, EngineHandle, Input, UpdateContext
 
 try:
     from pyg_engine.pyg_engine_native import (
@@ -41,6 +41,7 @@ __all__ = [
     "EngineHandle",
     "DrawCommand",
     "Input",
+    "UpdateContext",
     "Vec2",
     "Vec3",
     "Color",

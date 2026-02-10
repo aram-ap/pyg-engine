@@ -247,7 +247,7 @@ def draw_scene(engine: Engine, game: SnakeGame) -> None:
 
 def main() -> None:
     engine = Engine(log_level="INFO")
-    engine.initialize(
+    engine.start_manual(
         title="PyG Engine - Snake Demo",
         width=980,
         height=760,

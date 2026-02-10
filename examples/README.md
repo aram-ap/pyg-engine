@@ -184,6 +184,30 @@ Playable Snake game built with the Python API:
 python examples/python_snake_demo.py
 ```
 
+### python_function_update_demo.py
+
+Demonstrates callback-driven loop control:
+- Pass a Python function directly to `engine.run(update=...)`
+- Use injected callback params (`dt`, `engine`, `frame`, `user_data`)
+- Exit cleanly by returning `False`
+
+**Run:**
+```bash
+python examples/python_function_update_demo.py
+```
+
+### python_manual_loop.py
+
+Demonstrates explicit manual loop control:
+- Start manual mode with `engine.start_manual(...)`
+- Drive the loop with `poll_events()`, `update()`, and `render()`
+- Use when you need full control over frame pacing/ordering in Python
+
+**Run:**
+```bash
+python examples/python_manual_loop.py
+```
+
 See `examples/PYTHON_RENDERING_GUIDE.md` for API details.
 
 ## Creating New Examples

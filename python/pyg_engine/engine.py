@@ -5,6 +5,8 @@ This module provides a clean Python interface to the Rust engine implementation
 with comprehensive logging capabilities.
 """
 
+import inspect
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
@@ -304,6 +306,174 @@ class Input:
         return self._engine.axis_previous(name)
 
 
+class UpdateContext:
+    """
+    Mutable frame context passed to function-based engine update callbacks.
+
+    This object is reused each frame to keep callback overhead low.
+    """
+
+    __slots__ = (
+        "engine",
+        "input",
+        "delta_time",
+        "elapsed_time",
+        "frame",
+        "user_data",
+        "_should_stop",
+    )
+
+    def __init__(self, engine: "Engine", user_data: Any = None) -> None:
+        self.engine = engine
+        self.input = engine.input
+        self.delta_time = 0.0
+        self.elapsed_time = 0.0
+        self.frame = 0
+        self.user_data = user_data
+        self._should_stop = False
+
+    def stop(self) -> None:
+        """Request that `Engine.run(update=...)` exits after this frame."""
+        self._should_stop = True
+
+    @property
+    def should_stop(self) -> bool:
+        """Return whether `stop()` has been requested."""
+        return self._should_stop
+
+
+_CallbackInvoker = Callable[[UpdateContext], object]
+_CallbackValueProvider = Callable[[UpdateContext], object]
+
+_CALLBACK_VALUE_PROVIDERS: dict[str, _CallbackValueProvider] = {
+    "ctx": lambda context: context,
+    "context": lambda context: context,
+    "engine": lambda context: context.engine,
+    "input": lambda context: context.input,
+    "dt": lambda context: context.delta_time,
+    "delta_time": lambda context: context.delta_time,
+    "elapsed": lambda context: context.elapsed_time,
+    "elapsed_time": lambda context: context.elapsed_time,
+    "frame": lambda context: context.frame,
+    "user_data": lambda context: context.user_data,
+}
+
+
+def _compile_update_callback(update_callback: Callable[..., object]) -> _CallbackInvoker:
+    """
+    Compile callback argument injection once for low per-frame overhead.
+
+    Supported styles:
+    - `def update(): ...`
+    - `def update(dt): ...`
+    - `def update(delta_time, engine): ...`
+    - `def update(context): ...`
+    - `def update(any_name): ...`  # single unknown arg receives UpdateContext
+    """
+    if not callable(update_callback):
+        raise TypeError("update_callback must be callable")
+
+    try:
+        signature = inspect.signature(update_callback)
+    except (TypeError, ValueError) as exc:
+        raise TypeError("Could not inspect update callback signature") from exc
+
+    parameters = list(signature.parameters.values())
+    if not parameters:
+        return lambda _context: update_callback()
+
+    positional_providers: list[_CallbackValueProvider] = []
+    keyword_providers: list[tuple[str, _CallbackValueProvider]] = []
+    unknown_required_parameters: list[inspect.Parameter] = []
+
+    for parameter in parameters:
+        if parameter.kind is inspect.Parameter.VAR_POSITIONAL:
+            continue
+        if parameter.kind is inspect.Parameter.VAR_KEYWORD:
+            continue
+
+        provider = _CALLBACK_VALUE_PROVIDERS.get(parameter.name)
+        if provider is None:
+            if parameter.default is inspect.Parameter.empty:
+                unknown_required_parameters.append(parameter)
+            continue
+
+        if parameter.kind in (
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        ):
+            positional_providers.append(provider)
+        elif parameter.kind is inspect.Parameter.KEYWORD_ONLY:
+            keyword_providers.append((parameter.name, provider))
+
+    if unknown_required_parameters:
+        if len(parameters) == 1 and len(unknown_required_parameters) == 1:
+            single_unknown = unknown_required_parameters[0]
+            if single_unknown.kind is inspect.Parameter.KEYWORD_ONLY:
+                unknown_name = single_unknown.name
+
+                def invoke_with_context_alias_kw(context: UpdateContext) -> object:
+                    return update_callback(**{unknown_name: context})
+
+                return invoke_with_context_alias_kw
+
+            return lambda context: update_callback(context)
+
+        unsupported_names = ", ".join(
+            sorted(parameter.name for parameter in unknown_required_parameters)
+        )
+        raise TypeError(
+            "Unsupported required update callback parameter(s): "
+            f"{unsupported_names}. "
+            "Supported names: "
+            f"{', '.join(sorted(_CALLBACK_VALUE_PROVIDERS))}"
+        )
+
+    if not positional_providers and not keyword_providers:
+        return lambda _context: update_callback()
+
+    # Fast path: purely positional injection (no kwargs dict allocation per frame).
+    if not keyword_providers:
+        provider_count = len(positional_providers)
+        if provider_count == 1:
+            getter_0 = positional_providers[0]
+            return lambda context: update_callback(getter_0(context))
+        if provider_count == 2:
+            getter_0, getter_1 = positional_providers
+            return lambda context: update_callback(getter_0(context), getter_1(context))
+        if provider_count == 3:
+            getter_0, getter_1, getter_2 = positional_providers
+            return lambda context: update_callback(
+                getter_0(context), getter_1(context), getter_2(context)
+            )
+        if provider_count == 4:
+            getter_0, getter_1, getter_2, getter_3 = positional_providers
+            return lambda context: update_callback(
+                getter_0(context),
+                getter_1(context),
+                getter_2(context),
+                getter_3(context),
+            )
+
+        positional_getters = tuple(positional_providers)
+
+        def invoke_with_positional(context: UpdateContext) -> object:
+            return update_callback(*[getter(context) for getter in positional_getters])
+
+        return invoke_with_positional
+
+    # Slow path: keyword-only parameters require kwargs.
+    positional_getters = tuple(positional_providers)
+    keyword_getters = tuple(keyword_providers)
+
+    def invoke_with_mixed(context: UpdateContext) -> object:
+        positional_values = [getter(context) for getter in positional_getters]
+        kwargs = {name: getter(context) for name, getter in keyword_getters}
+        return update_callback(*positional_values, **kwargs)
+
+    return invoke_with_mixed
+
+
 class Engine:
     """
     Main game engine class providing core functionality with structured logging.
@@ -471,7 +641,7 @@ class Engine:
         """Get the current display size (window client size) in pixels."""
         return self._engine.get_display_size()
 
-    def initialize(
+    def start_manual(
         self,
         title: str = "PyG Engine",
         width: int = 1280,
@@ -483,9 +653,10 @@ class Engine:
         show_fps_in_title: bool = False,
     ) -> None:
         """
-        Initialize the engine with window configuration without starting the loop.
+        Start the engine in manual-loop mode without entering a blocking loop.
         
-        This method is used when you want to control the game loop manually using
+        This mode is for advanced use cases where Python controls the frame loop
+        manually using:
         `poll_events()`, `update()`, and `render()`.
         
         Args:
@@ -536,9 +707,23 @@ class Engine:
         vsync: bool = True,
         redraw_on_change_only: bool = True,
         show_fps_in_title: bool = False,
+        *,
+        update: Optional[Callable[..., object]] = None,
+        max_delta_time: Optional[float] = 0.1,
+        user_data: Any = None,
     ) -> None:
         """
-        Run the engine window and enter the event loop.
+        Run the engine and start the frame loop.
+
+        Default mode (no callback):
+        - Enter the native blocking loop until close.
+
+        Callback mode (`update=...`):
+        - Start a Python-managed loop and invoke callback once per frame.
+        - Callback can return `False` or call `context.stop()` to exit.
+        - See `UpdateContext` for injected values.
+        - Frame order is: poll events -> native update -> callback -> render.
+          (Future GameObject script updates are intended to run in native update.)
 
         Args:
             title: Window title.
@@ -549,8 +734,32 @@ class Engine:
             vsync: Enable/disable vertical sync.
             redraw_on_change_only: When True (default), only redraw on scene changes.
             show_fps_in_title: When True, appends current FPS to window title.
+            update: Optional callback invoked once per frame. When omitted,
+                the native blocking run loop is used.
+            max_delta_time: Clamp callback `dt` to this value in seconds.
+                Only used in callback mode (`update` provided).
+            user_data: Arbitrary object exposed via callback context.
+                Only used in callback mode (`update` provided).
         """
-        self._engine.run(
+        if update is None:
+            self._engine.run(
+                title=title,
+                width=width,
+                height=height,
+                resizable=resizable,
+                background_color=background_color,
+                vsync=vsync,
+                redraw_on_change_only=redraw_on_change_only,
+                show_fps_in_title=show_fps_in_title,
+            )
+            return
+
+        if max_delta_time is not None and max_delta_time <= 0.0:
+            raise ValueError("max_delta_time must be > 0.0 or None")
+
+        invoke_callback = _compile_update_callback(update)
+
+        self.start_manual(
             title=title,
             width=width,
             height=height,
@@ -560,6 +769,32 @@ class Engine:
             redraw_on_change_only=redraw_on_change_only,
             show_fps_in_title=show_fps_in_title,
         )
+
+        context = UpdateContext(self, user_data=user_data)
+
+        native_engine = self._engine
+        poll_events = native_engine.poll_events
+        update_step = native_engine.update
+        render_frame = native_engine.render
+
+        while True:
+            if not poll_events():
+                break
+
+            # Update native systems first so callback gets current dt/input.
+            update_step()
+
+            context.delta_time = native_engine.delta_time
+            if max_delta_time is not None and context.delta_time > max_delta_time:
+                context.delta_time = max_delta_time
+            context.elapsed_time = native_engine.elapsed_time
+
+            callback_result = invoke_callback(context)
+            if callback_result is False or context._should_stop:
+                break
+
+            render_frame()
+            context.frame += 1
 
     def add_game_object(self, game_object: Any) -> Optional[int]:
         """

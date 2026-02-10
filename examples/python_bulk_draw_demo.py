@@ -5,7 +5,7 @@ from pyg_engine import Color, DrawCommand, Engine
 
 def main() -> None:
     engine = Engine()
-    engine.initialize(
+    engine.start_manual(
         title="Bulk Draw Demo",
         width=1100,
         height=700,

@@ -94,6 +94,35 @@ engine.add_game_object(go)
 engine.run(title="Game Object Demo")
 ```
 
+### 4. Function-Based Update Loop
+```python
+import pyg_engine as pyg
+
+engine = pyg.Engine()
+
+def update(dt, engine, frame):
+    if engine.input.key_pressed(pyg.Keys.ESCAPE):
+        return False
+    engine.clear_draw_commands()
+    # draw/update game state...
+
+engine.run(
+    title="Callback Loop",
+    show_fps_in_title=True,
+    update=update,
+    max_delta_time=0.1,
+)
+```
+
+`run(update=...)` supports callbacks with no arguments, a single
+`context` argument, or named argument injection (`dt`, `engine`, `input`,
+`elapsed_time`, `frame`, `user_data`).
+
+For fully manual loop control, use `start_manual(...)` then drive
+`poll_events()`, `update()`, and `render()` yourself.
+The callback acts as a global frame hook; planned per-GameObject scripts are
+intended to run in the engine update phase before this global callback.
+
 ## 🔧 Architecture & Roadmap
 
 ### Current Capabilities
@@ -105,13 +134,14 @@ engine.run(title="Game Object Demo")
     - **Layers**: Z-indexing and integer layering for draw order control.
 - **Component System**: Basic `GameObject` with `TransformComponent` and `MeshComponent`.
 - **Input System**: Rust input manager (Keyboard, Mouse, Gamepad) to Python.
+- **Loop Control**: `run(...)` with optional callback and explicit `start_manual(...)` mode.
 
 ### Planned Features (Roadmap)
 - **Audio Manager**: Audio loading, playback, mixing, and timing.
 - **World-Based Camera**: A straightforward method for keeping your game objects in frame.
-- **Engine Loop (Upgrade)**: Function-passed update loops, coroutines, and global event systems.
+- **Engine Loop (Upgrade)**: Coroutines and global event systems.
 - **Physics Engine**: 2D rigid body physics and collision detection.
-- **Scripting**: Enhanced script attachment to GameObjects.
+- **Scripting**: Enhanced script attachment to GameObjects with frame-lifecycle hooks.
 - **UI System**: Built-in UI components.
 - **Additional Primitives**: Added capabilities for more basic shapes, arcs, SVGs, and function-based shapes.
 - **Advanced Rendering**: Shaders, Particles, and Post-processing.
@@ -123,7 +153,8 @@ Check the `examples/` directory for more complete demonstrations:
 - `python_direct_draw_demo.py`: Shows how to draw basic shapes (pixels, lines, rects).
 - `python_mesh_demo.py`: Demonstrates the GameObject and Mesh system.
 - `python_threading_demo.py`: **Advanced**: Spawns a background thread that safely updates the UI using `engine.get_handle()`.
-- `python_manual_loop.py`: Shows how to control the game loop manually (initialize -> poll -> update -> render).
+- `python_manual_loop.py`: Shows how to control the game loop manually (`start_manual` -> poll -> update -> render).
+- `python_function_update_demo.py`: Shows callback-based loop control via `engine.run(update=...)`.
 - `python_snake_demo.py`: Playable Snake game using immediate-mode drawing and keyboard input.
 
 ## 🛠️ Development & Testing

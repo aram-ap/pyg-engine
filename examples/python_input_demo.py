@@ -4,7 +4,7 @@ from pyg_engine import Engine, Keys, MouseButton, Color
 
 def main():
     engine = Engine()
-    engine.initialize(title="Input Demo", width=800, height=600)
+    engine.start_manual(title="Input Demo", width=800, height=600)
     
     # Simple state for demonstration
     circle_x = 400.0

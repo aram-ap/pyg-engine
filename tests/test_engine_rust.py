@@ -71,6 +71,7 @@ def test_engine_render_api_methods_exist() -> None:
     engine = pyg.Engine()
 
     assert hasattr(engine, "run")
+    assert hasattr(engine, "start_manual")
     assert hasattr(engine, "add_game_object")
     assert hasattr(engine, "create_game_object")
     assert hasattr(engine, "remove_game_object")
@@ -79,6 +80,59 @@ def test_engine_render_api_methods_exist() -> None:
     assert hasattr(engine, "draw_line")
     assert hasattr(engine, "draw_rectangle")
     assert hasattr(engine, "draw_circle")
+    assert not hasattr(engine, "run_with_update")
+    assert not hasattr(engine, "initialize")
+
+
+def test_update_context_is_exposed() -> None:
+    """Test that UpdateContext is importable from the top-level module."""
+    assert hasattr(pyg, "UpdateContext")
+
+
+def test_update_callback_compiler_supports_named_injection() -> None:
+    """Test callback argument injection without creating a window."""
+    from pyg_engine.engine import UpdateContext, _compile_update_callback
+
+    engine = pyg.Engine()
+    context = UpdateContext(engine, user_data={"speed": 4.0})
+    context.delta_time = 0.016
+    context.elapsed_time = 2.5
+    context.frame = 10
+
+    observed: dict[str, object] = {}
+
+    def callback(dt: float, engine: pyg.Engine, frame: int, user_data: object) -> None:
+        observed["dt"] = dt
+        observed["engine"] = engine
+        observed["frame"] = frame
+        observed["user_data"] = user_data
+
+    invoker = _compile_update_callback(callback)
+    invoker(context)
+
+    assert observed["dt"] == 0.016
+    assert observed["engine"] is engine
+    assert observed["frame"] == 10
+    assert observed["user_data"] == {"speed": 4.0}
+
+
+def test_update_callback_compiler_single_arg_falls_back_to_context() -> None:
+    """Test single unknown callback argument receives UpdateContext."""
+    from pyg_engine.engine import UpdateContext, _compile_update_callback
+
+    engine = pyg.Engine()
+    context = UpdateContext(engine)
+
+    received: list[object] = []
+
+    def callback(state: object) -> None:
+        received.append(state)
+
+    invoker = _compile_update_callback(callback)
+    invoker(context)
+
+    assert received
+    assert received[0] is context
 
 
 def test_engine_log_info_no_crash() -> None:

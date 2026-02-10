@@ -3,7 +3,7 @@
 Python manual loop demo for pyg_engine.
 
 Demonstrates controlling the engine loop manually from Python using:
-- engine.initialize()
+- engine.start_manual()
 - engine.poll_events()
 - engine.update()
 - engine.render()
@@ -18,8 +18,8 @@ def main() -> None:
     # Initialize engine with logging
     engine = pyg.Engine(log_level="INFO")
     
-    # Initialize window without starting the loop
-    engine.initialize(
+    # Start in manual-loop mode without entering a blocking run loop.
+    engine.start_manual(
         title="PyG Engine - Manual Loop Demo",
         width=1280,
         height=720,

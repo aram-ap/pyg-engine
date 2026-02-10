@@ -19,7 +19,7 @@ def make_checkerboard_rgba(width: int, height: int, cell_size: int = 8) -> bytes
 
 def main() -> None:
     engine = Engine()
-    engine.initialize(title="Visualization/Texture Demo", width=960, height=600)
+    engine.start_manual(title="Visualization/Texture Demo", width=960, height=600)
 
     texture_width = 128
     texture_height = 128

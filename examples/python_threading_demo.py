@@ -72,7 +72,7 @@ def main() -> None:
     # Initialize engine
     engine = pyg.Engine(log_level="INFO")
     
-    engine.initialize(
+    engine.start_manual(
         title="PyG Engine - Threading Demo",
         width=1280,
         height=720,
