@@ -23,7 +23,7 @@ def background_spawner(handle: pyg.EngineHandle, stop_event: threading.Event, co
     
     while not stop_event.is_set():
         # Simulate some work
-        time.sleep(0.001)
+        time.sleep(0.1)
         
         # Calculate random position
         x = random.randint(100, 1180)
