@@ -66,6 +66,15 @@ impl ObjectManager {
     }
 
     /**
+        Gets a mutable object by id.
+        @param id: The id of the object to get.
+        @return: The mutable object.
+    */
+    pub fn get_object_by_id_mut(&mut self, id: u32) -> Option<&mut GameObject> {
+        self.objects.get_mut(&id)
+    }
+
+    /**
         Gets the total number of objects.
         @return: The total number of objects.
     */

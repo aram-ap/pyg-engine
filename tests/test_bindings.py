@@ -947,3 +947,89 @@ def test_transform_component_properties() -> None:
     assert transform.scale.x == 2.0
     assert transform.scale.y == 2.0
 
+
+# ========== MeshComponent + Direct Draw Tests ==========
+
+def test_mesh_component_creation_and_properties() -> None:
+    """
+    Test that MeshComponent can be created and configured from Python.
+    """
+    mesh = pyg.MeshComponent("Quad")
+    assert mesh is not None
+    assert isinstance(mesh, pyg.MeshComponent)
+    assert mesh.name == "Quad"
+
+    mesh.set_geometry_rectangle(64.0, 32.0)
+    mesh.set_fill_color(pyg.Color.ORANGE)
+    mesh.set_image_path("images/1.png")
+    mesh.visible = True
+    mesh.layer = 3
+    mesh.z_index = 0.25
+
+    assert mesh.fill_color() is not None
+    assert mesh.image_path() == "images/1.png"
+    assert mesh.visible is True
+    assert mesh.layer == 3
+    assert abs(mesh.z_index - 0.25) < 1e-5
+
+
+def test_game_object_mesh_component_api() -> None:
+    """
+    Test mesh component APIs on GameObject bindings.
+    """
+    go = pyg.GameObject("Renderable")
+    assert go.has_mesh_component() is False
+
+    mesh = pyg.MeshComponent("RenderableMesh")
+    mesh.set_geometry_rectangle(48.0, 48.0)
+    mesh.set_fill_color(pyg.Color.CYAN)
+    go.add_mesh_component(mesh)
+
+    assert go.has_mesh_component() is True
+    assert go.mesh_component() is not None
+
+    go.set_mesh_fill_color(pyg.Color.MAGENTA)
+    go.set_mesh_image_path("images/2.png")
+    go.set_mesh_visible(True)
+    go.set_mesh_layer(5)
+    go.set_mesh_z_index(0.9)
+    go.set_mesh_geometry_rectangle(80.0, 40.0)
+
+    mesh_color = go.mesh_fill_color()
+    assert mesh_color is not None
+    assert abs(mesh_color.r - pyg.Color.MAGENTA.r) < 1e-5
+    assert go.mesh_image_path() == "images/2.png"
+    assert go.mesh_visible() is True
+    assert go.mesh_layer() == 5
+    assert abs((go.mesh_z_index() or 0.0) - 0.9) < 1e-5
+
+    removed = go.remove_mesh_component()
+    assert removed is not None
+    assert go.has_mesh_component() is False
+
+
+def test_engine_direct_draw_and_add_object_no_crash() -> None:
+    """
+    Test direct draw API calls and adding GameObject to runtime scene.
+    """
+    engine = pyg.Engine()
+    go = pyg.GameObject("PythonSceneObject")
+    go.position = pyg.Vec2(10.0, 20.0)
+    go.rotation = 0.25
+    go.scale = pyg.Vec2(1.5, 1.5)
+
+    mesh = pyg.MeshComponent("PyMesh")
+    mesh.set_geometry_rectangle(100.0, 40.0)
+    mesh.set_fill_color(pyg.Color.YELLOW)
+    go.set_mesh_component(mesh)
+
+    obj_id = engine.add_game_object(go)
+    assert obj_id is None or isinstance(obj_id, int)
+
+    # Should not raise exceptions.
+    engine.draw_pixel(1, 1, pyg.Color.WHITE)
+    engine.draw_line(10.0, 10.0, 100.0, 60.0, pyg.Color.RED, thickness=2.0)
+    engine.draw_rectangle(20.0, 20.0, 60.0, 40.0, pyg.Color.GREEN, filled=False, thickness=2.0)
+    engine.draw_circle(80.0, 80.0, 16.0, pyg.Color.BLUE, filled=True, segments=24)
+    engine.clear_draw_commands()
+

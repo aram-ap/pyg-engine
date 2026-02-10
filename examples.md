@@ -8,6 +8,27 @@ permalink: /examples/
 
 This page showcases various examples demonstrating the capabilities of the PyG Engine.
 
+## Current Native-Backed Examples
+
+### Python Rendering (new)
+
+- **examples/python_direct_draw_demo.py** - Immediate-mode drawing from Python (pixels, lines, rectangles, circles)
+- **examples/python_mesh_demo.py** - Python-side GameObject + MeshComponent scene rendering
+- **examples/PYTHON_RENDERING_GUIDE.md** - API guide for direct draw and mesh APIs in Python
+
+Run from project root:
+
+```bash
+pip install -e .
+python examples/python_direct_draw_demo.py
+python examples/python_mesh_demo.py
+```
+
+### Rust Rendering (new)
+
+- **examples/mesh_demo.rs** - Mesh/GameObject pipeline rendering demo
+- **examples/draw_primitives_demo.rs** - Direct draw primitives demo in Rust
+
 ## Available Examples
 
 ### Basic Examples

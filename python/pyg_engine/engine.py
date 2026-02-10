@@ -5,19 +5,130 @@ This module provides a clean Python interface to the Rust engine implementation
 with comprehensive logging capabilities.
 """
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     pass
 
 try:
     from .pyg_engine_native import Engine as _RustEngine
+    from .pyg_engine_native import EngineHandle as _RustEngineHandle
 except ImportError as e:
     raise ImportError(
         "Failed to import pyg_engine_native. "
         "The Rust extension may not be compiled. "
         "Run 'pip install -e .' to build the extension."
     ) from e
+
+
+class EngineHandle:
+    """
+    Thread-safe handle to the engine that can be passed to background threads.
+    
+    Use this handle to queue commands like adding objects or drawing from other threads.
+    """
+    def __init__(self, inner: _RustEngineHandle) -> None:
+        self._inner = inner
+
+    def add_game_object(self, game_object: Any) -> None:
+        """
+        Add a `pyg_engine.GameObject` to the runtime scene.
+        
+        This is thread-safe and will be processed on the next engine update.
+        """
+        self._inner.add_game_object(game_object)
+
+    def remove_game_object(self, object_id: int) -> None:
+        """Remove a runtime GameObject by id via command queue."""
+        self._inner.remove_game_object(object_id)
+
+    def clear_draw_commands(self) -> None:
+        """Clear all immediate-mode drawing commands via command queue."""
+        self._inner.clear_draw_commands()
+
+    def draw_pixel(
+        self,
+        x: int,
+        y: int,
+        color: Any,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a pixel in window coordinates via command queue."""
+        self._inner.draw_pixel(x, y, color, layer=layer, z_index=z_index)
+
+    def draw_line(
+        self,
+        start_x: float,
+        start_y: float,
+        end_x: float,
+        end_y: float,
+        color: Any,
+        thickness: float = 1.0,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a line in window coordinates via command queue."""
+        self._inner.draw_line(
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+            color,
+            thickness=thickness,
+            layer=layer,
+            z_index=z_index,
+        )
+
+    def draw_rectangle(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        color: Any,
+        filled: bool = True,
+        thickness: float = 1.0,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a rectangle in window coordinates via command queue."""
+        self._inner.draw_rectangle(
+            x,
+            y,
+            width,
+            height,
+            color,
+            filled=filled,
+            thickness=thickness,
+            layer=layer,
+            z_index=z_index,
+        )
+
+    def draw_circle(
+        self,
+        center_x: float,
+        center_y: float,
+        radius: float,
+        color: Any,
+        filled: bool = True,
+        thickness: float = 1.0,
+        segments: int = 32,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a circle in window coordinates via command queue."""
+        self._inner.draw_circle(
+            center_x,
+            center_y,
+            radius,
+            color,
+            filled=filled,
+            thickness=thickness,
+            segments=segments,
+            layer=layer,
+            z_index=z_index,
+        )
 
 
 class Engine:
@@ -83,6 +194,15 @@ class Engine:
             log_directory=log_directory,
             log_level=log_level,
         )
+    
+    def get_handle(self) -> EngineHandle:
+        """
+        Get a thread-safe handle to the engine that can be passed to background threads.
+        
+        Returns:
+            EngineHandle: A handle used to queue commands from other threads.
+        """
+        return EngineHandle(self._engine.get_handle())
     
     def log(self, message: str) -> None:
         """
@@ -153,6 +273,215 @@ class Engine:
             message: The message to log.
         """
         self._engine.log_error(message)
+
+    def set_window_title(self, title: str) -> None:
+        """
+        Set the window title.
+        
+        Args:
+            title: The new window title.
+        """
+        self._engine.set_window_title(title)
+
+    def initialize(
+        self,
+        title: str = "PyG Engine",
+        width: int = 1280,
+        height: int = 720,
+        resizable: bool = True,
+        background_color: Optional[Any] = None,
+        vsync: bool = True,
+        redraw_on_change_only: bool = True,
+        show_fps_in_title: bool = False,
+    ) -> None:
+        """
+        Initialize the engine with window configuration without starting the loop.
+        
+        This method is used when you want to control the game loop manually using
+        `poll_events()`, `update()`, and `render()`.
+        
+        Args:
+            title: Window title.
+            width: Initial window width.
+            height: Initial window height.
+            resizable: Whether the window can be resized.
+            background_color: Optional `pyg_engine.Color`.
+            vsync: Enable/disable vertical sync.
+            redraw_on_change_only: When True (default), only redraw on scene changes.
+            show_fps_in_title: When True, appends current FPS to window title.
+        """
+        self._engine.initialize(
+            title=title,
+            width=width,
+            height=height,
+            resizable=resizable,
+            background_color=background_color,
+            vsync=vsync,
+            redraw_on_change_only=redraw_on_change_only,
+            show_fps_in_title=show_fps_in_title,
+        )
+
+    def poll_events(self) -> bool:
+        """
+        Poll events from the window system.
+        
+        Returns:
+            bool: True if the loop should continue, False if exit requested.
+        """
+        return self._engine.poll_events()
+
+    def update(self) -> None:
+        """Run a single update step."""
+        self._engine.update()
+
+    def render(self) -> None:
+        """Render a single frame."""
+        self._engine.render()
+
+    def run(
+        self,
+        title: str = "PyG Engine",
+        width: int = 1280,
+        height: int = 720,
+        resizable: bool = True,
+        background_color: Optional[Any] = None,
+        vsync: bool = True,
+        redraw_on_change_only: bool = True,
+        show_fps_in_title: bool = False,
+    ) -> None:
+        """
+        Run the engine window and enter the event loop.
+
+        Args:
+            title: Window title.
+            width: Initial window width.
+            height: Initial window height.
+            resizable: Whether the window can be resized.
+            background_color: Optional `pyg_engine.Color`.
+            vsync: Enable/disable vertical sync.
+            redraw_on_change_only: When True (default), only redraw on scene changes.
+            show_fps_in_title: When True, appends current FPS to window title.
+        """
+        self._engine.run(
+            title=title,
+            width=width,
+            height=height,
+            resizable=resizable,
+            background_color=background_color,
+            vsync=vsync,
+            redraw_on_change_only=redraw_on_change_only,
+            show_fps_in_title=show_fps_in_title,
+        )
+
+    def add_game_object(self, game_object: Any) -> Optional[int]:
+        """
+        Add a `pyg_engine.GameObject` to the runtime scene.
+
+        Returns:
+            The runtime object id, or None if add failed.
+        """
+        return self._engine.add_game_object(game_object)
+
+    def create_game_object(self, name: Optional[str] = None) -> Optional[int]:
+        """
+        Create and add a runtime GameObject.
+
+        Returns:
+            The runtime object id, or None if creation failed.
+        """
+        return self._engine.create_game_object(name)
+
+    def remove_game_object(self, object_id: int) -> None:
+        """Remove a runtime GameObject by id."""
+        self._engine.remove_game_object(object_id)
+
+    def clear_draw_commands(self) -> None:
+        """Clear all immediate-mode drawing commands."""
+        self._engine.clear_draw_commands()
+
+    def draw_pixel(
+        self,
+        x: int,
+        y: int,
+        color: Any,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a pixel in window coordinates."""
+        self._engine.draw_pixel(x, y, color, layer=layer, z_index=z_index)
+
+    def draw_line(
+        self,
+        start_x: float,
+        start_y: float,
+        end_x: float,
+        end_y: float,
+        color: Any,
+        thickness: float = 1.0,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a line in window coordinates."""
+        self._engine.draw_line(
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+            color,
+            thickness=thickness,
+            layer=layer,
+            z_index=z_index,
+        )
+
+    def draw_rectangle(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        color: Any,
+        filled: bool = True,
+        thickness: float = 1.0,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a rectangle in window coordinates."""
+        self._engine.draw_rectangle(
+            x,
+            y,
+            width,
+            height,
+            color,
+            filled=filled,
+            thickness=thickness,
+            layer=layer,
+            z_index=z_index,
+        )
+
+    def draw_circle(
+        self,
+        center_x: float,
+        center_y: float,
+        radius: float,
+        color: Any,
+        filled: bool = True,
+        thickness: float = 1.0,
+        segments: int = 32,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a circle in window coordinates."""
+        self._engine.draw_circle(
+            center_x,
+            center_y,
+            radius,
+            color,
+            filled=filled,
+            thickness=thickness,
+            segments=segments,
+            layer=layer,
+            z_index=z_index,
+        )
     
     @property
     def version(self) -> str:

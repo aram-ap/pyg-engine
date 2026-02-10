@@ -5,7 +5,7 @@ use crate::types::color::Color;
 
 // Game objects contain components.
 // Components are used to add functionality to game objects.
-pub trait ComponentTrait: Send + Sync {
+pub trait ComponentTrait: Send + Sync + std::fmt::Debug {
     /**
         Creates a new component.
         @return: The new component.
@@ -30,6 +30,81 @@ pub trait ComponentTrait: Send + Sync {
     fn on_disable(&self);
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct MeshVertex {
+    position: Vec2,
+    uv: Vec2,
+}
+
+impl MeshVertex {
+    pub fn new(position: Vec2, uv: Vec2) -> Self {
+        Self { position, uv }
+    }
+
+    pub fn position(&self) -> Vec2 {
+        self.position
+    }
+
+    pub fn uv(&self) -> Vec2 {
+        self.uv
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MeshGeometry {
+    vertices: Vec<MeshVertex>,
+    indices: Vec<u32>,
+}
+
+impl MeshGeometry {
+    pub fn new(vertices: Vec<MeshVertex>, indices: Vec<u32>) -> Self {
+        Self { vertices, indices }
+    }
+
+    /// Create a unit rectangle centered at origin.
+    pub fn rectangle(width: f32, height: f32) -> Self {
+        let half_w = width * 0.5;
+        let half_h = height * 0.5;
+
+        Self {
+            vertices: vec![
+                MeshVertex::new(Vec2::new(-half_w, half_h), Vec2::new(0.0, 0.0)),
+                MeshVertex::new(Vec2::new(-half_w, -half_h), Vec2::new(0.0, 1.0)),
+                MeshVertex::new(Vec2::new(half_w, -half_h), Vec2::new(1.0, 1.0)),
+                MeshVertex::new(Vec2::new(half_w, half_h), Vec2::new(1.0, 0.0)),
+            ],
+            indices: vec![0, 1, 2, 0, 2, 3],
+        }
+    }
+
+    pub fn vertices(&self) -> &[MeshVertex] {
+        &self.vertices
+    }
+
+    pub fn indices(&self) -> &[u32] {
+        &self.indices
+    }
+
+    pub fn set_vertices(&mut self, vertices: Vec<MeshVertex>) {
+        self.vertices = vertices;
+    }
+
+    pub fn set_indices(&mut self, indices: Vec<u32>) {
+        self.indices = indices;
+    }
+
+    pub fn is_valid(&self) -> bool {
+        !self.vertices.is_empty() && !self.indices.is_empty()
+    }
+}
+
+impl Default for MeshGeometry {
+    fn default() -> Self {
+        Self::rectangle(1.0, 1.0)
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct TransformComponent {
     name: String,
     position: Vec2,
@@ -61,6 +136,10 @@ impl ComponentTrait for TransformComponent {
 }
 
 impl TransformComponent {
+    pub fn new(name: impl Into<String>) -> Self {
+        <Self as ComponentTrait>::new(name.into())
+    }
+
     pub fn position(&self) -> &Vec2 {
         &self.position
     }
@@ -86,6 +165,122 @@ impl TransformComponent {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct MeshComponent {
+    name: String,
+    geometry: MeshGeometry,
+    fill_color: Option<Color>,
+    image_path: Option<String>,
+    visible: bool,
+    layer: i32,
+    z_index: f32,
+}
+
+impl ComponentTrait for MeshComponent {
+    fn new(name: String) -> Self {
+        Self {
+            name,
+            geometry: MeshGeometry::default(),
+            fill_color: Some(Color::WHITE),
+            image_path: None,
+            visible: true,
+            layer: 0,
+            z_index: 0.0,
+        }
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn update(&self, _time: &Time) {}
+    fn fixed_update(&self, _time: &Time, _fixed_time: f32) {}
+    fn on_start(&self) {}
+    fn on_destroy(&self) {}
+    fn on_enable(&self) {}
+    fn on_disable(&self) {}
+}
+
+impl MeshComponent {
+    pub fn new(name: impl Into<String>) -> Self {
+        <Self as ComponentTrait>::new(name.into())
+    }
+
+    pub fn with_geometry(mut self, geometry: MeshGeometry) -> Self {
+        self.geometry = geometry;
+        self
+    }
+
+    pub fn with_fill_color(mut self, fill_color: Option<Color>) -> Self {
+        self.fill_color = fill_color;
+        self
+    }
+
+    pub fn with_image_path(mut self, image_path: Option<String>) -> Self {
+        self.image_path = image_path;
+        self
+    }
+
+    pub fn with_layer(mut self, layer: i32) -> Self {
+        self.layer = layer;
+        self
+    }
+
+    pub fn with_z_index(mut self, z_index: f32) -> Self {
+        self.z_index = z_index;
+        self
+    }
+
+    pub fn geometry(&self) -> &MeshGeometry {
+        &self.geometry
+    }
+
+    pub fn set_geometry(&mut self, geometry: MeshGeometry) {
+        self.geometry = geometry;
+    }
+
+    pub fn fill_color(&self) -> Option<&Color> {
+        self.fill_color.as_ref()
+    }
+
+    pub fn set_fill_color(&mut self, fill_color: Option<Color>) {
+        self.fill_color = fill_color;
+    }
+
+    pub fn image_path(&self) -> Option<&str> {
+        self.image_path.as_deref()
+    }
+
+    pub fn set_image_path(&mut self, image_path: Option<String>) {
+        self.image_path = image_path;
+    }
+
+    pub fn visible(&self) -> bool {
+        self.visible
+    }
+
+    pub fn set_visible(&mut self, visible: bool) {
+        self.visible = visible;
+    }
+
+    pub fn layer(&self) -> i32 {
+        self.layer
+    }
+
+    pub fn set_layer(&mut self, layer: i32) {
+        self.layer = layer;
+    }
+
+    pub fn z_index(&self) -> f32 {
+        self.z_index
+    }
+
+    pub fn set_z_index(&mut self, z_index: f32) {
+        self.z_index = z_index;
+    }
+}
+
+#[derive(Debug)]
 pub struct SpriteComponent {
     name: String,
     // texture: Option<Texture>,
@@ -108,7 +303,7 @@ pub struct SpriteComponent {
 impl ComponentTrait for SpriteComponent {
     fn new(name: String) -> Self {
         Self {
-            name: "Sprite Renderer".to_string(),
+            name,
             // texture: None,
             color: Color::new(1.0, 1.0, 1.0, 1.0),
             visible: true,

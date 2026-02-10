@@ -11,6 +11,7 @@ try:
         Color,
         Time,
         GameObject,
+        MeshComponent,
         TransformComponent,
         version as _version_func,
     )
@@ -23,6 +24,7 @@ except ImportError:
     Color = None  # type: ignore
     Time = None  # type: ignore
     GameObject = None  # type: ignore
+    MeshComponent = None  # type: ignore
     TransformComponent = None  # type: ignore
     version = None  # type: ignore
 
@@ -37,6 +39,7 @@ __all__ = [
     "Color",
     "Time",
     "GameObject",
+    "MeshComponent",
     "TransformComponent",
     "version",
 ]

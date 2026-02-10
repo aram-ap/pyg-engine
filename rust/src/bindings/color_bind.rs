@@ -7,7 +7,7 @@ use crate::types::color::Color as RustColor;
 #[pyclass(name = "Color")]
 #[derive(Clone)]
 pub struct PyColor {
-    inner: RustColor,
+    pub(crate) inner: RustColor,
 }
 
 #[pymethods]
@@ -171,6 +171,34 @@ impl PyColor {
     }
 
     #[classattr]
+    fn DARK_GRAY() -> PyColor {
+        PyColor {
+            inner: RustColor::DARK_GRAY,
+        }
+    }
+
+    #[classattr]
+    fn DARK_GREY() -> PyColor {
+        PyColor {
+            inner: RustColor::DARK_GREY,
+        }
+    }
+
+    #[classattr]
+    fn LIGHT_GRAY() -> PyColor {
+        PyColor {
+            inner: RustColor::LIGHT_GRAY,
+        }
+    }
+
+    #[classattr]
+    fn LIGHT_GREY() -> PyColor {
+        PyColor {
+            inner: RustColor::LIGHT_GREY,
+        }
+    }
+
+    #[classattr]
     fn RED() -> PyColor {
         PyColor { inner: RustColor::RED }
     }
@@ -178,6 +206,11 @@ impl PyColor {
     #[classattr]
     fn GREEN() -> PyColor {
         PyColor { inner: RustColor::GREEN }
+    }
+
+    #[classattr]
+    fn LIME() -> PyColor {
+        PyColor { inner: RustColor::LIME }
     }
 
     #[classattr]

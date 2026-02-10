@@ -64,6 +64,23 @@ def test_engine_log_methods_exist() -> None:
     assert callable(engine.log_error)
 
 
+def test_engine_render_api_methods_exist() -> None:
+    """
+    Test that new rendering control APIs are exposed on Python Engine.
+    """
+    engine = pyg.Engine()
+
+    assert hasattr(engine, "run")
+    assert hasattr(engine, "add_game_object")
+    assert hasattr(engine, "create_game_object")
+    assert hasattr(engine, "remove_game_object")
+    assert hasattr(engine, "clear_draw_commands")
+    assert hasattr(engine, "draw_pixel")
+    assert hasattr(engine, "draw_line")
+    assert hasattr(engine, "draw_rectangle")
+    assert hasattr(engine, "draw_circle")
+
+
 def test_engine_log_info_no_crash() -> None:
     """
     Test that log_info doesn't crash.

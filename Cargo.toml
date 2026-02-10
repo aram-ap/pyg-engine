@@ -26,6 +26,7 @@ cgmath = "0.18"
 bytemuck = { version = "1.14", features = ["derive"] }
 image = "0.25"
 anyhow = "1.0"
+crossbeam-channel = "0.5.15"
 
 [[example]]
 name = "window_demo"

@@ -1,5 +1,5 @@
-﻿use std::sync::atomic::{AtomicU32, Ordering};
-use super::component::ComponentTrait;
+use std::sync::atomic::{AtomicU32, Ordering};
+use super::component::{ComponentTrait, MeshComponent, TransformComponent};
 use super::time::Time;
 
 // Keep track of the next game object id.
@@ -21,11 +21,14 @@ impl Default for ObjectType {
     }
 }
 
+#[derive(Debug)]
 pub struct GameObject {
     id: u32,
     name: Option<String>,
     children: Vec<u32>,
     parent: Option<u32>,
+    transform: TransformComponent,
+    mesh: Option<MeshComponent>,
     components: Vec<Box<dyn ComponentTrait>>,
     object_type: Option<ObjectType>,
     active: bool,
@@ -43,6 +46,8 @@ impl GameObject {
             name: Some("GameObject".to_string()),
             children: Vec::new(),
             parent: None,
+            transform: TransformComponent::new("Transform".to_string()),
+            mesh: None,
             components: Vec::new(),
             object_type: None,
             active: true,
@@ -61,6 +66,8 @@ impl GameObject {
             name: Some(name),
             children: Vec::new(),
             parent: None,
+            transform: TransformComponent::new("Transform".to_string()),
+            mesh: None,
             components: Vec::new(),
             object_type: None,
             active: true,
@@ -84,6 +91,14 @@ impl GameObject {
     }
 
     /**
+        Gets the name of the game object.
+        @return: The object name, if set.
+    */
+    pub fn name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+
+    /**
         Adds a child to the game object.
         @param child: The child to add.
     */
@@ -98,6 +113,46 @@ impl GameObject {
     */
     pub fn add_component(&mut self, component: Box<dyn ComponentTrait>) {
         self.components.push(component);
+    }
+
+    /// Gets the transform component for this game object.
+    pub fn transform(&self) -> &TransformComponent {
+        &self.transform
+    }
+
+    /// Gets a mutable transform component for this game object.
+    pub fn transform_mut(&mut self) -> &mut TransformComponent {
+        &mut self.transform
+    }
+
+    /// Replaces the transform component.
+    pub fn set_transform(&mut self, transform: TransformComponent) {
+        self.transform = transform;
+    }
+
+    /// Adds or replaces the mesh component.
+    pub fn add_mesh_component(&mut self, mesh: MeshComponent) {
+        self.mesh = Some(mesh);
+    }
+
+    /// Removes and returns the mesh component if present.
+    pub fn remove_mesh_component(&mut self) -> Option<MeshComponent> {
+        self.mesh.take()
+    }
+
+    /// Gets an immutable mesh component reference.
+    pub fn mesh_component(&self) -> Option<&MeshComponent> {
+        self.mesh.as_ref()
+    }
+
+    /// Gets a mutable mesh component reference.
+    pub fn mesh_component_mut(&mut self) -> Option<&mut MeshComponent> {
+        self.mesh.as_mut()
+    }
+
+    /// Returns true when this object has a mesh component.
+    pub fn has_mesh_component(&self) -> bool {
+        self.mesh.is_some()
     }
 
     /**
@@ -217,6 +272,10 @@ impl GameObject {
         Updates the game object.
     */
     pub fn update(&self, time: &Time) {
+        self.transform.update(time);
+        if let Some(mesh) = &self.mesh {
+            mesh.update(time);
+        }
         for component in self.components.iter() {
             component.update(time);
         }
@@ -228,6 +287,10 @@ impl GameObject {
         @param fixed_time: The fixed time.
     */
     pub fn fixed_update(&self, time: &Time, fixed_time: f32) {
+        self.transform.fixed_update(time, fixed_time);
+        if let Some(mesh) = &self.mesh {
+            mesh.fixed_update(time, fixed_time);
+        }
         for component in self.components.iter() {
             component.fixed_update(time, fixed_time);
         }

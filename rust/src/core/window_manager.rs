@@ -30,6 +30,8 @@ pub struct WindowConfig {
     pub icon: Option<Icon>,
     pub background_color: Option<Color>,
     pub vsync: bool,
+    pub redraw_on_change_only: bool,
+    pub show_fps_in_title: bool,
 }
 
 impl Default for WindowConfig {
@@ -47,6 +49,8 @@ impl Default for WindowConfig {
             icon: None,
             background_color: None,
             vsync: true,
+            redraw_on_change_only: true,
+            show_fps_in_title: false,
         }
     }
 }
@@ -114,6 +118,24 @@ impl WindowConfig {
     /// When disabled, frames will be presented immediately, which may cause screen tearing.
     pub fn with_vsync(mut self, vsync: bool) -> Self {
         self.vsync = vsync;
+        self
+    }
+
+    /// Enable/disable redraw-on-change mode.
+    ///
+    /// When enabled (default), frames are only rendered when scene state changes,
+    /// reducing unnecessary GPU work for static scenes.
+    pub fn with_redraw_on_change_only(mut self, redraw_on_change_only: bool) -> Self {
+        self.redraw_on_change_only = redraw_on_change_only;
+        self
+    }
+
+    /// Enable/disable FPS display in the window title.
+    ///
+    /// Example title when enabled: "PyG Engine | FPS: 143.2"
+    /// Default is false.
+    pub fn with_show_fps_in_title(mut self, show_fps_in_title: bool) -> Self {
+        self.show_fps_in_title = show_fps_in_title;
         self
     }
 }

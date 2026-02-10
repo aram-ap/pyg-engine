@@ -64,8 +64,39 @@ engine.log(f"Welcome to pyg-engine!")
 
 ```
 
-Examples:
-- `basic_example.py` - Basic engine setup and object creation
+## Python Rendering Examples
+
+After installation (`pip install -e .`), try:
+
+- `python examples/python_direct_draw_demo.py`
+- `python examples/python_mesh_demo.py`
+
+Direct draw from Python:
+
+```python
+import pyg_engine as pyg
+
+engine = pyg.Engine()
+engine.draw_line(20, 20, 220, 80, pyg.Color.CYAN, thickness=2.0)
+engine.draw_rectangle(60, 120, 180, 90, pyg.Color.ORANGE, filled=False, thickness=3.0)
+engine.run(title="Python Direct Draw", show_fps_in_title=True, redraw_on_change_only=False)
+```
+
+GameObject + Mesh from Python:
+
+```python
+import pyg_engine as pyg
+
+engine = pyg.Engine()
+go = pyg.GameObject("Quad")
+mesh = pyg.MeshComponent("QuadMesh")
+mesh.set_geometry_rectangle(1.0, 1.0)
+mesh.set_fill_color(pyg.Color.WHITE)
+mesh.set_image_path("images/1.png")
+go.set_mesh_component(mesh)
+engine.add_game_object(go)
+engine.run(title="Python Mesh")
+```
 
 ## Documentation
 
