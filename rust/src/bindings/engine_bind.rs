@@ -5,12 +5,12 @@ use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
 use crossbeam_channel::Sender;
 
 use crate::core::component::{ComponentTrait, MeshComponent, MeshGeometry, TransformComponent};
+use crate::core::draw_manager::DrawCommand;
 use crate::core::engine::Engine as RustEngine;
 use crate::core::game_object::GameObject as RustGameObject;
 use crate::core::time::Time as RustTime;
 use crate::core::window_manager::{FullscreenMode, WindowConfig};
 use crate::core::command::EngineCommand;
-// use crate::core::draw_manager::DrawCommand;
 
 // Import bindings from separate modules
 use super::color_bind::PyColor;
@@ -18,6 +18,242 @@ use super::vector_bind::{PyVec2, PyVec3};
 use super::input_bind::{parse_key, parse_mouse_button, PyKeys, PyMouseButton};
 
 // ========== Engine Bindings ==========
+
+/// Python-side draw command builder used for bulk submission.
+#[pyclass(name = "DrawCommand")]
+#[derive(Clone)]
+pub struct PyDrawCommand {
+    inner: DrawCommand,
+}
+
+#[pymethods]
+impl PyDrawCommand {
+    #[staticmethod]
+    #[pyo3(signature = (x, y, color, layer=0, z_index=0.0))]
+    fn pixel(x: u32, y: u32, color: &PyColor, layer: i32, z_index: f32) -> Self {
+        Self {
+            inner: DrawCommand::Pixel {
+                x: x as f32,
+                y: y as f32,
+                color: color.inner,
+                layer,
+                z_index,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (start_x, start_y, end_x, end_y, color, thickness=1.0, layer=0, z_index=0.0))]
+    fn line(
+        start_x: f32,
+        start_y: f32,
+        end_x: f32,
+        end_y: f32,
+        color: &PyColor,
+        thickness: f32,
+        layer: i32,
+        z_index: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::Line {
+                start_x,
+                start_y,
+                end_x,
+                end_y,
+                thickness,
+                color: color.inner,
+                layer,
+                z_index,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (x, y, width, height, color, filled=true, thickness=1.0, layer=0, z_index=0.0))]
+    fn rectangle(
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        color: &PyColor,
+        filled: bool,
+        thickness: f32,
+        layer: i32,
+        z_index: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::Rectangle {
+                x,
+                y,
+                width,
+                height,
+                color: color.inner,
+                filled,
+                thickness,
+                layer,
+                z_index,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (
+        center_x,
+        center_y,
+        radius,
+        color,
+        filled=true,
+        thickness=1.0,
+        segments=32,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn circle(
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        color: &PyColor,
+        filled: bool,
+        thickness: f32,
+        segments: u32,
+        layer: i32,
+        z_index: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::Circle {
+                center_x,
+                center_y,
+                radius,
+                color: color.inner,
+                filled,
+                thickness,
+                segments,
+                layer,
+                z_index,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (
+        x,
+        y,
+        width,
+        height,
+        top_left,
+        bottom_left,
+        bottom_right,
+        top_right,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn gradient_rect(
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        top_left: &PyColor,
+        bottom_left: &PyColor,
+        bottom_right: &PyColor,
+        top_right: &PyColor,
+        layer: i32,
+        z_index: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::GradientRect {
+                x,
+                y,
+                width,
+                height,
+                top_left: top_left.inner,
+                bottom_left: bottom_left.inner,
+                bottom_right: bottom_right.inner,
+                top_right: top_right.inner,
+                layer,
+                z_index,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (x, y, width, height, texture_path, layer=0, z_index=0.0))]
+    fn image(
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_path: String,
+        layer: i32,
+        z_index: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::Image {
+                x,
+                y,
+                width,
+                height,
+                texture_path,
+                layer,
+                z_index,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (
+        x,
+        y,
+        width,
+        height,
+        texture_key,
+        rgba,
+        texture_width,
+        texture_height,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn image_from_bytes(
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_key: String,
+        rgba: Vec<u8>,
+        texture_width: u32,
+        texture_height: u32,
+        layer: i32,
+        z_index: f32,
+    ) -> PyResult<Self> {
+        let expected_size = (texture_width as usize)
+            .checked_mul(texture_height as usize)
+            .and_then(|value| value.checked_mul(4))
+            .ok_or_else(|| PyRuntimeError::new_err("texture size overflow while validating RGBA buffer"))?;
+
+        if rgba.len() != expected_size {
+            return Err(PyRuntimeError::new_err(format!(
+                "texture byte size mismatch for key '{texture_key}': expected {expected_size} bytes ({}x{} RGBA), got {} bytes",
+                texture_width,
+                texture_height,
+                rgba.len()
+            )));
+        }
+
+        Ok(Self {
+            inner: DrawCommand::ImageBytes {
+                x,
+                y,
+                width,
+                height,
+                texture_key,
+                rgba,
+                texture_width,
+                texture_height,
+                layer,
+                z_index,
+            },
+        })
+    }
+}
 
 /// Python wrapper for the Rust Engine.
 #[pyclass(name = "Engine", unsendable)]
@@ -199,6 +435,15 @@ impl PyEngine {
     /// Clear all immediate-mode draw commands.
     fn clear_draw_commands(&mut self) {
         self.inner.clear_draw_commands();
+    }
+
+    /// Submit many draw commands in one call.
+    fn add_draw_commands(&mut self, py: Python<'_>, commands: Vec<Py<PyDrawCommand>>) {
+        let runtime_commands: Vec<DrawCommand> = commands
+            .into_iter()
+            .map(|command| command.borrow(py).inner.clone())
+            .collect();
+        self.inner.add_draw_commands(runtime_commands);
     }
 
     /// Draw a pixel at window coordinates.
@@ -571,6 +816,17 @@ impl PyEngineHandle {
     /// Clear all immediate-mode draw commands via command queue.
     fn clear_draw_commands(&self) {
         let _ = self.sender.send(EngineCommand::ClearDrawCommands);
+    }
+
+    /// Submit many draw commands via command queue in one call.
+    fn add_draw_commands(&self, py: Python<'_>, commands: Vec<Py<PyDrawCommand>>) {
+        let runtime_commands: Vec<DrawCommand> = commands
+            .into_iter()
+            .map(|command| command.borrow(py).inner.clone())
+            .collect();
+        let _ = self
+            .sender
+            .send(EngineCommand::AddDrawCommands(runtime_commands));
     }
 
     /// Draw a pixel at window coordinates via command queue.
@@ -1130,6 +1386,7 @@ fn pyg_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version, m)?)?;
     m.add_class::<PyEngine>()?;
     m.add_class::<PyEngineHandle>()?;
+    m.add_class::<PyDrawCommand>()?;
     m.add_class::<PyVec2>()?;
     m.add_class::<PyVec3>()?;
     m.add_class::<PyColor>()?;

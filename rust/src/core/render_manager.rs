@@ -6,7 +6,6 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use image::GenericImageView;
-use wgpu::util::DeviceExt;
 use wgpu::{Device, PresentMode, Queue, Surface, SurfaceConfiguration, TextureUsages};
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
@@ -18,10 +17,12 @@ use crate::core::object_manager::ObjectManager;
 use crate::types::Color;
 
 struct CachedTexture {
-    _texture: wgpu::Texture,
+    texture: wgpu::Texture,
     _view: wgpu::TextureView,
     _sampler: wgpu::Sampler,
     bind_group: wgpu::BindGroup,
+    width: u32,
+    height: u32,
 }
 
 #[derive(Clone)]
@@ -46,6 +47,13 @@ struct PendingTextureUpload {
     width: u32,
     height: u32,
 }
+
+struct PooledBuffer {
+    buffer: wgpu::Buffer,
+    capacity_bytes: usize,
+}
+
+const MIN_POOL_BUFFER_BYTES: usize = 256;
 
 fn hash_f32<H: Hasher>(hasher: &mut H, value: f32) {
     value.to_bits().hash(hasher);
@@ -79,6 +87,8 @@ pub struct RenderManager {
     default_texture: CachedTexture,
     texture_cache: HashMap<String, Option<CachedTexture>>,
     texture_data_signature_cache: HashMap<String, u64>,
+    vertex_buffer_pool: Vec<PooledBuffer>,
+    index_buffer_pool: Vec<PooledBuffer>,
 }
 
 impl RenderManager {
@@ -261,6 +271,8 @@ impl RenderManager {
             default_texture,
             texture_cache: HashMap::new(),
             texture_data_signature_cache: HashMap::new(),
+            vertex_buffer_pool: Vec::new(),
+            index_buffer_pool: Vec::new(),
         })
     }
 
@@ -329,10 +341,12 @@ impl RenderManager {
         });
 
         CachedTexture {
-            _texture: texture,
+            texture,
             _view: view,
             _sampler: sampler,
             bind_group,
+            width,
+            height,
         }
     }
 
@@ -394,6 +408,15 @@ impl RenderManager {
             return Ok(());
         }
 
+        if let Some(Some(cached_texture)) = self.texture_cache.get_mut(texture_key) {
+            if cached_texture.width == width && cached_texture.height == height {
+                Self::write_rgba_to_texture(&self.queue, &cached_texture.texture, rgba, width, height);
+                self.texture_data_signature_cache
+                    .insert(texture_key.to_string(), signature);
+                return Ok(());
+            }
+        }
+
         let cached = Self::create_cached_texture(
             &self.device,
             &self.queue,
@@ -409,6 +432,79 @@ impl RenderManager {
             .insert(texture_key.to_string(), signature);
 
         Ok(())
+    }
+
+    fn write_rgba_to_texture(
+        queue: &wgpu::Queue,
+        texture: &wgpu::Texture,
+        rgba: &[u8],
+        width: u32,
+        height: u32,
+    ) {
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            rgba,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+    }
+
+    fn pooled_buffer_capacity(required_bytes: usize) -> usize {
+        required_bytes.max(MIN_POOL_BUFFER_BYTES).next_power_of_two()
+    }
+
+    fn write_to_pooled_buffer(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        pool: &mut Vec<PooledBuffer>,
+        slot: usize,
+        bytes: &[u8],
+        usage: wgpu::BufferUsages,
+        label: &str,
+    ) -> wgpu::Buffer {
+        debug_assert!(!bytes.is_empty(), "pooled buffer writes must not be empty");
+        let required_bytes = bytes.len();
+
+        if pool.len() <= slot {
+            let capacity = Self::pooled_buffer_capacity(required_bytes);
+            let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size: capacity as u64,
+                usage: usage | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            pool.push(PooledBuffer {
+                buffer,
+                capacity_bytes: capacity,
+            });
+        }
+
+        if pool[slot].capacity_bytes < required_bytes {
+            let capacity = Self::pooled_buffer_capacity(required_bytes);
+            pool[slot].buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some(label),
+                size: capacity as u64,
+                usage: usage | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+            pool[slot].capacity_bytes = capacity;
+        }
+
+        queue.write_buffer(&pool[slot].buffer, 0, bytes);
+        pool[slot].buffer.clone()
     }
 
     fn texture_bind_group_for(&mut self, texture_path: Option<&str>) -> wgpu::BindGroup {
@@ -1353,6 +1449,7 @@ impl RenderManager {
             }
         }
         let mut prepared_draws = Vec::new();
+        let mut batch_slot = 0usize;
 
         // Batching State
         let mut batch_vertices: Vec<Vertex> = Vec::new();
@@ -1371,17 +1468,24 @@ impl RenderManager {
                 
                 // 2. Flush
                 if !batch_vertices.is_empty() {
-                    let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("batch_vertex_buffer"),
-                        contents: bytemuck::cast_slice(&batch_vertices),
-                        usage: wgpu::BufferUsages::VERTEX,
-                    });
-
-                    let index_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("batch_index_buffer"),
-                        contents: bytemuck::cast_slice(&batch_indices),
-                        usage: wgpu::BufferUsages::INDEX,
-                    });
+                    let vertex_buffer = Self::write_to_pooled_buffer(
+                        &self.device,
+                        &self.queue,
+                        &mut self.vertex_buffer_pool,
+                        batch_slot,
+                        bytemuck::cast_slice(&batch_vertices),
+                        wgpu::BufferUsages::VERTEX,
+                        "batch_vertex_buffer_pool",
+                    );
+                    let index_buffer = Self::write_to_pooled_buffer(
+                        &self.device,
+                        &self.queue,
+                        &mut self.index_buffer_pool,
+                        batch_slot,
+                        bytemuck::cast_slice(&batch_indices),
+                        wgpu::BufferUsages::INDEX,
+                        "batch_index_buffer_pool",
+                    );
 
                     prepared_draws.push(PreparedDraw {
                         bind_group,
@@ -1389,6 +1493,7 @@ impl RenderManager {
                         index_buffer,
                         index_count: batch_indices.len() as u32,
                     });
+                    batch_slot += 1;
 
                     batch_vertices.clear();
                     batch_indices.clear();
@@ -1411,17 +1516,25 @@ impl RenderManager {
         if !batch_vertices.is_empty() {
             let bind_group = self.texture_bind_group_for(batch_texture_path.as_deref());
             
-            let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("batch_vertex_buffer"),
-                contents: bytemuck::cast_slice(&batch_vertices),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
+            let vertex_buffer = Self::write_to_pooled_buffer(
+                &self.device,
+                &self.queue,
+                &mut self.vertex_buffer_pool,
+                batch_slot,
+                bytemuck::cast_slice(&batch_vertices),
+                wgpu::BufferUsages::VERTEX,
+                "batch_vertex_buffer_pool",
+            );
 
-            let index_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("batch_index_buffer"),
-                contents: bytemuck::cast_slice(&batch_indices),
-                usage: wgpu::BufferUsages::INDEX,
-            });
+            let index_buffer = Self::write_to_pooled_buffer(
+                &self.device,
+                &self.queue,
+                &mut self.index_buffer_pool,
+                batch_slot,
+                bytemuck::cast_slice(&batch_indices),
+                wgpu::BufferUsages::INDEX,
+                "batch_index_buffer_pool",
+            );
 
             prepared_draws.push(PreparedDraw {
                 bind_group,

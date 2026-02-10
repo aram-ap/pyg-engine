@@ -100,6 +100,10 @@ impl DrawManager {
         self.commands.push(command);
     }
 
+    pub fn add_commands(&mut self, mut commands: Vec<DrawCommand>) {
+        self.commands.append(&mut commands);
+    }
+
     pub fn draw_pixel(&mut self, x: u32, y: u32, color: Color) {
         self.draw_pixel_with_order(x, y, color, 0, 0.0);
     }

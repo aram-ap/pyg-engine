@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     pass
 
 try:
+    from .pyg_engine_native import DrawCommand as _RustDrawCommand
     from .pyg_engine_native import Engine as _RustEngine
     from .pyg_engine_native import EngineHandle as _RustEngineHandle
     from .pyg_engine_native import MouseButton, Keys
@@ -20,6 +21,8 @@ except ImportError as e:
         "The Rust extension may not be compiled. "
         "Run 'pip install -e .' to build the extension."
     ) from e
+
+DrawCommand = _RustDrawCommand
 
 
 class EngineHandle:
@@ -46,6 +49,10 @@ class EngineHandle:
     def clear_draw_commands(self) -> None:
         """Clear all immediate-mode drawing commands via command queue."""
         self._inner.clear_draw_commands()
+
+    def add_draw_commands(self, commands: list[Any]) -> None:
+        """Submit many draw commands via command queue in one call."""
+        self._inner.add_draw_commands(commands)
 
     def draw_pixel(
         self,
@@ -547,6 +554,10 @@ class Engine:
     def clear_draw_commands(self) -> None:
         """Clear all immediate-mode drawing commands."""
         self._engine.clear_draw_commands()
+
+    def add_draw_commands(self, commands: list[Any]) -> None:
+        """Submit many draw commands in one call."""
+        self._engine.add_draw_commands(commands)
 
     def draw_pixel(
         self,

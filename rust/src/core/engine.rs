@@ -445,6 +445,15 @@ impl Engine {
         self.request_render_redraw();
     }
 
+    /// Push many direct draw commands in one batch.
+    pub fn add_draw_commands(&mut self, commands: Vec<DrawCommand>) {
+        if commands.is_empty() {
+            return;
+        }
+        self.draw_manager.add_commands(commands);
+        self.request_render_redraw();
+    }
+
     /// Process all queued commands
     fn process_commands(&mut self) {
         while let Ok(command) = self.command_receiver.try_recv() {
@@ -460,6 +469,9 @@ impl Engine {
                 }
                 EngineCommand::AddDrawCommand(command) => {
                     self.add_draw_command(command);
+                }
+                EngineCommand::AddDrawCommands(commands) => {
+                    self.add_draw_commands(commands);
                 }
                 EngineCommand::DrawPixel { x, y, color, layer, z_index } => {
                     self.draw_pixel_with_order(x, y, color, layer, z_index);

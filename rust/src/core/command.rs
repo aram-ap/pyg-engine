@@ -16,6 +16,9 @@ pub enum EngineCommand {
     
     /// Add a direct draw command
     AddDrawCommand(DrawCommand),
+
+    /// Add many direct draw commands in one batch
+    AddDrawCommands(Vec<DrawCommand>),
     
     /// Draw a pixel (helper wrapper around AddDrawCommand)
     DrawPixel {
