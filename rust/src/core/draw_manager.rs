@@ -1,6 +1,6 @@
 use crate::types::Color;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum DrawCommand {
     Pixel {
         x: f32,
@@ -38,6 +38,39 @@ pub enum DrawCommand {
         filled: bool,
         thickness: f32,
         segments: u32,
+        layer: i32,
+        z_index: f32,
+    },
+    GradientRect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        top_left: Color,
+        bottom_left: Color,
+        bottom_right: Color,
+        top_right: Color,
+        layer: i32,
+        z_index: f32,
+    },
+    Image {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_path: String,
+        layer: i32,
+        z_index: f32,
+    },
+    ImageBytes {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_key: String,
+        rgba: Vec<u8>,
+        texture_width: u32,
+        texture_height: u32,
         layer: i32,
         z_index: f32,
     },
@@ -196,5 +229,96 @@ impl DrawManager {
             layer,
             z_index,
         });
+    }
+
+    pub fn draw_gradient_rect_with_options(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        top_left: Color,
+        bottom_left: Color,
+        bottom_right: Color,
+        top_right: Color,
+        layer: i32,
+        z_index: f32,
+    ) {
+        self.commands.push(DrawCommand::GradientRect {
+            x,
+            y,
+            width,
+            height,
+            top_left,
+            bottom_left,
+            bottom_right,
+            top_right,
+            layer,
+            z_index,
+        });
+    }
+
+    pub fn draw_image_with_options(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_path: String,
+        layer: i32,
+        z_index: f32,
+    ) {
+        self.commands.push(DrawCommand::Image {
+            x,
+            y,
+            width,
+            height,
+            texture_path,
+            layer,
+            z_index,
+        });
+    }
+
+    pub fn draw_image_from_bytes_with_options(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_key: String,
+        rgba: Vec<u8>,
+        texture_width: u32,
+        texture_height: u32,
+        layer: i32,
+        z_index: f32,
+    ) -> Result<(), String> {
+        let expected_size = (texture_width as usize)
+            .checked_mul(texture_height as usize)
+            .and_then(|value| value.checked_mul(4))
+            .ok_or_else(|| "texture size overflow while validating RGBA buffer".to_string())?;
+
+        if rgba.len() != expected_size {
+            return Err(format!(
+                "texture byte size mismatch for key '{texture_key}': expected {expected_size} bytes ({}x{} RGBA), got {} bytes",
+                texture_width,
+                texture_height,
+                rgba.len()
+            ));
+        }
+
+        self.commands.push(DrawCommand::ImageBytes {
+            x,
+            y,
+            width,
+            height,
+            texture_key,
+            rgba,
+            texture_width,
+            texture_height,
+            layer,
+            z_index,
+        });
+
+        Ok(())
     }
 }

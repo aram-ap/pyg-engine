@@ -63,4 +63,43 @@ pub enum EngineCommand {
         layer: i32,
         z_index: f32,
     },
+
+    /// Draw a gradient rectangle (helper wrapper around AddDrawCommand)
+    DrawGradientRect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        top_left: Color,
+        bottom_left: Color,
+        bottom_right: Color,
+        top_right: Color,
+        layer: i32,
+        z_index: f32,
+    },
+
+    /// Draw an image from disk path (helper wrapper around AddDrawCommand)
+    DrawImage {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_path: String,
+        layer: i32,
+        z_index: f32,
+    },
+
+    /// Draw an image from raw RGBA bytes (helper wrapper around AddDrawCommand)
+    DrawImageBytes {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_key: String,
+        rgba: Vec<u8>,
+        texture_width: u32,
+        texture_height: u32,
+        layer: i32,
+        z_index: f32,
+    },
 }

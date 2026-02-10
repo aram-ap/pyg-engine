@@ -23,9 +23,9 @@ pub struct Engine {
     window_manager: Option<WindowManager>,
     render_manager: Option<RenderManager>,
     object_manager: Option<ObjectManager>,
-    input_manager: Option<InputManager>,
-    draw_manager: DrawManager,
-    time: Time,
+    pub input_manager: Option<InputManager>,
+    pub draw_manager: DrawManager,
+    pub time: Time,
     
     // Command Queue
     command_receiver: Receiver<EngineCommand>,
@@ -131,6 +131,21 @@ impl Engine {
             if !self.show_fps_in_title {
                 window_manager.set_title(&title);
             }
+        }
+    }
+
+    /// Get the current display size (window client size) in pixels.
+    ///
+    /// If the window has not been created yet, this falls back to the configured
+    /// size if available; otherwise returns (0, 0).
+    pub fn get_display_size(&self) -> (u32, u32) {
+        if let Some(window_manager) = &self.window_manager {
+            let size = window_manager.size();
+            (size.width, size.height)
+        } else if let Some(config) = &self.window_config {
+            (config.width, config.height)
+        } else {
+            (0, 0)
         }
     }
 
@@ -349,6 +364,81 @@ impl Engine {
         self.request_render_redraw();
     }
 
+    /// Draw a gradient rectangle with per-corner colors.
+    pub fn draw_gradient_rect_with_options(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        top_left: Color,
+        bottom_left: Color,
+        bottom_right: Color,
+        top_right: Color,
+        layer: i32,
+        z_index: f32,
+    ) {
+        self.draw_manager.draw_gradient_rect_with_options(
+            x,
+            y,
+            width,
+            height,
+            top_left,
+            bottom_left,
+            bottom_right,
+            top_right,
+            layer,
+            z_index,
+        );
+        self.request_render_redraw();
+    }
+
+    /// Draw an image from a file path in window pixel coordinates.
+    pub fn draw_image_with_options(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_path: String,
+        layer: i32,
+        z_index: f32,
+    ) {
+        self.draw_manager
+            .draw_image_with_options(x, y, width, height, texture_path, layer, z_index);
+        self.request_render_redraw();
+    }
+
+    /// Draw an image from RGBA bytes in window pixel coordinates.
+    pub fn draw_image_from_bytes_with_options(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_key: String,
+        rgba: Vec<u8>,
+        texture_width: u32,
+        texture_height: u32,
+        layer: i32,
+        z_index: f32,
+    ) -> Result<(), String> {
+        self.draw_manager.draw_image_from_bytes_with_options(
+            x,
+            y,
+            width,
+            height,
+            texture_key,
+            rgba,
+            texture_width,
+            texture_height,
+            layer,
+            z_index,
+        )?;
+        self.request_render_redraw();
+        Ok(())
+    }
+
     /// Push a fully-custom direct draw command.
     pub fn add_draw_command(&mut self, command: DrawCommand) {
         self.draw_manager.add_command(command);
@@ -382,6 +472,69 @@ impl Engine {
                 }
                 EngineCommand::DrawCircle { center_x, center_y, radius, color, filled, thickness, segments, layer, z_index } => {
                     self.draw_circle_with_options(center_x, center_y, radius, color, filled, thickness, segments, layer, z_index);
+                }
+                EngineCommand::DrawGradientRect {
+                    x,
+                    y,
+                    width,
+                    height,
+                    top_left,
+                    bottom_left,
+                    bottom_right,
+                    top_right,
+                    layer,
+                    z_index,
+                } => {
+                    self.draw_gradient_rect_with_options(
+                        x,
+                        y,
+                        width,
+                        height,
+                        top_left,
+                        bottom_left,
+                        bottom_right,
+                        top_right,
+                        layer,
+                        z_index,
+                    );
+                }
+                EngineCommand::DrawImage {
+                    x,
+                    y,
+                    width,
+                    height,
+                    texture_path,
+                    layer,
+                    z_index,
+                } => {
+                    self.draw_image_with_options(x, y, width, height, texture_path, layer, z_index);
+                }
+                EngineCommand::DrawImageBytes {
+                    x,
+                    y,
+                    width,
+                    height,
+                    texture_key,
+                    rgba,
+                    texture_width,
+                    texture_height,
+                    layer,
+                    z_index,
+                } => {
+                    if let Err(err) = self.draw_image_from_bytes_with_options(
+                        x,
+                        y,
+                        width,
+                        height,
+                        texture_key,
+                        rgba,
+                        texture_width,
+                        texture_height,
+                        layer,
+                        z_index,
+                    ) {
+                        logging::log_warn(&format!("Dropped DrawImageBytes command: {err}"));
+                    }
                 }
             }
         }

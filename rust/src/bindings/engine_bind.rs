@@ -15,6 +15,7 @@ use crate::core::command::EngineCommand;
 // Import bindings from separate modules
 use super::color_bind::PyColor;
 use super::vector_bind::{PyVec2, PyVec3};
+use super::input_bind::{parse_key, parse_mouse_button, PyKeys, PyMouseButton};
 
 // ========== Engine Bindings ==========
 
@@ -126,6 +127,11 @@ impl PyEngine {
     #[pyo3(signature = (title))]
     fn set_window_title(&mut self, title: String) {
         self.inner.set_window_title(title);
+    }
+
+    /// Get the current display size (window client size) in pixels.
+    fn get_display_size(&self) -> (u32, u32) {
+        self.inner.get_display_size()
     }
 
     /// Run the engine with a basic window configuration (blocking).
@@ -291,6 +297,104 @@ impl PyEngine {
         );
     }
 
+    /// Draw a gradient rectangle with per-corner colors.
+    #[pyo3(signature = (
+        x,
+        y,
+        width,
+        height,
+        top_left,
+        bottom_left,
+        bottom_right,
+        top_right,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn draw_gradient_rect(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        top_left: &PyColor,
+        bottom_left: &PyColor,
+        bottom_right: &PyColor,
+        top_right: &PyColor,
+        layer: i32,
+        z_index: f32,
+    ) {
+        self.inner.draw_gradient_rect_with_options(
+            x,
+            y,
+            width,
+            height,
+            top_left.inner,
+            bottom_left.inner,
+            bottom_right.inner,
+            top_right.inner,
+            layer,
+            z_index,
+        );
+    }
+
+    /// Draw an image from a filesystem path at window coordinates.
+    #[pyo3(signature = (x, y, width, height, texture_path, layer=0, z_index=0.0))]
+    fn draw_image(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_path: String,
+        layer: i32,
+        z_index: f32,
+    ) {
+        self.inner
+            .draw_image_with_options(x, y, width, height, texture_path, layer, z_index);
+    }
+
+    /// Draw an image from raw RGBA bytes at window coordinates.
+    #[pyo3(signature = (
+        x,
+        y,
+        width,
+        height,
+        texture_key,
+        rgba,
+        texture_width,
+        texture_height,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn draw_image_from_bytes(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_key: String,
+        rgba: Vec<u8>,
+        texture_width: u32,
+        texture_height: u32,
+        layer: i32,
+        z_index: f32,
+    ) -> PyResult<()> {
+        self.inner
+            .draw_image_from_bytes_with_options(
+                x,
+                y,
+                width,
+                height,
+                texture_key,
+                rgba,
+                texture_width,
+                texture_height,
+                layer,
+                z_index,
+            )
+            .map_err(PyRuntimeError::new_err)
+    }
+
     /// Log a message at INFO level (default log method).
     fn log(&self, message: &str) {
         self.inner.log(message);
@@ -325,6 +429,119 @@ impl PyEngine {
     #[getter]
     fn version(&self) -> String {
         self.inner.version().to_string()
+    }
+    
+    /// Get the time since the last frame in seconds.
+    #[getter]
+    fn delta_time(&self) -> f32 {
+        self.inner.time.delta_time()
+    }
+    
+    /// Get the total elapsed time in seconds since the engine started.
+    #[getter]
+    fn elapsed_time(&self) -> f32 {
+        self.inner.time.elapsed_time()
+    }
+
+    // ========== Input Methods ==========
+
+    /// Check if a keyboard key is currently held down.
+    fn key_down(&self, key_name: &str) -> bool {
+        if let Some(input) = &self.inner.input_manager {
+            input.key_down(&parse_key(key_name))
+        } else {
+            false
+        }
+    }
+
+    /// Check if a keyboard key was pressed this frame.
+    fn key_pressed(&self, key_name: &str) -> bool {
+        if let Some(input) = &self.inner.input_manager {
+            input.key_pressed(&parse_key(key_name))
+        } else {
+            false
+        }
+    }
+
+    /// Check if a keyboard key was released this frame.
+    fn key_released(&self, key_name: &str) -> bool {
+        if let Some(input) = &self.inner.input_manager {
+            input.key_released(&parse_key(key_name))
+        } else {
+            false
+        }
+    }
+
+    /// Check if a mouse button is currently held down.
+    fn mouse_button_down(&self, button: &str) -> bool {
+        if let Some(input) = &self.inner.input_manager {
+            input.mouse_button_down(parse_mouse_button(button))
+        } else {
+            false
+        }
+    }
+
+    /// Check if a mouse button was pressed this frame.
+    fn mouse_button_pressed(&self, button: &str) -> bool {
+        if let Some(input) = &self.inner.input_manager {
+            input.mouse_button_pressed(parse_mouse_button(button))
+        } else {
+            false
+        }
+    }
+
+    /// Check if a mouse button was released this frame.
+    fn mouse_button_released(&self, button: &str) -> bool {
+        if let Some(input) = &self.inner.input_manager {
+            input.mouse_button_released(parse_mouse_button(button))
+        } else {
+            false
+        }
+    }
+
+    /// Get the current mouse position in window coordinates.
+    fn mouse_position(&self) -> (f64, f64) {
+        if let Some(input) = &self.inner.input_manager {
+            input.mouse_position()
+        } else {
+            (0.0, 0.0)
+        }
+    }
+
+    /// Get the mouse movement delta for this frame.
+    fn mouse_delta(&self) -> (f64, f64) {
+        if let Some(input) = &self.inner.input_manager {
+            input.mouse_delta()
+        } else {
+            (0.0, 0.0)
+        }
+    }
+
+    /// Get the mouse wheel delta accumulated this frame.
+    fn mouse_wheel(&self) -> (f64, f64) {
+        if let Some(input) = &self.inner.input_manager {
+            input.mouse_wheel()
+        } else {
+            (0.0, 0.0)
+        }
+    }
+
+    /// Get the current value of a logical axis.
+    fn axis(&self, name: &str) -> f32 {
+        if let Some(input) = &self.inner.input_manager {
+            input.axis(name)
+        } else {
+            0.0
+        }
+    }
+
+    /// Get the previous frame's value of a logical axis.
+    fn axis_previous(&self, name: &str) -> f32 {
+        if let Some(input) = &self.inner.input_manager {
+            input.axis_previous(name)
+        } else {
+            0.0
+        }
     }
 }
 
@@ -427,6 +644,109 @@ impl PyEngineHandle {
     ) {
         let _ = self.sender.send(EngineCommand::DrawCircle {
             center_x, center_y, radius, color: color.inner, filled, thickness, segments, layer, z_index,
+        });
+    }
+
+    /// Draw a gradient rectangle with per-corner colors via command queue.
+    #[pyo3(signature = (
+        x,
+        y,
+        width,
+        height,
+        top_left,
+        bottom_left,
+        bottom_right,
+        top_right,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn draw_gradient_rect(
+        &self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        top_left: &PyColor,
+        bottom_left: &PyColor,
+        bottom_right: &PyColor,
+        top_right: &PyColor,
+        layer: i32,
+        z_index: f32,
+    ) {
+        let _ = self.sender.send(EngineCommand::DrawGradientRect {
+            x,
+            y,
+            width,
+            height,
+            top_left: top_left.inner,
+            bottom_left: bottom_left.inner,
+            bottom_right: bottom_right.inner,
+            top_right: top_right.inner,
+            layer,
+            z_index,
+        });
+    }
+
+    /// Draw an image from a filesystem path via command queue.
+    #[pyo3(signature = (x, y, width, height, texture_path, layer=0, z_index=0.0))]
+    fn draw_image(
+        &self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_path: String,
+        layer: i32,
+        z_index: f32,
+    ) {
+        let _ = self.sender.send(EngineCommand::DrawImage {
+            x,
+            y,
+            width,
+            height,
+            texture_path,
+            layer,
+            z_index,
+        });
+    }
+
+    /// Draw an image from raw RGBA bytes via command queue.
+    #[pyo3(signature = (
+        x,
+        y,
+        width,
+        height,
+        texture_key,
+        rgba,
+        texture_width,
+        texture_height,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn draw_image_from_bytes(
+        &self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_key: String,
+        rgba: Vec<u8>,
+        texture_width: u32,
+        texture_height: u32,
+        layer: i32,
+        z_index: f32,
+    ) {
+        let _ = self.sender.send(EngineCommand::DrawImageBytes {
+            x,
+            y,
+            width,
+            height,
+            texture_key,
+            rgba,
+            texture_width,
+            texture_height,
+            layer,
+            z_index,
         });
     }
 }
@@ -817,5 +1137,7 @@ fn pyg_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyGameObject>()?;
     m.add_class::<PyMeshComponent>()?;
     m.add_class::<PyTransformComponent>()?;
+    m.add_class::<PyMouseButton>()?;
+    m.add_class::<PyKeys>()?;
     Ok(())
 }

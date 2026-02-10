@@ -2,7 +2,7 @@
 pyg_engine - A Python game engine with Rust-powered native performance.
 """
 
-from pyg_engine.engine import Engine, EngineHandle
+from pyg_engine.engine import Engine, EngineHandle, Input
 
 try:
     from pyg_engine.pyg_engine_native import (
@@ -13,6 +13,8 @@ try:
         GameObject,
         MeshComponent,
         TransformComponent,
+        MouseButton,
+        Keys,
         version as _version_func,
     )
     # Expose version as a module-level attribute (from native binary)
@@ -26,6 +28,8 @@ except ImportError:
     GameObject = None  # type: ignore
     MeshComponent = None  # type: ignore
     TransformComponent = None  # type: ignore
+    MouseButton = None  # type: ignore
+    Keys = None  # type: ignore
     version = None  # type: ignore
 
 __version__ = "1.2.0"
@@ -35,6 +39,7 @@ __description__ = "A Python game engine with Rust-powered native performance"
 __all__ = [
     "Engine",
     "EngineHandle",
+    "Input",
     "Vec2",
     "Vec3",
     "Color",
@@ -42,5 +47,7 @@ __all__ = [
     "GameObject",
     "MeshComponent",
     "TransformComponent",
+    "MouseButton",
+    "Keys",
     "version",
 ]

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 try:
     from .pyg_engine_native import Engine as _RustEngine
     from .pyg_engine_native import EngineHandle as _RustEngineHandle
+    from .pyg_engine_native import MouseButton, Keys
 except ImportError as e:
     raise ImportError(
         "Failed to import pyg_engine_native. "
@@ -130,6 +131,139 @@ class EngineHandle:
             z_index=z_index,
         )
 
+    def draw_gradient_rect(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        top_left: Any,
+        bottom_left: Any,
+        bottom_right: Any,
+        top_right: Any,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a gradient rectangle with per-corner colors via command queue."""
+        self._inner.draw_gradient_rect(
+            x,
+            y,
+            width,
+            height,
+            top_left,
+            bottom_left,
+            bottom_right,
+            top_right,
+            layer=layer,
+            z_index=z_index,
+        )
+
+    def draw_image(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        texture_path: str,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw an image from a file path via command queue."""
+        self._inner.draw_image(
+            x,
+            y,
+            width,
+            height,
+            texture_path,
+            layer=layer,
+            z_index=z_index,
+        )
+
+    def draw_image_from_bytes(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        texture_key: str,
+        rgba: bytes,
+        texture_width: int,
+        texture_height: int,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw an image from raw RGBA bytes via command queue."""
+        self._inner.draw_image_from_bytes(
+            x,
+            y,
+            width,
+            height,
+            texture_key,
+            rgba,
+            texture_width,
+            texture_height,
+            layer=layer,
+            z_index=z_index,
+        )
+
+
+class Input:
+    """
+    Handles keyboard, mouse, and joystick input.
+    
+    This class provides methods to check the current state of input devices
+    and events. It is accessed via the `engine.input` property.
+    """
+    def __init__(self, engine: "Engine") -> None:
+        self._engine = engine._engine
+    
+    def key_down(self, key: str) -> bool:
+        """Check if a keyboard key is currently held down."""
+        return self._engine.key_down(key)
+    
+    def key_pressed(self, key: str) -> bool:
+        """Check if a keyboard key was pressed this frame."""
+        return self._engine.key_pressed(key)
+    
+    def key_released(self, key: str) -> bool:
+        """Check if a keyboard key was released this frame."""
+        return self._engine.key_released(key)
+    
+    def mouse_button_down(self, button: MouseButton) -> bool:
+        """Check if a mouse button is currently held down."""
+        return self._engine.mouse_button_down(button)
+    
+    def mouse_button_pressed(self, button: MouseButton) -> bool:
+        """Check if a mouse button was pressed this frame."""
+        return self._engine.mouse_button_pressed(button)
+    
+    def mouse_button_released(self, button: MouseButton) -> bool:
+        """Check if a mouse button was released this frame."""
+        return self._engine.mouse_button_released(button)
+    
+    @property
+    def mouse_position(self) -> tuple[float, float]:
+        """Get the current mouse position in window coordinates."""
+        return self._engine.mouse_position()
+    
+    @property
+    def mouse_delta(self) -> tuple[float, float]:
+        """Get the mouse movement delta for this frame."""
+        return self._engine.mouse_delta()
+    
+    @property
+    def mouse_wheel(self) -> tuple[float, float]:
+        """Get the mouse wheel delta accumulated this frame."""
+        return self._engine.mouse_wheel()
+    
+    def axis(self, name: str) -> float:
+        """Get the current value of a logical axis (-1.0 to 1.0)."""
+        return self._engine.axis(name)
+    
+    def axis_previous(self, name: str) -> float:
+        """Get the previous frame's value of a logical axis."""
+        return self._engine.axis_previous(name)
+
 
 class Engine:
     """
@@ -194,7 +328,18 @@ class Engine:
             log_directory=log_directory,
             log_level=log_level,
         )
+        self._input = Input(self)
     
+    @property
+    def input(self) -> Input:
+        """
+        Get the input manager for the engine.
+        
+        Returns:
+            Input: The input manager instance.
+        """
+        return self._input
+
     def get_handle(self) -> EngineHandle:
         """
         Get a thread-safe handle to the engine that can be passed to background threads.
@@ -282,6 +427,10 @@ class Engine:
             title: The new window title.
         """
         self._engine.set_window_title(title)
+
+    def get_display_size(self) -> tuple[int, int]:
+        """Get the current display size (window client size) in pixels."""
+        return self._engine.get_display_size()
 
     def initialize(
         self,
@@ -482,6 +631,81 @@ class Engine:
             layer=layer,
             z_index=z_index,
         )
+
+    def draw_gradient_rect(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        top_left: Any,
+        bottom_left: Any,
+        bottom_right: Any,
+        top_right: Any,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw a gradient rectangle with per-corner colors."""
+        self._engine.draw_gradient_rect(
+            x,
+            y,
+            width,
+            height,
+            top_left,
+            bottom_left,
+            bottom_right,
+            top_right,
+            layer=layer,
+            z_index=z_index,
+        )
+
+    def draw_image(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        texture_path: str,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw an image from a file path."""
+        self._engine.draw_image(
+            x,
+            y,
+            width,
+            height,
+            texture_path,
+            layer=layer,
+            z_index=z_index,
+        )
+
+    def draw_image_from_bytes(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        texture_key: str,
+        rgba: bytes,
+        texture_width: int,
+        texture_height: int,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """Draw an image from raw RGBA bytes."""
+        self._engine.draw_image_from_bytes(
+            x,
+            y,
+            width,
+            height,
+            texture_key,
+            rgba,
+            texture_width,
+            texture_height,
+            layer=layer,
+            z_index=z_index,
+        )
     
     @property
     def version(self) -> str:
@@ -492,3 +716,13 @@ class Engine:
             The version string (e.g., "1.2.0").
         """
         return self._engine.version
+
+    @property
+    def delta_time(self) -> float:
+        """Get the time since the last frame in seconds."""
+        return self._engine.delta_time
+
+    @property
+    def elapsed_time(self) -> float:
+        """Get the total elapsed time in seconds since the engine started."""
+        return self._engine.elapsed_time
