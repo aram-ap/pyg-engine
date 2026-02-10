@@ -1,6 +1,7 @@
 use super::draw_manager::DrawCommand;
 use super::game_object::GameObject;
 use crate::types::Color;
+use std::sync::Arc;
 
 /// Commands that can be sent to the engine from any thread
 #[derive(Debug)]
@@ -99,7 +100,7 @@ pub enum EngineCommand {
         width: f32,
         height: f32,
         texture_key: String,
-        rgba: Vec<u8>,
+        rgba: Arc<[u8]>,
         texture_width: u32,
         texture_height: u32,
         layer: i32,

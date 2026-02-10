@@ -1,4 +1,5 @@
 use crate::types::Color;
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub enum DrawCommand {
@@ -68,7 +69,7 @@ pub enum DrawCommand {
         width: f32,
         height: f32,
         texture_key: String,
-        rgba: Vec<u8>,
+        rgba: Arc<[u8]>,
         texture_width: u32,
         texture_height: u32,
         layer: i32,
@@ -91,29 +92,54 @@ pub enum DrawCommand {
 #[derive(Default)]
 pub struct DrawManager {
     commands: Vec<DrawCommand>,
+    scene_version: u64,
 }
 
 impl DrawManager {
     pub fn new() -> Self {
         Self {
             commands: Vec::new(),
+            scene_version: 0,
         }
     }
 
     pub fn clear(&mut self) {
+        if self.commands.is_empty() {
+            return;
+        }
+
         self.commands.clear();
+        self.bump_scene_version();
     }
 
     pub fn commands(&self) -> &[DrawCommand] {
         &self.commands
     }
 
-    pub fn add_command(&mut self, command: DrawCommand) {
+    pub fn scene_version(&self) -> u64 {
+        self.scene_version
+    }
+
+    fn bump_scene_version(&mut self) {
+        self.scene_version = self.scene_version.wrapping_add(1);
+    }
+
+    fn push_command(&mut self, command: DrawCommand) {
         self.commands.push(command);
+        self.bump_scene_version();
+    }
+
+    pub fn add_command(&mut self, command: DrawCommand) {
+        self.push_command(command);
     }
 
     pub fn add_commands(&mut self, mut commands: Vec<DrawCommand>) {
+        if commands.is_empty() {
+            return;
+        }
+
         self.commands.append(&mut commands);
+        self.bump_scene_version();
     }
 
     pub fn draw_pixel(&mut self, x: u32, y: u32, color: Color) {
@@ -128,7 +154,7 @@ impl DrawManager {
         layer: i32,
         z_index: f32,
     ) {
-        self.commands.push(DrawCommand::Pixel {
+        self.push_command(DrawCommand::Pixel {
             x: x as f32,
             y: y as f32,
             color,
@@ -152,7 +178,7 @@ impl DrawManager {
         layer: i32,
         z_index: f32,
     ) {
-        self.commands.push(DrawCommand::Line {
+        self.push_command(DrawCommand::Line {
             start_x,
             start_y,
             end_x,
@@ -192,7 +218,7 @@ impl DrawManager {
         layer: i32,
         z_index: f32,
     ) {
-        self.commands.push(DrawCommand::Rectangle {
+        self.push_command(DrawCommand::Rectangle {
             x,
             y,
             width,
@@ -234,7 +260,7 @@ impl DrawManager {
         layer: i32,
         z_index: f32,
     ) {
-        self.commands.push(DrawCommand::Circle {
+        self.push_command(DrawCommand::Circle {
             center_x,
             center_y,
             radius,
@@ -260,7 +286,7 @@ impl DrawManager {
         layer: i32,
         z_index: f32,
     ) {
-        self.commands.push(DrawCommand::GradientRect {
+        self.push_command(DrawCommand::GradientRect {
             x,
             y,
             width,
@@ -284,7 +310,7 @@ impl DrawManager {
         layer: i32,
         z_index: f32,
     ) {
-        self.commands.push(DrawCommand::Image {
+        self.push_command(DrawCommand::Image {
             x,
             y,
             width,
@@ -302,7 +328,7 @@ impl DrawManager {
         width: f32,
         height: f32,
         texture_key: String,
-        rgba: Vec<u8>,
+        rgba: Arc<[u8]>,
         texture_width: u32,
         texture_height: u32,
         layer: i32,
@@ -322,7 +348,7 @@ impl DrawManager {
             ));
         }
 
-        self.commands.push(DrawCommand::ImageBytes {
+        self.push_command(DrawCommand::ImageBytes {
             x,
             y,
             width,
@@ -356,7 +382,7 @@ impl DrawManager {
         layer: i32,
         z_index: f32,
     ) {
-        self.commands.push(DrawCommand::Text {
+        self.push_command(DrawCommand::Text {
             text,
             x,
             y,

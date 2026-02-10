@@ -45,7 +45,7 @@ struct PreparedDraw {
 
 struct PendingTextureUpload {
     key: String,
-    rgba: Vec<u8>,
+    rgba: Arc<[u8]>,
     width: u32,
     height: u32,
 }
@@ -77,6 +77,13 @@ fn hash_color<H: Hasher>(hasher: &mut H, color: &Color) {
     hash_f32(hasher, color.a());
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct SceneVersion {
+    render_state_epoch: u64,
+    object_epoch: u64,
+    draw_epoch: u64,
+}
+
 /// Manages the rendering pipeline using wgpu.
 pub struct RenderManager {
     device: Device,
@@ -92,7 +99,9 @@ pub struct RenderManager {
     // expensive reconfigurations during rapid resize events.
     pending_resize: Option<PhysicalSize<u32>>,
     requires_redraw: bool,
-    last_scene_signature: Option<u64>,
+    last_scene_version: Option<SceneVersion>,
+    precomputed_scene_version: Option<SceneVersion>,
+    render_state_epoch: u64,
     render_pipeline: wgpu::RenderPipeline,
     texture_bind_group_layout: wgpu::BindGroupLayout,
     default_texture: CachedTexture,
@@ -277,7 +286,9 @@ impl RenderManager {
             _window: window,
             pending_resize: None,
             requires_redraw: true,
-            last_scene_signature: None,
+            last_scene_version: None,
+            precomputed_scene_version: None,
+            render_state_epoch: 0,
             render_pipeline,
             texture_bind_group_layout,
             default_texture,
@@ -1099,7 +1110,7 @@ impl RenderManager {
 
         let upload = PendingTextureUpload {
             key: texture_key,
-            rgba: rasterized.rgba,
+            rgba: Arc::from(rasterized.rgba),
             width: rasterized.width,
             height: rasterized.height,
         };
@@ -1439,7 +1450,7 @@ impl RenderManager {
                     ));
                     texture_uploads.push(PendingTextureUpload {
                         key: texture_key.clone(),
-                        rgba: rgba.clone(),
+                        rgba: Arc::clone(rgba),
                         width: *texture_width,
                         height: *texture_height,
                     });
@@ -1485,10 +1496,9 @@ impl RenderManager {
             return items;
         };
 
-        let mut keys = object_manager.get_keys();
-        keys.sort_unstable();
+        let keys = object_manager.get_sorted_keys();
 
-        for id in keys {
+        for &id in keys {
             let Some(object) = object_manager.get_object_by_id(id) else {
                 continue;
             };
@@ -1565,282 +1575,52 @@ impl RenderManager {
         (items, texture_uploads)
     }
 
-    fn hash_draw_command<H: Hasher>(hasher: &mut H, command: &DrawCommand) {
-        match command {
-            DrawCommand::Pixel {
-                x,
-                y,
-                color,
-                layer,
-                z_index,
-            } => {
-                0u8.hash(hasher);
-                hash_f32(hasher, *x);
-                hash_f32(hasher, *y);
-                hash_color(hasher, color);
-                layer.hash(hasher);
-                hash_f32(hasher, *z_index);
-            }
-            DrawCommand::Line {
-                start_x,
-                start_y,
-                end_x,
-                end_y,
-                thickness,
-                color,
-                layer,
-                z_index,
-            } => {
-                1u8.hash(hasher);
-                hash_f32(hasher, *start_x);
-                hash_f32(hasher, *start_y);
-                hash_f32(hasher, *end_x);
-                hash_f32(hasher, *end_y);
-                hash_f32(hasher, *thickness);
-                hash_color(hasher, color);
-                layer.hash(hasher);
-                hash_f32(hasher, *z_index);
-            }
-            DrawCommand::Rectangle {
-                x,
-                y,
-                width,
-                height,
-                color,
-                filled,
-                thickness,
-                layer,
-                z_index,
-            } => {
-                2u8.hash(hasher);
-                hash_f32(hasher, *x);
-                hash_f32(hasher, *y);
-                hash_f32(hasher, *width);
-                hash_f32(hasher, *height);
-                hash_color(hasher, color);
-                filled.hash(hasher);
-                hash_f32(hasher, *thickness);
-                layer.hash(hasher);
-                hash_f32(hasher, *z_index);
-            }
-            DrawCommand::Circle {
-                center_x,
-                center_y,
-                radius,
-                color,
-                filled,
-                thickness,
-                segments,
-                layer,
-                z_index,
-            } => {
-                3u8.hash(hasher);
-                hash_f32(hasher, *center_x);
-                hash_f32(hasher, *center_y);
-                hash_f32(hasher, *radius);
-                hash_color(hasher, color);
-                filled.hash(hasher);
-                hash_f32(hasher, *thickness);
-                segments.hash(hasher);
-                layer.hash(hasher);
-                hash_f32(hasher, *z_index);
-            }
-            DrawCommand::GradientRect {
-                x,
-                y,
-                width,
-                height,
-                top_left,
-                bottom_left,
-                bottom_right,
-                top_right,
-                layer,
-                z_index,
-            } => {
-                4u8.hash(hasher);
-                hash_f32(hasher, *x);
-                hash_f32(hasher, *y);
-                hash_f32(hasher, *width);
-                hash_f32(hasher, *height);
-                hash_color(hasher, top_left);
-                hash_color(hasher, bottom_left);
-                hash_color(hasher, bottom_right);
-                hash_color(hasher, top_right);
-                layer.hash(hasher);
-                hash_f32(hasher, *z_index);
-            }
-            DrawCommand::Image {
-                x,
-                y,
-                width,
-                height,
-                texture_path,
-                layer,
-                z_index,
-            } => {
-                5u8.hash(hasher);
-                hash_f32(hasher, *x);
-                hash_f32(hasher, *y);
-                hash_f32(hasher, *width);
-                hash_f32(hasher, *height);
-                texture_path.hash(hasher);
-                layer.hash(hasher);
-                hash_f32(hasher, *z_index);
-            }
-            DrawCommand::ImageBytes {
-                x,
-                y,
-                width,
-                height,
-                texture_key,
-                rgba,
-                texture_width,
-                texture_height,
-                layer,
-                z_index,
-            } => {
-                6u8.hash(hasher);
-                hash_f32(hasher, *x);
-                hash_f32(hasher, *y);
-                hash_f32(hasher, *width);
-                hash_f32(hasher, *height);
-                texture_key.hash(hasher);
-                texture_width.hash(hasher);
-                texture_height.hash(hasher);
-                rgba.hash(hasher);
-                layer.hash(hasher);
-                hash_f32(hasher, *z_index);
-            }
-            DrawCommand::Text {
-                text,
-                x,
-                y,
-                font_size,
-                color,
-                font_path,
-                letter_spacing,
-                line_spacing,
-                layer,
-                z_index,
-            } => {
-                7u8.hash(hasher);
-                text.hash(hasher);
-                hash_f32(hasher, *x);
-                hash_f32(hasher, *y);
-                hash_f32(hasher, *font_size);
-                hash_color(hasher, color);
-                font_path.hash(hasher);
-                hash_f32(hasher, *letter_spacing);
-                hash_f32(hasher, *line_spacing);
-                layer.hash(hasher);
-                hash_f32(hasher, *z_index);
-            }
-        }
-    }
-
-    fn compute_scene_signature(
+    fn compute_scene_version(
         &self,
         objects: &Option<ObjectManager>,
         draw_manager: Option<&DrawManager>,
-    ) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        hash_color(&mut hasher, &self.background_color);
-
-        if let Some(object_manager) = objects {
-            let mut keys = object_manager.get_keys();
-            keys.sort_unstable();
-            keys.len().hash(&mut hasher);
-
-            for id in keys {
-                let Some(object) = object_manager.get_object_by_id(id) else {
-                    continue;
-                };
-
-                id.hash(&mut hasher);
-                object.is_active().hash(&mut hasher);
-
-                let transform = object.transform();
-                hash_f32(&mut hasher, transform.position().x());
-                hash_f32(&mut hasher, transform.position().y());
-                hash_f32(&mut hasher, transform.rotation());
-                hash_f32(&mut hasher, transform.scale().x());
-                hash_f32(&mut hasher, transform.scale().y());
-
-                if let Some(mesh) = object.mesh_component() {
-                    true.hash(&mut hasher);
-                    mesh.visible().hash(&mut hasher);
-                    mesh.layer().hash(&mut hasher);
-                    hash_f32(&mut hasher, mesh.z_index());
-
-                    match mesh.fill_color() {
-                        Some(color) => {
-                            true.hash(&mut hasher);
-                            hash_color(&mut hasher, color);
-                        }
-                        None => false.hash(&mut hasher),
-                    }
-
-                    match mesh.image_path() {
-                        Some(path) => {
-                            true.hash(&mut hasher);
-                            path.hash(&mut hasher);
-                        }
-                        None => false.hash(&mut hasher),
-                    }
-
-                    let geometry = mesh.geometry();
-                    geometry.vertices().len().hash(&mut hasher);
-                    geometry.indices().len().hash(&mut hasher);
-
-                    for vertex in geometry.vertices() {
-                        hash_f32(&mut hasher, vertex.position().x());
-                        hash_f32(&mut hasher, vertex.position().y());
-                        hash_f32(&mut hasher, vertex.uv().x());
-                        hash_f32(&mut hasher, vertex.uv().y());
-                    }
-
-                    for index in geometry.indices() {
-                        index.hash(&mut hasher);
-                    }
-                } else {
-                    false.hash(&mut hasher);
-                }
-            }
+    ) -> SceneVersion {
+        SceneVersion {
+            render_state_epoch: self.render_state_epoch,
+            object_epoch: objects.as_ref().map_or(0, ObjectManager::scene_version),
+            draw_epoch: draw_manager.map_or(0, DrawManager::scene_version),
         }
-
-        if let Some(draw_manager) = draw_manager {
-            draw_manager.commands().len().hash(&mut hasher);
-            for command in draw_manager.commands() {
-                Self::hash_draw_command(&mut hasher, command);
-            }
-        } else {
-            0usize.hash(&mut hasher);
-        }
-
-        hasher.finish()
     }
 
     /// Returns whether the window should request another redraw.
     pub fn should_request_redraw(
-        &self,
+        &mut self,
         objects: &Option<ObjectManager>,
         draw_manager: Option<&DrawManager>,
     ) -> bool {
         if !self.redraw_on_change_only {
+            self.precomputed_scene_version = None;
             return true;
         }
 
         if self.requires_redraw || self.pending_resize.is_some() {
+            self.precomputed_scene_version = None;
             return true;
         }
 
-        let scene_signature = self.compute_scene_signature(objects, draw_manager);
-        self.last_scene_signature != Some(scene_signature)
+        let scene_version = self.compute_scene_version(objects, draw_manager);
+        self.precomputed_scene_version = Some(scene_version);
+        self.last_scene_version != Some(scene_version)
     }
 
     /// Mark the renderer as needing a redraw.
     pub fn request_redraw(&mut self) {
         self.requires_redraw = true;
+        self.precomputed_scene_version = None;
+    }
+
+    fn bump_render_state_epoch(&mut self) {
+        self.render_state_epoch = self.render_state_epoch.wrapping_add(1);
+    }
+
+    /// Invalidate any scene version precomputed before a simulation update.
+    pub fn invalidate_precomputed_scene_signature(&mut self) {
+        self.precomputed_scene_version = None;
     }
 
     /// Render a frame.
@@ -1852,8 +1632,11 @@ impl RenderManager {
         objects: &Option<ObjectManager>,
         draw_manager: Option<&DrawManager>,
     ) -> Result<(), wgpu::SurfaceError> {
-        let scene_signature = self.compute_scene_signature(objects, draw_manager);
-        let scene_changed = self.last_scene_signature != Some(scene_signature);
+        let scene_version = self
+            .precomputed_scene_version
+            .take()
+            .unwrap_or_else(|| self.compute_scene_version(objects, draw_manager));
+        let scene_changed = self.last_scene_version != Some(scene_version);
 
         if self.redraw_on_change_only
             && !self.requires_redraw
@@ -1876,7 +1659,12 @@ impl RenderManager {
         let (draw_items, pending_texture_uploads) = self.collect_draw_items(objects, draw_manager);
         for upload in pending_texture_uploads {
             if let Err(err) =
-                self.cache_texture_from_rgba(&upload.key, &upload.rgba, upload.width, upload.height)
+                self.cache_texture_from_rgba(
+                    &upload.key,
+                    upload.rgba.as_ref(),
+                    upload.width,
+                    upload.height,
+                )
             {
                 logging::log_warn(&err);
             }
@@ -2025,7 +1813,7 @@ impl RenderManager {
         output.present();
 
         self.requires_redraw = false;
-        self.last_scene_signature = Some(scene_signature);
+        self.last_scene_version = Some(scene_version);
 
         Ok(())
     }
@@ -2039,6 +1827,8 @@ impl RenderManager {
         if new_size.width > 0 && new_size.height > 0 {
             self.pending_resize = Some(new_size);
             self.requires_redraw = true;
+            self.precomputed_scene_version = None;
+            self.bump_render_state_epoch();
         }
     }
 
@@ -2057,6 +1847,8 @@ impl RenderManager {
 
         self.surface.configure(&self.device, &self.surface_config);
         self.requires_redraw = true;
+        self.precomputed_scene_version = None;
+        self.bump_render_state_epoch();
     }
 
     /// Configure redraw-on-change behavior.
@@ -2065,6 +1857,8 @@ impl RenderManager {
     pub fn configure_redraw_on_change_only(&mut self, enabled: bool) {
         self.redraw_on_change_only = enabled;
         self.requires_redraw = true;
+        self.precomputed_scene_version = None;
+        self.bump_render_state_epoch();
     }
 
     /// Get whether VSync is currently enabled.
@@ -2081,6 +1875,8 @@ impl RenderManager {
     pub fn set_background_color(&mut self, color: Color) {
         self.background_color = color;
         self.requires_redraw = true;
+        self.precomputed_scene_version = None;
+        self.bump_render_state_epoch();
     }
 
     /// Get the current surface configuration.

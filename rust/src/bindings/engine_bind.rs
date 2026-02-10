@@ -1,6 +1,7 @@
 use crossbeam_channel::Sender;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
+use std::sync::Arc;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
 
@@ -247,7 +248,7 @@ impl PyDrawCommand {
                 width,
                 height,
                 texture_key,
-                rgba,
+                rgba: Arc::from(rgba),
                 texture_width,
                 texture_height,
                 layer,
@@ -1137,7 +1138,7 @@ impl PyEngineHandle {
             width,
             height,
             texture_key,
-            rgba,
+            rgba: Arc::from(rgba),
             texture_width,
             texture_height,
             layer,

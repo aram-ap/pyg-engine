@@ -11,6 +11,7 @@ use super::window_manager::{WindowConfig, WindowManager};
 use crate::types::Color;
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Instant;
 use tracing::Level;
 use winit::application::ApplicationHandler;
@@ -458,6 +459,33 @@ impl Engine {
         layer: i32,
         z_index: f32,
     ) -> Result<(), String> {
+        self.draw_image_from_bytes_with_options_shared(
+            x,
+            y,
+            width,
+            height,
+            texture_key,
+            Arc::from(rgba),
+            texture_width,
+            texture_height,
+            layer,
+            z_index,
+        )
+    }
+
+    fn draw_image_from_bytes_with_options_shared(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        texture_key: String,
+        rgba: Arc<[u8]>,
+        texture_width: u32,
+        texture_height: u32,
+        layer: i32,
+        z_index: f32,
+    ) -> Result<(), String> {
         self.draw_manager.draw_image_from_bytes_with_options(
             x,
             y,
@@ -640,7 +668,7 @@ impl Engine {
                     layer,
                     z_index,
                 } => {
-                    if let Err(err) = self.draw_image_from_bytes_with_options(
+                    if let Err(err) = self.draw_image_from_bytes_with_options_shared(
                         x,
                         y,
                         width,
@@ -686,6 +714,12 @@ impl Engine {
 
     /// Engine update loop
     pub fn update(&mut self) {
+        if let Some(render_manager) = &mut self.render_manager {
+            // `about_to_wait` can precompute a signature for redraw checks.
+            // Simulation updates can change scene state, so invalidate it.
+            render_manager.invalidate_precomputed_scene_signature();
+        }
+
         // ------------------------------------------------------------
         // Process Commands First
         // ------------------------------------------------------------
@@ -711,7 +745,13 @@ impl Engine {
 
         // GameObjects + Components - pre-physics (gameplay/AI/scripts)
         if let Some(object_manager) = &mut self.object_manager {
-            for key in object_manager.get_keys() {
+            if object_manager.get_total_objects() > 0 {
+                // Component updates can mutate object state through interior mutability.
+                // Mark scene state as potentially changed before running user updates.
+                object_manager.mark_scene_dirty();
+            }
+
+            for &key in object_manager.get_keys() {
                 if let Some(object) = object_manager.get_object_by_id(key) {
                     object.update(&self.time);
                 }
@@ -722,7 +762,12 @@ impl Engine {
         // Physics (often fixed-timestep; may run 0..N steps)
         let (is_fixed_time, fixed_time) = self.time.tick_fixed();
         if is_fixed_time && let Some(object_manager) = &mut self.object_manager {
-            for key in object_manager.get_keys() {
+            if object_manager.get_total_objects() > 0 {
+                // Fixed-step systems may also update transforms/mesh state.
+                object_manager.mark_scene_dirty();
+            }
+
+            for &key in object_manager.get_keys() {
                 if let Some(object) = object_manager.get_object_by_id(key) {
                     object.fixed_update(&self.time, fixed_time);
                 }
@@ -979,13 +1024,11 @@ impl ApplicationHandler for Engine {
             }
         }
 
-        if let (Some(window_manager), Some(render_manager)) =
-            (&self.window_manager, &self.render_manager)
+        if let Some(window_manager) = &self.window_manager
+            && let Some(render_manager) = &mut self.render_manager
+            && render_manager.should_request_redraw(&self.object_manager, Some(&self.draw_manager))
         {
-            if render_manager.should_request_redraw(&self.object_manager, Some(&self.draw_manager))
-            {
-                window_manager.request_redraw();
-            }
+            window_manager.request_redraw();
         }
     }
 }

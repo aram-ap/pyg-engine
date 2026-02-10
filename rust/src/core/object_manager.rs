@@ -6,6 +6,9 @@ pub struct ObjectManager {
     objects: HashMap<u32, GameObject>, // id -> object
     total_objects: u32,
     active_objects: u32,
+    keys_insertion: Vec<u32>,
+    keys_sorted: Vec<u32>,
+    scene_version: u64,
 }
 
 impl ObjectManager {
@@ -14,6 +17,40 @@ impl ObjectManager {
             objects: HashMap::new(),
             total_objects: 0,
             active_objects: 0,
+            keys_insertion: Vec::new(),
+            keys_sorted: Vec::new(),
+            scene_version: 0,
+        }
+    }
+
+    fn bump_scene_version(&mut self) {
+        self.scene_version = self.scene_version.wrapping_add(1);
+    }
+
+    /// Marks object-managed scene state as changed.
+    pub fn mark_scene_dirty(&mut self) {
+        self.bump_scene_version();
+    }
+
+    /// Returns the current object scene version.
+    pub fn scene_version(&self) -> u64 {
+        self.scene_version
+    }
+
+    fn insert_key(&mut self, id: u32) {
+        self.keys_insertion.push(id);
+        match self.keys_sorted.binary_search(&id) {
+            Ok(_) => {}
+            Err(index) => self.keys_sorted.insert(index, id),
+        }
+    }
+
+    fn remove_key(&mut self, id: u32) {
+        if let Some(index) = self.keys_insertion.iter().position(|key| *key == id) {
+            self.keys_insertion.remove(index);
+        }
+        if let Ok(index) = self.keys_sorted.binary_search(&id) {
+            self.keys_sorted.remove(index);
         }
     }
 
@@ -29,10 +66,12 @@ impl ObjectManager {
         } else {
             // New object, increment total_objects
             self.total_objects += 1;
+            self.insert_key(id);
         }
 
         // Update active_objects counter for the new/replaced object
         self.active_objects += if is_active { 1 } else { 0 };
+        self.bump_scene_version();
         Some(id)
     }
 
@@ -51,6 +90,8 @@ impl ObjectManager {
             let was_active = removed_object.is_active();
             self.total_objects -= 1;
             self.active_objects -= if was_active { 1 } else { 0 };
+            self.remove_key(id);
+            self.bump_scene_version();
         } else {
             logging::log_warn(&format!("Object {id} not found"));
         }
@@ -71,6 +112,10 @@ impl ObjectManager {
         @return: The mutable object.
     */
     pub fn get_object_by_id_mut(&mut self, id: u32) -> Option<&mut GameObject> {
+        if self.objects.contains_key(&id) {
+            // Mutable access may change visual state; conservatively bump.
+            self.bump_scene_version();
+        }
         self.objects.get_mut(&id)
     }
 
@@ -100,7 +145,13 @@ impl ObjectManager {
 
     /// Gets the keys of the objects.
     /// @return: The keys of the objects.
-    pub fn get_keys(&self) -> Vec<u32> {
-        self.objects.keys().cloned().collect()
+    pub fn get_keys(&self) -> &[u32] {
+        &self.keys_insertion
+    }
+
+    /// Gets the sorted keys of the objects.
+    /// @return: The sorted keys of the objects.
+    pub fn get_sorted_keys(&self) -> &[u32] {
+        &self.keys_sorted
     }
 }
