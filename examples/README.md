@@ -1,8 +1,8 @@
 # PyG Engine Examples
 
-This directory contains Rust examples demonstrating various features of the PyG Engine.
+This directory contains Rust and Python examples demonstrating features of the PyG Engine.
 
-## Running Examples
+## Running Rust Examples
 
 All examples must be run with the `--no-default-features` flag to disable Python bindings:
 
@@ -11,6 +11,27 @@ cargo run --example window_demo --no-default-features
 ```
 
 This is required because the library uses pyo3's `extension-module` feature by default, which expects to be loaded by Python. When running standalone Rust examples, we need to disable this feature.
+
+## Running Python Examples
+
+Install the package in editable mode first:
+
+```bash
+pip install -e .
+```
+
+Then run a Python demo from the project root:
+
+```bash
+python examples/python_direct_draw_demo.py
+python examples/python_mesh_demo.py
+```
+
+For pygame-based comparison demos, install pygame:
+
+```bash
+pip install pygame
+```
 
 ## Available Examples
 
@@ -32,6 +53,125 @@ cargo run --example window_demo --no-default-features
 - Close the window or press Alt+F4 to exit
 - Resize the window by dragging edges
 - The window enforces min size (640x480) and max size (1920x1080)
+
+### mesh_demo
+
+Demonstrates mesh rendering through Rust-side GameObject + MeshComponent:
+- Color-filled mesh rendering
+- Textured mesh rendering
+- Transform (position, scale, rotation)
+- Layer and z-index ordering
+
+**Run:**
+```bash
+cargo run --example mesh_demo --no-default-features
+```
+
+### draw_primitives_demo
+
+Demonstrates direct drawing primitives on the Rust backend:
+- Pixels
+- Lines
+- Rectangles (filled + outline)
+- Circles (filled + outline)
+
+**Run:**
+```bash
+cargo run --example draw_primitives_demo --no-default-features
+```
+
+### python_direct_draw_demo.py
+
+Demonstrates immediate-mode direct draw from Python:
+- `engine.draw_pixel(...)`
+- `engine.draw_line(...)`
+- `engine.draw_rectangle(...)`
+- `engine.draw_circle(...)`
+- `engine.draw_gradient_rect(...)`
+- `engine.draw_image(...)`
+- `engine.draw_image_from_bytes(...)`
+- `engine.add_draw_commands([...])` with `DrawCommand.*(...)` builders
+
+**Run:**
+```bash
+python examples/python_direct_draw_demo.py
+```
+
+### python_bulk_draw_demo.py
+
+Demonstrates Phase 2 bulk draw submission API:
+- Build `DrawCommand` objects in Python
+- Submit a whole frame's draw list in one native call via `engine.add_draw_commands(...)`
+- Better Python->Rust call overhead for large dynamic overlays
+
+**Run:**
+```bash
+python examples/python_bulk_draw_demo.py
+```
+
+### python_rendering_showcase_demo.py
+
+Unified "all systems" rendering showcase:
+- Mesh + GameObject rendering (solid + textured quads)
+- Immediate-mode primitives (pixels/lines/rectangles/circles)
+- Gradient background rendering
+- Path-based image rendering + dynamic RGBA bytes textures
+- Bulk draw submission with `DrawCommand` builders
+- Input-driven interaction and overlay toggles
+
+**Run:**
+```bash
+python examples/python_rendering_showcase_demo.py
+```
+
+### pygame_rendering_showcase_demo.py
+
+Pygame clone of the unified showcase for visual/perf comparison:
+- Recreates the same scene style with pygame primitives + blits
+- Shows FPS in the pygame window title
+- Includes matching controls/toggles for fair comparison
+
+**Run:**
+```bash
+python examples/pygame_rendering_showcase_demo.py
+```
+
+### rendering_showcase_side_by_side.py
+
+Launches both versions together:
+- `python_rendering_showcase_demo.py` (pyg_engine)
+- `pygame_rendering_showcase_demo.py` (pygame clone)
+
+**Run:**
+```bash
+python examples/rendering_showcase_side_by_side.py
+```
+
+### python_visualization_demo.py
+
+Demonstrates Phase 1 visualization APIs:
+- Per-corner gradient rectangles
+- Drawing textures from raw RGBA bytes
+- Layered composition (gradient background + image overlay)
+
+**Run:**
+```bash
+python examples/python_visualization_demo.py
+```
+
+### python_mesh_demo.py
+
+Demonstrates Python-side scene setup with GameObject + MeshComponent:
+- Build mesh components in Python
+- Set transform and render ordering
+- Add objects to runtime engine scene
+
+**Run:**
+```bash
+python examples/python_mesh_demo.py
+```
+
+See `examples/PYTHON_RENDERING_GUIDE.md` for API details.
 
 ## Creating New Examples
 
