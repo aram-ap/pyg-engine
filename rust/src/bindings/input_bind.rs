@@ -56,10 +56,10 @@ pub fn parse_key(key_name: &str) -> Key {
         "f10" => Key::Named(NamedKey::F10),
         "f11" => Key::Named(NamedKey::F11),
         "f12" => Key::Named(NamedKey::F12),
-        
+
         // Single characters
         c if c.len() == 1 => Key::Character(c.into()),
-        
+
         // Fallback
         _ => Key::Unidentified(NativeKey::Unidentified),
     }

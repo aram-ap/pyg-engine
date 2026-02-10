@@ -8,8 +8,9 @@
 ///
 /// To run:
 /// `cargo run --example mesh_demo --no-default-features`
-
-use pyg_engine_native::core::{Engine, FullscreenMode, GameObject, MeshComponent, MeshGeometry, WindowConfig};
+use pyg_engine_native::core::{
+    Engine, FullscreenMode, GameObject, MeshComponent, MeshGeometry, WindowConfig,
+};
 use pyg_engine_native::types::{Color, Vec2};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,7 +35,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let mut solid_quad = GameObject::new_named("SolidQuad".to_string());
-    solid_quad.transform_mut().set_position(Vec2::new(-0.35, 0.1));
+    solid_quad
+        .transform_mut()
+        .set_position(Vec2::new(-0.35, 0.1));
     solid_quad.transform_mut().set_scale(Vec2::new(0.45, 0.45));
     solid_quad.transform_mut().set_rotation(0.3);
     solid_quad.add_mesh_component(
@@ -49,7 +52,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     textured_quad
         .transform_mut()
         .set_position(Vec2::new(0.35, -0.1));
-    textured_quad.transform_mut().set_scale(Vec2::new(0.45, 0.45));
+    textured_quad
+        .transform_mut()
+        .set_scale(Vec2::new(0.45, 0.45));
     textured_quad.transform_mut().set_rotation(-0.2);
     textured_quad.add_mesh_component(
         MeshComponent::new("textured_quad")

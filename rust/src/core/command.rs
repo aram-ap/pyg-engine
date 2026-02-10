@@ -1,25 +1,25 @@
-use crate::types::Color;
-use super::game_object::GameObject;
 use super::draw_manager::DrawCommand;
+use super::game_object::GameObject;
+use crate::types::Color;
 
 /// Commands that can be sent to the engine from any thread
 #[derive(Debug)]
 pub enum EngineCommand {
     /// Add a new game object to the scene
     AddGameObject(GameObject),
-    
+
     /// Remove a game object by ID
     RemoveGameObject(u32),
-    
+
     /// Clear all immediate-mode draw commands
     ClearDrawCommands,
-    
+
     /// Add a direct draw command
     AddDrawCommand(DrawCommand),
 
     /// Add many direct draw commands in one batch
     AddDrawCommands(Vec<DrawCommand>),
-    
+
     /// Draw a pixel (helper wrapper around AddDrawCommand)
     DrawPixel {
         x: u32,
@@ -28,7 +28,7 @@ pub enum EngineCommand {
         layer: i32,
         z_index: f32,
     },
-    
+
     /// Draw a line (helper wrapper around AddDrawCommand)
     DrawLine {
         start_x: f32,
@@ -40,7 +40,7 @@ pub enum EngineCommand {
         layer: i32,
         z_index: f32,
     },
-    
+
     /// Draw a rectangle (helper wrapper around AddDrawCommand)
     DrawRectangle {
         x: f32,
@@ -53,7 +53,7 @@ pub enum EngineCommand {
         layer: i32,
         z_index: f32,
     },
-    
+
     /// Draw a circle (helper wrapper around AddDrawCommand)
     DrawCircle {
         center_x: f32,
@@ -102,6 +102,20 @@ pub enum EngineCommand {
         rgba: Vec<u8>,
         texture_width: u32,
         texture_height: u32,
+        layer: i32,
+        z_index: f32,
+    },
+
+    /// Draw text with optional custom font (helper wrapper around AddDrawCommand)
+    DrawText {
+        text: String,
+        x: f32,
+        y: f32,
+        font_size: f32,
+        color: Color,
+        font_path: Option<String>,
+        letter_spacing: f32,
+        line_spacing: f32,
         layer: i32,
         z_index: f32,
     },

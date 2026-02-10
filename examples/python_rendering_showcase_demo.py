@@ -456,6 +456,34 @@ def main() -> None:
             )
             engine.add_draw_commands(commands)
 
+        hud_text = (
+            f"probe=({int(probe_x)}, {int(probe_y)})  mouse=({mouse_x}, {mouse_y})\n"
+            f"bulk={'on' if show_bulk else 'off'}  primitives={'on' if show_primitives else 'off'}  "
+            f"dynamic={'on' if show_dynamic_texture else 'off'}"
+        )
+        engine.draw_text(
+            hud_text,
+            30.0,
+            display_height * 0.70,
+            Color(0.98, 0.99, 1.0, 0.90),
+            font_size=16.0,
+            letter_spacing=1.0,
+            line_spacing=4.0,
+            layer=18,
+            z_index=1.15,
+        )
+
+        engine.draw_text(
+            "PyG Text Rendering",
+            display_width * 0.66,
+            display_height * 0.93,
+            Color(0.90, 0.96, 1.0, 0.95),
+            font_size=20.0,
+            letter_spacing=1.5,
+            layer=18,
+            z_index=1.16,
+        )
+
         engine.update()
         engine.render()
 

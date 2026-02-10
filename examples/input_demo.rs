@@ -13,10 +13,9 @@
 ///
 /// Note: The `--no-default-features` flag is required to disable Python
 /// bindings when running standalone Rust examples.
-
 use pyg_engine_native::core::{
-    logging, FullscreenMode, InputManager, MouseButtonType, RenderManager, WindowConfig,
-    WindowManager,
+    FullscreenMode, InputManager, MouseButtonType, RenderManager, WindowConfig, WindowManager,
+    logging,
 };
 use pyg_engine_native::types::Color;
 use winit::application::ApplicationHandler;
@@ -47,7 +46,9 @@ impl ApplicationHandler for InputApp {
                         let window = window_manager.window_arc();
                         match pollster::block_on(RenderManager::new(window, bg_color, vsync)) {
                             Ok(render_manager) => {
-                                logging::log_info("Input demo render manager initialized successfully");
+                                logging::log_info(
+                                    "Input demo render manager initialized successfully",
+                                );
                                 self.render_manager = Some(render_manager);
                                 self.window_manager = Some(window_manager);
 
@@ -126,9 +127,7 @@ impl ApplicationHandler for InputApp {
                 let horizontal = self.input_manager.axis("Horizontal");
                 let vertical = self.input_manager.axis("Vertical");
                 let mouse_pos = self.input_manager.mouse_position();
-                let left_mouse = self
-                    .input_manager
-                    .mouse_button_down(MouseButtonType::Left);
+                let left_mouse = self.input_manager.mouse_button_down(MouseButtonType::Left);
 
                 logging::log_debug(&format!(
                     "Axes - Horizontal: {:.2}, Vertical: {:.2}, Mouse: ({:.1}, {:.1}), LMB: {}",
@@ -210,5 +209,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     logging::log_info("Input demo shut down successfully.");
     Ok(())
 }
-
-

@@ -74,6 +74,18 @@ pub enum DrawCommand {
         layer: i32,
         z_index: f32,
     },
+    Text {
+        text: String,
+        x: f32,
+        y: f32,
+        font_size: f32,
+        color: Color,
+        font_path: Option<String>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        layer: i32,
+        z_index: f32,
+    },
 }
 
 #[derive(Default)]
@@ -324,5 +336,37 @@ impl DrawManager {
         });
 
         Ok(())
+    }
+
+    pub fn draw_text(&mut self, text: String, x: f32, y: f32, color: Color) {
+        self.draw_text_with_options(text, x, y, 24.0, color, None, 0.0, 0.0, 0, 0.0);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_text_with_options(
+        &mut self,
+        text: String,
+        x: f32,
+        y: f32,
+        font_size: f32,
+        color: Color,
+        font_path: Option<String>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        layer: i32,
+        z_index: f32,
+    ) {
+        self.commands.push(DrawCommand::Text {
+            text,
+            x,
+            y,
+            font_size,
+            color,
+            font_path,
+            letter_spacing,
+            line_spacing,
+            layer,
+            z_index,
+        });
     }
 }

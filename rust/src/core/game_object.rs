@@ -1,6 +1,6 @@
-use std::sync::atomic::{AtomicU32, Ordering};
 use super::component::{ComponentTrait, MeshComponent, TransformComponent};
 use super::time::Time;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 // Keep track of the next game object id.
 static GO_ID: AtomicU32 = AtomicU32::new(0);
@@ -12,7 +12,7 @@ pub enum ObjectType {
     ParticleSystem,
     Sound,
     Light,
-    Camera
+    Camera,
 }
 
 impl Default for ObjectType {
@@ -257,7 +257,10 @@ impl GameObject {
         @return: The object type of the game object.
     */
     pub fn get_object_type(&self) -> ObjectType {
-        self.object_type.as_ref().copied().unwrap_or(ObjectType::GameObject)
+        self.object_type
+            .as_ref()
+            .copied()
+            .unwrap_or(ObjectType::GameObject)
     }
 
     /**

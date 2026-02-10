@@ -62,6 +62,26 @@ def main() -> None:
             texture_height,
             layer=1,
         )
+        engine.draw_text(
+            "Visualization/Texture Demo",
+            24.0,
+            24.0,
+            Color(0.97, 0.99, 1.0, 0.98),
+            font_size=24.0,
+            letter_spacing=1.0,
+            layer=10,
+            z_index=1.0,
+        )
+        engine.draw_text(
+            f"elapsed: {t:0.2f}s\nfont: built-in open-source default",
+            24.0,
+            58.0,
+            Color(0.90, 0.95, 1.0, 0.95),
+            font_size=16.0,
+            line_spacing=4.0,
+            layer=10,
+            z_index=1.01,
+        )
 
         engine.update()
         engine.render()

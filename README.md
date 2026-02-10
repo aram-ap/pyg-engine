@@ -60,6 +60,9 @@ engine.draw_line(20, 20, 220, 80, pyg.Color.CYAN, thickness=2.0)
 # Draw an orange rectangle outline
 engine.draw_rectangle(60, 120, 180, 90, pyg.Color.ORANGE, filled=False, thickness=3.0)
 
+# Draw text (built-in font by default)
+engine.draw_text("Hello PyG", 32, 48, pyg.Color.WHITE, font_size=28.0)
+
 # Start the application
 engine.run(title="Direct Draw Demo", show_fps_in_title=True)
 ```
@@ -97,6 +100,7 @@ engine.run(title="Game Object Demo")
 - **Window Management**: Resizable windows, VSync control, Fullscreen support.
 - **2D Rendering**:
     - **Primitives**: Immediate mode drawing using pixel coordinates.
+    - **Text**: Built-in open-source font rendering with optional custom font files.
     - **Meshes**: Component-based rendering using normalized device coordinates.
     - **Layers**: Z-indexing and integer layering for draw order control.
 - **Component System**: Basic `GameObject` with `TransformComponent` and `MeshComponent`.

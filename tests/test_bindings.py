@@ -1033,3 +1033,51 @@ def test_engine_direct_draw_and_add_object_no_crash() -> None:
     engine.draw_circle(80.0, 80.0, 16.0, pyg.Color.BLUE, filled=True, segments=24)
     engine.clear_draw_commands()
 
+
+def test_text_draw_api_no_crash() -> None:
+    """
+    Test direct text draw API and DrawCommand.text builder calls.
+    """
+    engine = pyg.Engine()
+
+    # Direct draw call.
+    engine.draw_text(
+        "Hello PyG",
+        24.0,
+        36.0,
+        pyg.Color.WHITE,
+        font_size=20.0,
+        letter_spacing=1.0,
+        line_spacing=2.0,
+        layer=2,
+        z_index=0.4,
+    )
+
+    # Bulk draw command call.
+    text_command = pyg.DrawCommand.text(
+        "Bulk Text",
+        48.0,
+        72.0,
+        pyg.Color.CYAN,
+        font_size=18.0,
+        letter_spacing=0.5,
+        line_spacing=1.0,
+        layer=3,
+        z_index=0.5,
+    )
+    engine.add_draw_commands([text_command])
+
+    # Thread-safe handle call.
+    handle = engine.get_handle()
+    handle.draw_text(
+        "Handle Text",
+        72.0,
+        108.0,
+        pyg.Color.YELLOW,
+        font_size=16.0,
+        layer=4,
+        z_index=0.6,
+    )
+
+    engine.clear_draw_commands()
+

@@ -1,21 +1,21 @@
+use crossbeam_channel::Sender;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
-use crossbeam_channel::Sender;
 
+use crate::core::command::EngineCommand;
 use crate::core::component::{ComponentTrait, MeshComponent, MeshGeometry, TransformComponent};
 use crate::core::draw_manager::DrawCommand;
 use crate::core::engine::Engine as RustEngine;
 use crate::core::game_object::GameObject as RustGameObject;
 use crate::core::time::Time as RustTime;
 use crate::core::window_manager::{FullscreenMode, WindowConfig};
-use crate::core::command::EngineCommand;
 
 // Import bindings from separate modules
 use super::color_bind::PyColor;
+use super::input_bind::{PyKeys, PyMouseButton, parse_key, parse_mouse_button};
 use super::vector_bind::{PyVec2, PyVec3};
-use super::input_bind::{parse_key, parse_mouse_button, PyKeys, PyMouseButton};
 
 // ========== Engine Bindings ==========
 
@@ -227,7 +227,9 @@ impl PyDrawCommand {
         let expected_size = (texture_width as usize)
             .checked_mul(texture_height as usize)
             .and_then(|value| value.checked_mul(4))
-            .ok_or_else(|| PyRuntimeError::new_err("texture size overflow while validating RGBA buffer"))?;
+            .ok_or_else(|| {
+                PyRuntimeError::new_err("texture size overflow while validating RGBA buffer")
+            })?;
 
         if rgba.len() != expected_size {
             return Err(PyRuntimeError::new_err(format!(
@@ -252,6 +254,47 @@ impl PyDrawCommand {
                 z_index,
             },
         })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (
+        text,
+        x,
+        y,
+        color,
+        font_size=24.0,
+        font_path=None,
+        letter_spacing=0.0,
+        line_spacing=0.0,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn text(
+        text: String,
+        x: f32,
+        y: f32,
+        color: &PyColor,
+        font_size: f32,
+        font_path: Option<String>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        layer: i32,
+        z_index: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::Text {
+                text,
+                x,
+                y,
+                font_size,
+                color: color.inner,
+                font_path,
+                letter_spacing,
+                line_spacing,
+                layer,
+                z_index,
+            },
+        }
     }
 }
 
@@ -278,7 +321,7 @@ impl PyEngine {
             RustEngine::new()
         };
 
-        Self { 
+        Self {
             inner,
             event_loop: None,
         }
@@ -327,7 +370,7 @@ impl PyEngine {
         }
 
         self.inner.set_window_config(config);
-        
+
         // Create the event loop here
         let event_loop = EventLoop::new().map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
         event_loop.set_control_flow(ControlFlow::Poll);
@@ -345,7 +388,9 @@ impl PyEngine {
                 PumpStatus::Exit(_) => Ok(false),
             }
         } else {
-            Err(PyRuntimeError::new_err("Engine not initialized. Call initialize() first."))
+            Err(PyRuntimeError::new_err(
+                "Engine not initialized. Call initialize() first.",
+            ))
         }
     }
 
@@ -414,7 +459,8 @@ impl PyEngine {
     ///
     /// The object is copied into the runtime scene using current transform + mesh state.
     fn add_game_object(&mut self, game_object: &PyGameObject) -> Option<u32> {
-        self.inner.add_game_object(game_object.to_runtime_game_object())
+        self.inner
+            .add_game_object(game_object.to_runtime_game_object())
     }
 
     /// Create and add a default GameObject (or named one) to the runtime scene.
@@ -640,6 +686,47 @@ impl PyEngine {
             .map_err(PyRuntimeError::new_err)
     }
 
+    /// Draw text in window coordinates. Uses built-in open-source font by default,
+    /// or a custom font file when `font_path` is provided.
+    #[pyo3(signature = (
+        text,
+        x,
+        y,
+        color,
+        font_size=24.0,
+        font_path=None,
+        letter_spacing=0.0,
+        line_spacing=0.0,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn draw_text(
+        &mut self,
+        text: String,
+        x: f32,
+        y: f32,
+        color: &PyColor,
+        font_size: f32,
+        font_path: Option<String>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        layer: i32,
+        z_index: f32,
+    ) {
+        self.inner.draw_text_with_options(
+            text,
+            x,
+            y,
+            font_size,
+            color.inner,
+            font_path,
+            letter_spacing,
+            line_spacing,
+            layer,
+            z_index,
+        );
+    }
+
     /// Log a message at INFO level (default log method).
     fn log(&self, message: &str) {
         self.inner.log(message);
@@ -675,13 +762,13 @@ impl PyEngine {
     fn version(&self) -> String {
         self.inner.version().to_string()
     }
-    
+
     /// Get the time since the last frame in seconds.
     #[getter]
     fn delta_time(&self) -> f32 {
         self.inner.time.delta_time()
     }
-    
+
     /// Get the total elapsed time in seconds since the engine started.
     #[getter]
     fn elapsed_time(&self) -> f32 {
@@ -791,7 +878,7 @@ impl PyEngine {
 }
 
 /// A thread-safe handle to the engine that can be passed to background threads.
-/// 
+///
 /// Use this handle to queue commands like adding objects or drawing from other threads.
 #[pyclass(name = "EngineHandle")]
 #[derive(Clone)]
@@ -805,7 +892,9 @@ impl PyEngineHandle {
     ///
     /// This is thread-safe and will be processed on the next engine update.
     fn add_game_object(&self, game_object: &PyGameObject) {
-        let _ = self.sender.send(EngineCommand::AddGameObject(game_object.to_runtime_game_object()));
+        let _ = self.sender.send(EngineCommand::AddGameObject(
+            game_object.to_runtime_game_object(),
+        ));
     }
 
     /// Remove a runtime GameObject by id via command queue.
@@ -833,7 +922,11 @@ impl PyEngineHandle {
     #[pyo3(signature = (x, y, color, layer=0, z_index=0.0))]
     fn draw_pixel(&self, x: u32, y: u32, color: &PyColor, layer: i32, z_index: f32) {
         let _ = self.sender.send(EngineCommand::DrawPixel {
-            x, y, color: color.inner, layer, z_index,
+            x,
+            y,
+            color: color.inner,
+            layer,
+            z_index,
         });
     }
 
@@ -851,7 +944,14 @@ impl PyEngineHandle {
         z_index: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawLine {
-            start_x, start_y, end_x, end_y, thickness, color: color.inner, layer, z_index,
+            start_x,
+            start_y,
+            end_x,
+            end_y,
+            thickness,
+            color: color.inner,
+            layer,
+            z_index,
         });
     }
 
@@ -870,7 +970,15 @@ impl PyEngineHandle {
         z_index: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawRectangle {
-            x, y, width, height, color: color.inner, filled, thickness, layer, z_index,
+            x,
+            y,
+            width,
+            height,
+            color: color.inner,
+            filled,
+            thickness,
+            layer,
+            z_index,
         });
     }
 
@@ -899,7 +1007,15 @@ impl PyEngineHandle {
         z_index: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawCircle {
-            center_x, center_y, radius, color: color.inner, filled, thickness, segments, layer, z_index,
+            center_x,
+            center_y,
+            radius,
+            color: color.inner,
+            filled,
+            thickness,
+            segments,
+            layer,
+            z_index,
         });
     }
 
@@ -1001,6 +1117,46 @@ impl PyEngineHandle {
             rgba,
             texture_width,
             texture_height,
+            layer,
+            z_index,
+        });
+    }
+
+    /// Draw text in window coordinates via command queue.
+    #[pyo3(signature = (
+        text,
+        x,
+        y,
+        color,
+        font_size=24.0,
+        font_path=None,
+        letter_spacing=0.0,
+        line_spacing=0.0,
+        layer=0,
+        z_index=0.0
+    ))]
+    fn draw_text(
+        &self,
+        text: String,
+        x: f32,
+        y: f32,
+        color: &PyColor,
+        font_size: f32,
+        font_path: Option<String>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        layer: i32,
+        z_index: f32,
+    ) {
+        let _ = self.sender.send(EngineCommand::DrawText {
+            text,
+            x,
+            y,
+            font_size,
+            color: color.inner,
+            font_path,
+            letter_spacing,
+            line_spacing,
             layer,
             z_index,
         });
@@ -1263,7 +1419,8 @@ impl PyMeshComponent {
     }
 
     fn set_geometry_rectangle(&mut self, width: f32, height: f32) {
-        self.inner.set_geometry(MeshGeometry::rectangle(width, height));
+        self.inner
+            .set_geometry(MeshGeometry::rectangle(width, height));
     }
 
     fn set_fill_color(&mut self, color: Option<PyColor>) {
@@ -1271,7 +1428,10 @@ impl PyMeshComponent {
     }
 
     fn fill_color(&self) -> Option<PyColor> {
-        self.inner.fill_color().copied().map(|inner| PyColor { inner })
+        self.inner
+            .fill_color()
+            .copied()
+            .map(|inner| PyColor { inner })
     }
 
     fn set_image_path(&mut self, image_path: Option<String>) {

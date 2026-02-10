@@ -1,5 +1,5 @@
-use std::time::SystemTime;
 use super::logging;
+use std::time::SystemTime;
 /**
     The time class.
 */
@@ -19,7 +19,6 @@ pub struct Time {
 }
 
 impl Time {
-
     /// Creates a new time instance.
     /// @return: The new time instance.
     pub fn new() -> Self {
@@ -27,7 +26,7 @@ impl Time {
             system_time: SystemTime::now(),
             delta_time: 0.0,
             elapsed_time: 0.0,
-            fixed_timestep: 1.0/60.0, 
+            fixed_timestep: 1.0 / 60.0,
             last_fixed_time: 0.0,
             tick_count: 0,
         }
@@ -37,7 +36,10 @@ impl Time {
     /// @return: The delta time.
     pub fn tick(&mut self) -> f32 {
         self.delta_time = self.system_time.elapsed().unwrap().as_secs_f32() - self.elapsed_time;
-        self.elapsed_time = SystemTime::now().duration_since(self.system_time).unwrap_or_default().as_secs_f32();
+        self.elapsed_time = SystemTime::now()
+            .duration_since(self.system_time)
+            .unwrap_or_default()
+            .as_secs_f32();
         // wrapping_add avoids explicit conditional and efficiently increments with overflow wrapping to 0
         self.tick_count = self.tick_count.wrapping_add(1);
 
@@ -100,10 +102,7 @@ impl Time {
         logging::log_info(&format!("Elapsed time: {}", self.elapsed_time()));
         logging::log_info(&format!("Fixed timestep: {}", self.fixed_timestep()));
         logging::log_info(&format!("Last fixed time: {}", self.last_fixed_time()));
-        logging::log_info(&format!(
-            "Tick count: {:>6.0e}",
-            self.tick_count as f64
-        ));
+        logging::log_info(&format!("Tick count: {:>6.0e}", self.tick_count as f64));
         logging::log_info("--------------------------------");
     }
 }

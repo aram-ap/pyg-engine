@@ -5,6 +5,8 @@ use std::f32::consts::TAU;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use font8x8::{BASIC_FONTS, UnicodeFonts};
+use fontdue::Font;
 use image::GenericImageView;
 use wgpu::{Device, PresentMode, Queue, Surface, SurfaceConfiguration, TextureUsages};
 use winit::dpi::PhysicalSize;
@@ -48,12 +50,21 @@ struct PendingTextureUpload {
     height: u32,
 }
 
+struct RasterizedText {
+    rgba: Vec<u8>,
+    width: u32,
+    height: u32,
+}
+
 struct PooledBuffer {
     buffer: wgpu::Buffer,
     capacity_bytes: usize,
 }
 
 const MIN_POOL_BUFFER_BYTES: usize = 256;
+// Built-in default font comes from the `font8x8` crate (MIT/Apache-2.0).
+const DEFAULT_FONT_NAME: &str = "font8x8-basic";
+const DEFAULT_GLYPH_PIXEL_SIZE: f32 = 8.0;
 
 fn hash_f32<H: Hasher>(hasher: &mut H, value: f32) {
     value.to_bits().hash(hasher);
@@ -87,6 +98,7 @@ pub struct RenderManager {
     default_texture: CachedTexture,
     texture_cache: HashMap<String, Option<CachedTexture>>,
     texture_data_signature_cache: HashMap<String, u64>,
+    font_cache: HashMap<String, Option<Font>>,
     vertex_buffer_pool: Vec<PooledBuffer>,
     index_buffer_pool: Vec<PooledBuffer>,
 }
@@ -271,6 +283,7 @@ impl RenderManager {
             default_texture,
             texture_cache: HashMap::new(),
             texture_data_signature_cache: HashMap::new(),
+            font_cache: HashMap::new(),
             vertex_buffer_pool: Vec::new(),
             index_buffer_pool: Vec::new(),
         })
@@ -410,7 +423,13 @@ impl RenderManager {
 
         if let Some(Some(cached_texture)) = self.texture_cache.get_mut(texture_key) {
             if cached_texture.width == width && cached_texture.height == height {
-                Self::write_rgba_to_texture(&self.queue, &cached_texture.texture, rgba, width, height);
+                Self::write_rgba_to_texture(
+                    &self.queue,
+                    &cached_texture.texture,
+                    rgba,
+                    width,
+                    height,
+                );
                 self.texture_data_signature_cache
                     .insert(texture_key.to_string(), signature);
                 return Ok(());
@@ -463,7 +482,9 @@ impl RenderManager {
     }
 
     fn pooled_buffer_capacity(required_bytes: usize) -> usize {
-        required_bytes.max(MIN_POOL_BUFFER_BYTES).next_power_of_two()
+        required_bytes
+            .max(MIN_POOL_BUFFER_BYTES)
+            .next_power_of_two()
     }
 
     fn write_to_pooled_buffer(
@@ -703,6 +724,389 @@ impl RenderManager {
         )
     }
 
+    fn color_component_to_u8(value: f32) -> u8 {
+        (value.clamp(0.0, 1.0) * 255.0).round() as u8
+    }
+
+    fn build_text_texture_key(
+        text: &str,
+        font_path: Option<&str>,
+        font_size: f32,
+        color: Color,
+        letter_spacing: f32,
+        line_spacing: f32,
+    ) -> String {
+        let mut hasher = DefaultHasher::new();
+        text.hash(&mut hasher);
+        font_path.unwrap_or(DEFAULT_FONT_NAME).hash(&mut hasher);
+        hash_f32(&mut hasher, font_size);
+        hash_color(&mut hasher, &color);
+        hash_f32(&mut hasher, letter_spacing);
+        hash_f32(&mut hasher, line_spacing);
+        format!("__pyg_text_{:016x}", hasher.finish())
+    }
+
+    fn load_font_from_path(&mut self, font_path: &str) -> Option<&Font> {
+        if !self.font_cache.contains_key(font_path) {
+            let loaded = match std::fs::read(font_path) {
+                Ok(bytes) => match Font::from_bytes(bytes, fontdue::FontSettings::default()) {
+                    Ok(font) => Some(font),
+                    Err(err) => {
+                        logging::log_warn(&format!(
+                            "Failed to decode font '{font_path}': {err}. Falling back to built-in font."
+                        ));
+                        None
+                    }
+                },
+                Err(err) => {
+                    logging::log_warn(&format!(
+                        "Failed to read font '{font_path}': {err}. Falling back to built-in font."
+                    ));
+                    None
+                }
+            };
+            self.font_cache.insert(font_path.to_string(), loaded);
+        }
+
+        self.font_cache
+            .get(font_path)
+            .and_then(|font| font.as_ref())
+    }
+
+    fn rasterize_text_font8x8(
+        text: &str,
+        font_size: f32,
+        color: Color,
+        letter_spacing: f32,
+        line_spacing: f32,
+    ) -> Option<RasterizedText> {
+        if text.is_empty() {
+            return None;
+        }
+
+        let scale = (font_size.max(1.0) / DEFAULT_GLYPH_PIXEL_SIZE)
+            .max(1.0)
+            .round() as i32;
+        let glyph_width = (DEFAULT_GLYPH_PIXEL_SIZE as i32) * scale;
+        let glyph_height = (DEFAULT_GLYPH_PIXEL_SIZE as i32) * scale;
+        let spacing_x = (letter_spacing.round() as i32).max(-(glyph_width - 1));
+        let spacing_y = (line_spacing.round() as i32).max(-(glyph_height - 1));
+
+        let lines: Vec<&str> = text.split('\n').collect();
+        if lines.is_empty() {
+            return None;
+        }
+
+        let mut max_width = 0i32;
+        for line in &lines {
+            let glyph_count = line.chars().count() as i32;
+            let line_width = if glyph_count == 0 {
+                0
+            } else {
+                glyph_count * glyph_width + (glyph_count - 1) * spacing_x
+            };
+            max_width = max_width.max(line_width);
+        }
+
+        let line_count = lines.len() as i32;
+        let total_height = if line_count == 0 {
+            0
+        } else {
+            line_count * glyph_height + (line_count - 1) * spacing_y
+        };
+
+        let width = max_width.max(1) as u32;
+        let height = total_height.max(1) as u32;
+        let mut rgba = vec![0u8; (width as usize) * (height as usize) * 4];
+
+        let r = Self::color_component_to_u8(color.r());
+        let g = Self::color_component_to_u8(color.g());
+        let b = Self::color_component_to_u8(color.b());
+        let a = Self::color_component_to_u8(color.a());
+
+        for (line_index, line) in lines.iter().enumerate() {
+            let mut pen_x = 0i32;
+            let base_y = line_index as i32 * (glyph_height + spacing_y);
+
+            for ch in line.chars() {
+                let glyph = BASIC_FONTS.get(ch).or_else(|| BASIC_FONTS.get('?'));
+                if let Some(bitmap) = glyph {
+                    for (row, bits) in bitmap.iter().enumerate() {
+                        for col in 0..8usize {
+                            if ((bits >> col) & 1) == 0 {
+                                continue;
+                            }
+
+                            let pixel_x = pen_x + (col as i32) * scale;
+                            let pixel_y = base_y + (row as i32) * scale;
+
+                            for sy in 0..scale {
+                                for sx in 0..scale {
+                                    let x = pixel_x + sx;
+                                    let y = pixel_y + sy;
+                                    if x < 0 || y < 0 {
+                                        continue;
+                                    }
+                                    if x >= width as i32 || y >= height as i32 {
+                                        continue;
+                                    }
+
+                                    let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+                                    rgba[idx] = r;
+                                    rgba[idx + 1] = g;
+                                    rgba[idx + 2] = b;
+                                    rgba[idx + 3] = a;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                pen_x += glyph_width + spacing_x;
+            }
+        }
+
+        Some(RasterizedText {
+            rgba,
+            width,
+            height,
+        })
+    }
+
+    fn rasterize_text_fontdue(
+        font: &Font,
+        text: &str,
+        font_size: f32,
+        color: Color,
+        letter_spacing: f32,
+        line_spacing: f32,
+    ) -> Option<RasterizedText> {
+        if text.is_empty() {
+            return None;
+        }
+
+        let font_size = font_size.max(1.0);
+        let letter_spacing = letter_spacing.max(-(font_size * 0.95));
+        let line_spacing = line_spacing.max(-(font_size * 0.95));
+        let line_metrics = font.horizontal_line_metrics(font_size);
+        let ascent = line_metrics
+            .map(|metrics| metrics.ascent)
+            .unwrap_or(font_size * 0.8);
+        let base_line_height = line_metrics
+            .map(|metrics| metrics.new_line_size)
+            .unwrap_or(font_size * 1.2)
+            .max(1.0);
+        let line_stride = (base_line_height + line_spacing).max(1.0);
+        let lines: Vec<&str> = text.split('\n').collect();
+        let (space_metrics, _) = font.rasterize(' ', font_size);
+        let tab_advance = (space_metrics.advance_width.max(font_size * 0.25)) * 4.0;
+
+        struct GlyphBitmap {
+            x: i32,
+            y: i32,
+            width: usize,
+            height: usize,
+            bitmap: Vec<u8>,
+        }
+
+        let mut glyphs: Vec<GlyphBitmap> = Vec::new();
+        let mut min_x = 0i32;
+        let mut min_y = 0i32;
+        let mut max_x = 0i32;
+        let mut max_y = 0i32;
+        let mut has_visible_glyph = false;
+        let mut measured_width = 0.0f32;
+
+        for (line_index, line) in lines.iter().enumerate() {
+            let baseline_y = ascent + line_index as f32 * line_stride;
+            let chars: Vec<char> = line.chars().collect();
+            let mut pen_x = 0.0f32;
+
+            for (char_index, ch) in chars.iter().enumerate() {
+                if *ch == '\t' {
+                    pen_x += tab_advance;
+                } else {
+                    let (metrics, bitmap) = font.rasterize(*ch, font_size);
+
+                    if metrics.width > 0 && metrics.height > 0 {
+                        let glyph_x = (pen_x + metrics.xmin as f32).floor() as i32;
+                        let glyph_y = (baseline_y - metrics.ymin as f32 - metrics.height as f32)
+                            .floor() as i32;
+                        let glyph_right = glyph_x + metrics.width as i32;
+                        let glyph_bottom = glyph_y + metrics.height as i32;
+
+                        if !has_visible_glyph {
+                            min_x = glyph_x;
+                            min_y = glyph_y;
+                            max_x = glyph_right;
+                            max_y = glyph_bottom;
+                            has_visible_glyph = true;
+                        } else {
+                            min_x = min_x.min(glyph_x);
+                            min_y = min_y.min(glyph_y);
+                            max_x = max_x.max(glyph_right);
+                            max_y = max_y.max(glyph_bottom);
+                        }
+
+                        glyphs.push(GlyphBitmap {
+                            x: glyph_x,
+                            y: glyph_y,
+                            width: metrics.width,
+                            height: metrics.height,
+                            bitmap,
+                        });
+                    }
+
+                    pen_x += metrics.advance_width.max(font_size * 0.25);
+                }
+
+                if char_index + 1 < chars.len() {
+                    pen_x += letter_spacing;
+                }
+            }
+
+            measured_width = measured_width.max(pen_x.max(0.0));
+        }
+
+        let (width, height) = if has_visible_glyph {
+            ((max_x - min_x).max(1) as u32, (max_y - min_y).max(1) as u32)
+        } else {
+            let text_height = if lines.is_empty() {
+                1.0
+            } else {
+                (lines.len().saturating_sub(1) as f32 * line_stride) + base_line_height
+            };
+            (
+                measured_width.ceil().max(1.0) as u32,
+                text_height.ceil().max(1.0) as u32,
+            )
+        };
+
+        let mut rgba = vec![0u8; (width as usize) * (height as usize) * 4];
+
+        let r = Self::color_component_to_u8(color.r());
+        let g = Self::color_component_to_u8(color.g());
+        let b = Self::color_component_to_u8(color.b());
+        let alpha_scale = color.a().clamp(0.0, 1.0);
+
+        for glyph in glyphs {
+            let origin_x = glyph.x - min_x;
+            let origin_y = glyph.y - min_y;
+
+            for gy in 0..glyph.height {
+                for gx in 0..glyph.width {
+                    let x = origin_x + gx as i32;
+                    let y = origin_y + gy as i32;
+                    if x < 0 || y < 0 || x >= width as i32 || y >= height as i32 {
+                        continue;
+                    }
+
+                    let coverage = glyph.bitmap[gy * glyph.width + gx] as f32 / 255.0;
+                    let alpha = (coverage * alpha_scale * 255.0).round() as u8;
+                    if alpha == 0 {
+                        continue;
+                    }
+
+                    let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+                    rgba[idx] = r;
+                    rgba[idx + 1] = g;
+                    rgba[idx + 2] = b;
+                    rgba[idx + 3] = alpha;
+                }
+            }
+        }
+
+        Some(RasterizedText {
+            rgba,
+            width,
+            height,
+        })
+    }
+
+    fn rasterize_text(
+        &mut self,
+        text: &str,
+        font_size: f32,
+        color: Color,
+        font_path: Option<&str>,
+        letter_spacing: f32,
+        line_spacing: f32,
+    ) -> Option<RasterizedText> {
+        let font_size = font_size.max(1.0);
+        if let Some(path) = font_path
+            && let Some(font) = self.load_font_from_path(path)
+        {
+            if let Some(rasterized) = Self::rasterize_text_fontdue(
+                font,
+                text,
+                font_size,
+                color,
+                letter_spacing,
+                line_spacing,
+            ) {
+                return Some(rasterized);
+            }
+        }
+
+        Self::rasterize_text_font8x8(text, font_size, color, letter_spacing, line_spacing)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn build_text_draw_item(
+        &mut self,
+        text: &str,
+        x: f32,
+        y: f32,
+        font_size: f32,
+        color: Color,
+        font_path: Option<&str>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        layer: i32,
+        z_index: f32,
+    ) -> Option<(DrawItem, PendingTextureUpload)> {
+        if text.is_empty() {
+            return None;
+        }
+
+        let font_size = font_size.max(1.0);
+        let rasterized = self.rasterize_text(
+            text,
+            font_size,
+            color,
+            font_path,
+            letter_spacing,
+            line_spacing,
+        )?;
+        let texture_key = Self::build_text_texture_key(
+            text,
+            font_path,
+            font_size,
+            color,
+            letter_spacing,
+            line_spacing,
+        );
+
+        let item = self.build_image_rect_draw_item(
+            x,
+            y,
+            rasterized.width as f32,
+            rasterized.height as f32,
+            texture_key.clone(),
+            layer,
+            z_index,
+        );
+
+        let upload = PendingTextureUpload {
+            key: texture_key,
+            rgba: rasterized.rgba,
+            width: rasterized.width,
+            height: rasterized.height,
+        };
+
+        Some((item, upload))
+    }
+
     fn build_line_draw_item(
         &self,
         start_x: f32,
@@ -721,13 +1125,7 @@ impl RenderManager {
 
         if length <= f32::EPSILON {
             return self.build_filled_rect_draw_item(
-                start_x,
-                start_y,
-                thickness,
-                thickness,
-                color,
-                layer,
-                z_index,
+                start_x, start_y, thickness, thickness, color, layer, z_index,
             );
         }
 
@@ -839,14 +1237,7 @@ impl RenderManager {
 
         for i in 0..segments {
             let base = i * 2;
-            indices.extend_from_slice(&[
-                base,
-                base + 1,
-                base + 2,
-                base + 1,
-                base + 3,
-                base + 2,
-            ]);
+            indices.extend_from_slice(&[base, base + 1, base + 2, base + 1, base + 3, base + 2]);
         }
 
         Some(DrawItem {
@@ -859,7 +1250,7 @@ impl RenderManager {
     }
 
     fn collect_direct_draw_items(
-        &self,
+        &mut self,
         draw_manager: Option<&DrawManager>,
     ) -> (Vec<DrawItem>, Vec<PendingTextureUpload>) {
         let mut items = Vec::new();
@@ -877,9 +1268,11 @@ impl RenderManager {
                     layer,
                     z_index,
                 } => {
-                    items.push(self.build_filled_rect_draw_item(
-                        *x, *y, 1.0, 1.0, *color, *layer, *z_index,
-                    ));
+                    items.push(
+                        self.build_filled_rect_draw_item(
+                            *x, *y, 1.0, 1.0, *color, *layer, *z_index,
+                        ),
+                    );
                 }
                 DrawCommand::Line {
                     start_x,
@@ -966,23 +1359,11 @@ impl RenderManager {
                 } => {
                     let item = if *filled {
                         self.build_filled_circle_draw_item(
-                            *center_x,
-                            *center_y,
-                            *radius,
-                            *segments,
-                            *color,
-                            *layer,
-                            *z_index,
+                            *center_x, *center_y, *radius, *segments, *color, *layer, *z_index,
                         )
                     } else {
                         self.build_circle_outline_draw_item(
-                            *center_x,
-                            *center_y,
-                            *radius,
-                            *thickness,
-                            *segments,
-                            *color,
-                            *layer,
+                            *center_x, *center_y, *radius, *thickness, *segments, *color, *layer,
                             *z_index,
                         )
                     };
@@ -1063,6 +1444,34 @@ impl RenderManager {
                         height: *texture_height,
                     });
                 }
+                DrawCommand::Text {
+                    text,
+                    x,
+                    y,
+                    font_size,
+                    color,
+                    font_path,
+                    letter_spacing,
+                    line_spacing,
+                    layer,
+                    z_index,
+                } => {
+                    if let Some((item, upload)) = self.build_text_draw_item(
+                        text,
+                        *x,
+                        *y,
+                        *font_size,
+                        *color,
+                        font_path.as_deref(),
+                        *letter_spacing,
+                        *line_spacing,
+                        *layer,
+                        *z_index,
+                    ) {
+                        items.push(item);
+                        texture_uploads.push(upload);
+                    }
+                }
             }
         }
 
@@ -1140,7 +1549,7 @@ impl RenderManager {
     }
 
     fn collect_draw_items(
-        &self,
+        &mut self,
         objects: &Option<ObjectManager>,
         draw_manager: Option<&DrawManager>,
     ) -> (Vec<DrawItem>, Vec<PendingTextureUpload>) {
@@ -1299,6 +1708,30 @@ impl RenderManager {
                 texture_width.hash(hasher);
                 texture_height.hash(hasher);
                 rgba.hash(hasher);
+                layer.hash(hasher);
+                hash_f32(hasher, *z_index);
+            }
+            DrawCommand::Text {
+                text,
+                x,
+                y,
+                font_size,
+                color,
+                font_path,
+                letter_spacing,
+                line_spacing,
+                layer,
+                z_index,
+            } => {
+                7u8.hash(hasher);
+                text.hash(hasher);
+                hash_f32(hasher, *x);
+                hash_f32(hasher, *y);
+                hash_f32(hasher, *font_size);
+                hash_color(hasher, color);
+                font_path.hash(hasher);
+                hash_f32(hasher, *letter_spacing);
+                hash_f32(hasher, *line_spacing);
                 layer.hash(hasher);
                 hash_f32(hasher, *z_index);
             }
@@ -1465,7 +1898,7 @@ impl RenderManager {
             if texture_changed && !is_first_item {
                 // 1. Resolve the bind group for the COMPLETED batch
                 let bind_group = self.texture_bind_group_for(batch_texture_path.as_deref());
-                
+
                 // 2. Flush
                 if !batch_vertices.is_empty() {
                     let vertex_buffer = Self::write_to_pooled_buffer(
@@ -1515,7 +1948,7 @@ impl RenderManager {
         // Final Flush
         if !batch_vertices.is_empty() {
             let bind_group = self.texture_bind_group_for(batch_texture_path.as_deref());
-            
+
             let vertex_buffer = Self::write_to_pooled_buffer(
                 &self.device,
                 &self.queue,
@@ -1581,7 +2014,8 @@ impl RenderManager {
             for draw in &prepared_draws {
                 render_pass.set_bind_group(0, &draw.bind_group, &[]);
                 render_pass.set_vertex_buffer(0, draw.vertex_buffer.slice(..));
-                render_pass.set_index_buffer(draw.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+                render_pass
+                    .set_index_buffer(draw.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
                 render_pass.draw_indexed(0..draw.index_count, 0, 0..1);
             }
         }

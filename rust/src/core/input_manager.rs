@@ -85,21 +85,49 @@ pub struct AxisBinding {
 /// Input event types that can be queued
 #[derive(Debug, Clone)]
 pub enum InputEvent {
-    KeyPressed { key: Key },
-    KeyReleased { key: Key },
-    MouseButtonPressed { button: MouseButtonType },
-    MouseButtonReleased { button: MouseButtonType },
-    MouseMoved { x: f64, y: f64 },
-    MouseWheel { delta_x: f64, delta_y: f64 },
-    JoystickConnected { joystick_id: u32 },
-    JoystickDisconnected { joystick_id: u32 },
-    JoystickButtonPressed { joystick_id: u32, button_id: u8 },
-    JoystickButtonReleased { joystick_id: u32, button_id: u8 },
-    JoystickAxisMoved { joystick_id: u32, axis_id: u8, value: f32 },
+    KeyPressed {
+        key: Key,
+    },
+    KeyReleased {
+        key: Key,
+    },
+    MouseButtonPressed {
+        button: MouseButtonType,
+    },
+    MouseButtonReleased {
+        button: MouseButtonType,
+    },
+    MouseMoved {
+        x: f64,
+        y: f64,
+    },
+    MouseWheel {
+        delta_x: f64,
+        delta_y: f64,
+    },
+    JoystickConnected {
+        joystick_id: u32,
+    },
+    JoystickDisconnected {
+        joystick_id: u32,
+    },
+    JoystickButtonPressed {
+        joystick_id: u32,
+        button_id: u8,
+    },
+    JoystickButtonReleased {
+        joystick_id: u32,
+        button_id: u8,
+    },
+    JoystickAxisMoved {
+        joystick_id: u32,
+        axis_id: u8,
+        value: f32,
+    },
 }
 
 /// Manages all input from keyboard, mouse, and joysticks
-/// 
+///
 /// Tracks current state of all input devices and maintains an event queue
 /// for frame-by-frame input processing. Supports both state queries (is key pressed?)
 /// and event-driven input (key just pressed this frame?).
@@ -110,7 +138,7 @@ pub struct InputManager {
     keys_current: HashMap<Key, bool>,
     /// Previous frame keyboard state - used for detecting press/release events
     keys_previous: HashMap<Key, bool>,
-    
+
     // Mouse state
     /// Current mouse position in window coordinates
     mouse_position: (f64, f64),
@@ -122,7 +150,7 @@ pub struct InputManager {
     mouse_buttons_previous: HashMap<MouseButtonType, bool>,
     /// Mouse wheel delta accumulated this frame
     mouse_wheel_delta: (f64, f64),
-    
+
     // Joystick/Gamepad state
     /// Set of connected joystick IDs
     connected_joysticks: HashSet<u32>,
@@ -132,7 +160,7 @@ pub struct InputManager {
     joystick_buttons_previous: HashMap<JoystickButton, bool>,
     /// Current joystick axis values - (joystick_id, axis_id) -> value (-1.0 to 1.0)
     joystick_axes: HashMap<JoystickAxis, f32>,
-    
+
     // Unified axis system
     /// Configuration for each logical axis (e.g., \"Horizontal\", \"Vertical\", \"Fire\")
     axis_bindings: HashMap<String, AxisBinding>,
@@ -140,11 +168,11 @@ pub struct InputManager {
     axis_values_current: HashMap<String, f32>,
     /// Previous frame axis values (for detecting changes / edge triggers)
     axis_values_previous: HashMap<String, f32>,
-    
+
     // Event queue
     /// Queue of input events that occurred this frame
     event_queue: VecDeque<InputEvent>,
-    
+
     // Input action mappings (optional - for action-based input)
     /// Maps action names to sets of keys that trigger them
     key_action_mappings: HashMap<String, Vec<Key>>,
@@ -248,14 +276,8 @@ impl InputManager {
 
         // Horizontal axis: A/D, Left/Right arrows, gamepad left-stick X (axis 0)
         let horizontal_keyboard = KeyboardAxisBinding {
-            positive_keys: vec![
-                Key::Character("d".into()),
-                Key::Named(NamedKey::ArrowRight),
-            ],
-            negative_keys: vec![
-                Key::Character("a".into()),
-                Key::Named(NamedKey::ArrowLeft),
-            ],
+            positive_keys: vec![Key::Character("d".into()), Key::Named(NamedKey::ArrowRight)],
+            negative_keys: vec![Key::Character("a".into()), Key::Named(NamedKey::ArrowLeft)],
             sensitivity: 1.0,
         };
         let horizontal_joystick = JoystickAxisBinding {
@@ -279,14 +301,8 @@ impl InputManager {
 
         // Vertical axis: W/S, Up/Down arrows, gamepad left-stick Y (axis 1)
         let vertical_keyboard = KeyboardAxisBinding {
-            positive_keys: vec![
-                Key::Character("w".into()),
-                Key::Named(NamedKey::ArrowUp),
-            ],
-            negative_keys: vec![
-                Key::Character("s".into()),
-                Key::Named(NamedKey::ArrowDown),
-            ],
+            positive_keys: vec![Key::Character("w".into()), Key::Named(NamedKey::ArrowUp)],
+            negative_keys: vec![Key::Character("s".into()), Key::Named(NamedKey::ArrowDown)],
             sensitivity: 1.0,
         };
         let vertical_joystick = JoystickAxisBinding {
@@ -337,11 +353,7 @@ impl InputManager {
     }
 
     /// Update or create the mouse binding for a logical axis.
-    pub fn set_axis_mouse_binding<S: Into<String>>(
-        &mut self,
-        name: S,
-        mouse: MouseAxisBinding,
-    ) {
+    pub fn set_axis_mouse_binding<S: Into<String>>(&mut self, name: S, mouse: MouseAxisBinding) {
         let name = name.into();
         self.axis_bindings
             .entry(name)

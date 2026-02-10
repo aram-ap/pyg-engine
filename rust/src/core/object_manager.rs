@@ -1,5 +1,5 @@
-use crate::core::game_object::GameObject;
 use super::logging;
+use crate::core::game_object::GameObject;
 use std::collections::HashMap;
 
 pub struct ObjectManager {
@@ -20,7 +20,7 @@ impl ObjectManager {
     pub fn add_object(&mut self, object: GameObject) -> Option<u32> {
         let id = object.get_id();
         let is_active = object.is_active();
-        
+
         // If replacing an existing object, update counters for the old object
         if let Some(old_object) = self.objects.insert(id, object) {
             // Object with this ID already existed, so we're replacing it
@@ -30,7 +30,7 @@ impl ObjectManager {
             // New object, increment total_objects
             self.total_objects += 1;
         }
-        
+
         // Update active_objects counter for the new/replaced object
         self.active_objects += if is_active { 1 } else { 0 };
         Some(id)
@@ -104,4 +104,3 @@ impl ObjectManager {
         self.objects.keys().cloned().collect()
     }
 }
-

@@ -1,6 +1,5 @@
-pub mod vector;
 pub mod color;
+pub mod vector;
 
-pub use vector::*;
 pub use color::*;
-
+pub use vector::*;

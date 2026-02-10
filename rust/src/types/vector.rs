@@ -19,7 +19,11 @@ impl<T: Copy, const N: usize> Vector<T, N> {
 
 impl<T, const N: usize> Vector<T, N>
 where
-    T: Copy + std::ops::Add<Output = T> + std::ops::Sub<Output = T> + std::ops::Mul<Output = T> + std::ops::Div<Output = T>,
+    T: Copy
+        + std::ops::Add<Output = T>
+        + std::ops::Sub<Output = T>
+        + std::ops::Mul<Output = T>
+        + std::ops::Div<Output = T>,
 {
     pub fn add(&self, other: &Self) -> Self {
         let mut data = self.data;
@@ -204,7 +208,10 @@ impl<const N: usize> Vector<f32, N> {
     /// In release builds, follows IEEE float behavior (Inf/NaN) for zero division.
     #[inline]
     pub fn divide_scalar_checked(&self, scalar: f32) -> Self {
-        debug_assert!(scalar != 0.0, "Vector::divide_scalar_checked: Division by zero");
+        debug_assert!(
+            scalar != 0.0,
+            "Vector::divide_scalar_checked: Division by zero"
+        );
         self.divide_scalar(scalar)
     }
 
@@ -214,7 +221,10 @@ impl<const N: usize> Vector<f32, N> {
     #[inline]
     pub fn normalize_checked(&self) -> Self {
         let len = self.length();
-        debug_assert!(len > 0.0, "Vector::normalize_checked: Cannot normalize zero-length vector");
+        debug_assert!(
+            len > 0.0,
+            "Vector::normalize_checked: Cannot normalize zero-length vector"
+        );
         self.divide_scalar(len)
     }
 }
@@ -255,10 +265,12 @@ impl Vector<f32, 3> {
     }
 
     pub fn cross(&self, other: &Self) -> Self {
-        Self { data: [
-            self.y() * other.z() - self.z() * other.y(),
-            self.z() * other.x() - self.x() * other.z(),
-            self.x() * other.y() - self.y() * other.x(),
-        ] }
+        Self {
+            data: [
+                self.y() * other.z() - self.z() * other.y(),
+                self.z() * other.x() - self.x() * other.z(),
+                self.x() * other.y() - self.y() * other.x(),
+            ],
+        }
     }
 }

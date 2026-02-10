@@ -213,6 +213,38 @@ class EngineHandle:
             z_index=z_index,
         )
 
+    def draw_text(
+        self,
+        text: str,
+        x: float,
+        y: float,
+        color: Any,
+        font_size: float = 24.0,
+        font_path: Optional[str] = None,
+        letter_spacing: float = 0.0,
+        line_spacing: float = 0.0,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """
+        Draw text via command queue.
+
+        By default, this uses the engine's built-in open-source font.
+        Provide `font_path` to use a custom TTF/OTF font file.
+        """
+        self._inner.draw_text(
+            text,
+            x,
+            y,
+            color,
+            font_size=font_size,
+            font_path=font_path,
+            letter_spacing=letter_spacing,
+            line_spacing=line_spacing,
+            layer=layer,
+            z_index=z_index,
+        )
+
 
 class Input:
     """
@@ -714,6 +746,38 @@ class Engine:
             rgba,
             texture_width,
             texture_height,
+            layer=layer,
+            z_index=z_index,
+        )
+
+    def draw_text(
+        self,
+        text: str,
+        x: float,
+        y: float,
+        color: Any,
+        font_size: float = 24.0,
+        font_path: Optional[str] = None,
+        letter_spacing: float = 0.0,
+        line_spacing: float = 0.0,
+        layer: int = 0,
+        z_index: float = 0.0,
+    ) -> None:
+        """
+        Draw text in window coordinates.
+
+        By default, this uses the engine's built-in open-source font.
+        Provide `font_path` to use a custom TTF/OTF font file.
+        """
+        self._engine.draw_text(
+            text,
+            x,
+            y,
+            color,
+            font_size=font_size,
+            font_path=font_path,
+            letter_spacing=letter_spacing,
+            line_spacing=line_spacing,
             layer=layer,
             z_index=z_index,
         )

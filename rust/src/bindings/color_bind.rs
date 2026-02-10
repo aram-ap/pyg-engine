@@ -1,5 +1,5 @@
-use pyo3::prelude::*;
 use crate::types::color::Color as RustColor;
+use pyo3::prelude::*;
 
 // ========== Color Bindings ==========
 
@@ -147,27 +147,37 @@ impl PyColor {
     // Color constants as class attributes
     #[classattr]
     fn TRANSPARENT() -> PyColor {
-        PyColor { inner: RustColor::TRANSPARENT }
+        PyColor {
+            inner: RustColor::TRANSPARENT,
+        }
     }
 
     #[classattr]
     fn BLACK() -> PyColor {
-        PyColor { inner: RustColor::BLACK }
+        PyColor {
+            inner: RustColor::BLACK,
+        }
     }
 
     #[classattr]
     fn WHITE() -> PyColor {
-        PyColor { inner: RustColor::WHITE }
+        PyColor {
+            inner: RustColor::WHITE,
+        }
     }
 
     #[classattr]
     fn GRAY() -> PyColor {
-        PyColor { inner: RustColor::GRAY }
+        PyColor {
+            inner: RustColor::GRAY,
+        }
     }
 
     #[classattr]
     fn GREY() -> PyColor {
-        PyColor { inner: RustColor::GREY }
+        PyColor {
+            inner: RustColor::GREY,
+        }
     }
 
     #[classattr]
@@ -200,57 +210,78 @@ impl PyColor {
 
     #[classattr]
     fn RED() -> PyColor {
-        PyColor { inner: RustColor::RED }
+        PyColor {
+            inner: RustColor::RED,
+        }
     }
 
     #[classattr]
     fn GREEN() -> PyColor {
-        PyColor { inner: RustColor::GREEN }
+        PyColor {
+            inner: RustColor::GREEN,
+        }
     }
 
     #[classattr]
     fn LIME() -> PyColor {
-        PyColor { inner: RustColor::LIME }
+        PyColor {
+            inner: RustColor::LIME,
+        }
     }
 
     #[classattr]
     fn BLUE() -> PyColor {
-        PyColor { inner: RustColor::BLUE }
+        PyColor {
+            inner: RustColor::BLUE,
+        }
     }
 
     #[classattr]
     fn YELLOW() -> PyColor {
-        PyColor { inner: RustColor::YELLOW }
+        PyColor {
+            inner: RustColor::YELLOW,
+        }
     }
 
     #[classattr]
     fn CYAN() -> PyColor {
-        PyColor { inner: RustColor::CYAN }
+        PyColor {
+            inner: RustColor::CYAN,
+        }
     }
 
     #[classattr]
     fn MAGENTA() -> PyColor {
-        PyColor { inner: RustColor::MAGENTA }
+        PyColor {
+            inner: RustColor::MAGENTA,
+        }
     }
 
     #[classattr]
     fn ORANGE() -> PyColor {
-        PyColor { inner: RustColor::ORANGE }
+        PyColor {
+            inner: RustColor::ORANGE,
+        }
     }
 
     #[classattr]
     fn PINK() -> PyColor {
-        PyColor { inner: RustColor::PINK }
+        PyColor {
+            inner: RustColor::PINK,
+        }
     }
 
     #[classattr]
     fn PURPLE() -> PyColor {
-        PyColor { inner: RustColor::PURPLE }
+        PyColor {
+            inner: RustColor::PURPLE,
+        }
     }
 
     #[classattr]
     fn BROWN() -> PyColor {
-        PyColor { inner: RustColor::BROWN }
+        PyColor {
+            inner: RustColor::BROWN,
+        }
     }
 }
-

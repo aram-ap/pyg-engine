@@ -9,16 +9,16 @@
 
 use once_cell::sync::OnceCell;
 use std::path::PathBuf;
-use tracing::{debug, error, info, trace, warn, Level};
+use tracing::{Level, debug, error, info, trace, warn};
 use tracing_appender::{
     non_blocking::WorkerGuard,
     rolling::{RollingFileAppender, Rotation},
 };
 use tracing_subscriber::{
+    EnvFilter, Layer,
     fmt::{self, time::ChronoLocal},
     layer::SubscriberExt,
     util::SubscriberInitExt,
-    EnvFilter, Layer,
 };
 
 /// Global logger guard to keep file writer alive
@@ -113,8 +113,8 @@ pub fn init_logging(config: LogConfig) {
     layers.push(console_layer);
 
     // Build the subscriber with env filter
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(config.level.as_str()));
+    let env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(config.level.as_str()));
 
     tracing_subscriber::registry()
         .with(env_filter)

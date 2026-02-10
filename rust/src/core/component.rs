@@ -1,6 +1,6 @@
 use super::time::Time;
-use crate::types::vector::Vec2;
 use crate::types::color::Color;
+use crate::types::vector::Vec2;
 // use crate::types::texture::Texture;
 
 // Game objects contain components.
@@ -10,7 +10,9 @@ pub trait ComponentTrait: Send + Sync + std::fmt::Debug {
         Creates a new component.
         @return: The new component.
     */
-    fn new(name: String) -> Self where Self: Sized;
+    fn new(name: String) -> Self
+    where
+        Self: Sized;
 
     /**
         Gets the name of the component.

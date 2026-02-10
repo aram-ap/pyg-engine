@@ -1,5 +1,5 @@
-use pyo3::prelude::*;
 use crate::types::vector::{Vec2, Vec3};
+use pyo3::prelude::*;
 
 // ========== Vector Bindings ==========
 
@@ -117,27 +117,37 @@ impl PyVec2 {
     // Vector constants as class attributes
     #[classattr]
     fn ZERO() -> PyVec2 {
-        PyVec2 { inner: Vec2::new(0.0, 0.0) }
+        PyVec2 {
+            inner: Vec2::new(0.0, 0.0),
+        }
     }
 
     #[classattr]
     fn UP() -> PyVec2 {
-        PyVec2 { inner: Vec2::new(0.0, 1.0) }
+        PyVec2 {
+            inner: Vec2::new(0.0, 1.0),
+        }
     }
 
     #[classattr]
     fn DOWN() -> PyVec2 {
-        PyVec2 { inner: Vec2::new(0.0, -1.0) }
+        PyVec2 {
+            inner: Vec2::new(0.0, -1.0),
+        }
     }
 
     #[classattr]
     fn LEFT() -> PyVec2 {
-        PyVec2 { inner: Vec2::new(-1.0, 0.0) }
+        PyVec2 {
+            inner: Vec2::new(-1.0, 0.0),
+        }
     }
 
     #[classattr]
     fn RIGHT() -> PyVec2 {
-        PyVec2 { inner: Vec2::new(1.0, 0.0) }
+        PyVec2 {
+            inner: Vec2::new(1.0, 0.0),
+        }
     }
 
     // Python operator overloads
@@ -148,7 +158,7 @@ impl PyVec2 {
             Ok(self.add_scalar(scalar))
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for +: 'Vec2' and unknown type"
+                "unsupported operand type(s) for +: 'Vec2' and unknown type",
             ))
         }
     }
@@ -164,7 +174,7 @@ impl PyVec2 {
             Ok(self.subtract_scalar(scalar))
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for -: 'Vec2' and unknown type"
+                "unsupported operand type(s) for -: 'Vec2' and unknown type",
             ))
         }
     }
@@ -172,11 +182,11 @@ impl PyVec2 {
     fn __rsub__(&self, other: &Bound<'_, pyo3::PyAny>) -> PyResult<PyVec2> {
         if let Ok(scalar) = other.extract::<f32>() {
             Ok(PyVec2 {
-                inner: Vec2::new(scalar - self.inner.x(), scalar - self.inner.y())
+                inner: Vec2::new(scalar - self.inner.x(), scalar - self.inner.y()),
             })
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for -: unknown type and 'Vec2'"
+                "unsupported operand type(s) for -: unknown type and 'Vec2'",
             ))
         }
     }
@@ -188,7 +198,7 @@ impl PyVec2 {
             Ok(self.multiply_scalar(scalar))
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for *: 'Vec2' and unknown type"
+                "unsupported operand type(s) for *: 'Vec2' and unknown type",
             ))
         }
     }
@@ -204,7 +214,7 @@ impl PyVec2 {
             Ok(self.divide_scalar(scalar))
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for /: 'Vec2' and unknown type"
+                "unsupported operand type(s) for /: 'Vec2' and unknown type",
             ))
         }
     }
@@ -212,11 +222,11 @@ impl PyVec2 {
     fn __rtruediv__(&self, other: &Bound<'_, pyo3::PyAny>) -> PyResult<PyVec2> {
         if let Ok(scalar) = other.extract::<f32>() {
             Ok(PyVec2 {
-                inner: Vec2::new(scalar / self.inner.x(), scalar / self.inner.y())
+                inner: Vec2::new(scalar / self.inner.x(), scalar / self.inner.y()),
             })
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for /: unknown type and 'Vec2'"
+                "unsupported operand type(s) for /: unknown type and 'Vec2'",
             ))
         }
     }
@@ -343,37 +353,51 @@ impl PyVec3 {
     // Vector constants as class attributes
     #[classattr]
     fn ZERO() -> PyVec3 {
-        PyVec3 { inner: Vec3::new(0.0, 0.0, 0.0) }
+        PyVec3 {
+            inner: Vec3::new(0.0, 0.0, 0.0),
+        }
     }
 
     #[classattr]
     fn UP() -> PyVec3 {
-        PyVec3 { inner: Vec3::new(0.0, 1.0, 0.0) }
+        PyVec3 {
+            inner: Vec3::new(0.0, 1.0, 0.0),
+        }
     }
 
     #[classattr]
     fn DOWN() -> PyVec3 {
-        PyVec3 { inner: Vec3::new(0.0, -1.0, 0.0) }
+        PyVec3 {
+            inner: Vec3::new(0.0, -1.0, 0.0),
+        }
     }
 
     #[classattr]
     fn LEFT() -> PyVec3 {
-        PyVec3 { inner: Vec3::new(-1.0, 0.0, 0.0) }
+        PyVec3 {
+            inner: Vec3::new(-1.0, 0.0, 0.0),
+        }
     }
 
     #[classattr]
     fn RIGHT() -> PyVec3 {
-        PyVec3 { inner: Vec3::new(1.0, 0.0, 0.0) }
+        PyVec3 {
+            inner: Vec3::new(1.0, 0.0, 0.0),
+        }
     }
 
     #[classattr]
     fn FORWARD() -> PyVec3 {
-        PyVec3 { inner: Vec3::new(0.0, 0.0, 1.0) }
+        PyVec3 {
+            inner: Vec3::new(0.0, 0.0, 1.0),
+        }
     }
 
     #[classattr]
     fn BACK() -> PyVec3 {
-        PyVec3 { inner: Vec3::new(0.0, 0.0, -1.0) }
+        PyVec3 {
+            inner: Vec3::new(0.0, 0.0, -1.0),
+        }
     }
 
     // Python operator overloads
@@ -384,7 +408,7 @@ impl PyVec3 {
             Ok(self.add_scalar(scalar))
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for +: 'Vec3' and unknown type"
+                "unsupported operand type(s) for +: 'Vec3' and unknown type",
             ))
         }
     }
@@ -400,7 +424,7 @@ impl PyVec3 {
             Ok(self.subtract_scalar(scalar))
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for -: 'Vec3' and unknown type"
+                "unsupported operand type(s) for -: 'Vec3' and unknown type",
             ))
         }
     }
@@ -411,12 +435,12 @@ impl PyVec3 {
                 inner: Vec3::new(
                     scalar - self.inner.x(),
                     scalar - self.inner.y(),
-                    scalar - self.inner.z()
-                )
+                    scalar - self.inner.z(),
+                ),
             })
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for -: unknown type and 'Vec3'"
+                "unsupported operand type(s) for -: unknown type and 'Vec3'",
             ))
         }
     }
@@ -428,7 +452,7 @@ impl PyVec3 {
             Ok(self.multiply_scalar(scalar))
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for *: 'Vec3' and unknown type"
+                "unsupported operand type(s) for *: 'Vec3' and unknown type",
             ))
         }
     }
@@ -444,7 +468,7 @@ impl PyVec3 {
             Ok(self.divide_scalar(scalar))
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for /: 'Vec3' and unknown type"
+                "unsupported operand type(s) for /: 'Vec3' and unknown type",
             ))
         }
     }
@@ -455,14 +479,13 @@ impl PyVec3 {
                 inner: Vec3::new(
                     scalar / self.inner.x(),
                     scalar / self.inner.y(),
-                    scalar / self.inner.z()
-                )
+                    scalar / self.inner.z(),
+                ),
             })
         } else {
             Err(pyo3::exceptions::PyTypeError::new_err(
-                "unsupported operand type(s) for /: unknown type and 'Vec3'"
+                "unsupported operand type(s) for /: unknown type and 'Vec3'",
             ))
         }
     }
 }
-

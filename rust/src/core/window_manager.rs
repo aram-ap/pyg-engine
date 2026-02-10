@@ -1,9 +1,9 @@
+use super::logging;
+use crate::types::Color;
+use std::sync::Arc;
 use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Fullscreen, Icon, Window};
-use std::sync::Arc;
-use super::logging;
-use crate::types::Color;
 
 /// Fullscreen mode options for the window
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -113,7 +113,7 @@ impl WindowConfig {
     }
 
     /// Set VSync (vertical synchronization)
-    /// 
+    ///
     /// When enabled (default), the frame rate will be limited to the display's refresh rate.
     /// When disabled, frames will be presented immediately, which may cause screen tearing.
     pub fn with_vsync(mut self, vsync: bool) -> Self {
@@ -148,7 +148,10 @@ pub struct WindowManager {
 
 impl WindowManager {
     /// Create a new WindowManager with the given configuration
-    pub fn new(event_loop: &ActiveEventLoop, config: WindowConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        event_loop: &ActiveEventLoop,
+        config: WindowConfig,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let mut window_attrs = Window::default_attributes()
             .with_title(&config.title)
             .with_inner_size(LogicalSize::new(config.width, config.height))
@@ -170,9 +173,7 @@ impl WindowManager {
         // Apply fullscreen mode
         let fullscreen = match config.fullscreen {
             FullscreenMode::None => None,
-            FullscreenMode::Borderless => {
-                Some(Fullscreen::Borderless(None))
-            }
+            FullscreenMode::Borderless => Some(Fullscreen::Borderless(None)),
             FullscreenMode::Exclusive => {
                 // For exclusive fullscreen, we'd need to select a video mode
                 // For now, default to borderless if exclusive is requested
@@ -189,10 +190,7 @@ impl WindowManager {
         // Log window creation details
         logging::log_info(&format!(
             "Window created: title='{}', size={}x{}, fullscreen={:?}",
-            config.title,
-            current_size.width,
-            current_size.height,
-            config.fullscreen
+            config.title, current_size.width, current_size.height, config.fullscreen
         ));
 
         Ok(Self {
@@ -228,7 +226,9 @@ impl WindowManager {
 
     /// Set the window size
     pub fn set_size(&self, width: u32, height: u32) {
-        let _ = self.window.request_inner_size(LogicalSize::new(width, height));
+        let _ = self
+            .window
+            .request_inner_size(LogicalSize::new(width, height));
     }
 
     /// Set the fullscreen mode
@@ -282,4 +282,3 @@ impl WindowManager {
         self.window.has_focus()
     }
 }
-

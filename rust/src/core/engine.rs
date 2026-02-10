@@ -1,14 +1,15 @@
-/// Core engine functionality
-use super::logging;
-use super::window_manager::{WindowConfig, WindowManager};
-use super::render_manager::RenderManager;
-use super::object_manager::ObjectManager;
-use super::input_manager::InputManager;
+use super::command::EngineCommand;
 use super::draw_manager::{DrawCommand, DrawManager};
 use super::game_object::GameObject;
+use super::input_manager::InputManager;
+/// Core engine functionality
+use super::logging;
+use super::object_manager::ObjectManager;
+use super::render_manager::RenderManager;
 use super::time::Time;
-use super::command::EngineCommand;
+use super::window_manager::{WindowConfig, WindowManager};
 use crate::types::Color;
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::path::PathBuf;
 use std::time::Instant;
 use tracing::Level;
@@ -16,7 +17,6 @@ use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::WindowId;
-use crossbeam_channel::{unbounded, Receiver, Sender};
 
 pub struct Engine {
     version: String,
@@ -26,7 +26,7 @@ pub struct Engine {
     pub input_manager: Option<InputManager>,
     pub draw_manager: DrawManager,
     pub time: Time,
-    
+
     // Command Queue
     command_receiver: Receiver<EngineCommand>,
     // We keep a sender to give out clones
@@ -47,7 +47,7 @@ impl Engine {
     pub fn new() -> Self {
         logging::init_default();
         let (sender, receiver) = unbounded();
-        
+
         Self {
             version: VERSION.to_string(),
             window_manager: None,
@@ -67,11 +67,7 @@ impl Engine {
     }
 
     /// Initialize the engine with custom logging configuration
-    pub fn with_logging(
-        enable_file: bool,
-        log_dir: Option<String>,
-        level: Option<String>,
-    ) -> Self {
+    pub fn with_logging(enable_file: bool, log_dir: Option<String>, level: Option<String>) -> Self {
         let log_level = level
             .as_deref()
             .and_then(|s| match s.to_uppercase().as_str() {
@@ -87,7 +83,9 @@ impl Engine {
         let config = logging::LogConfig {
             level: log_level,
             enable_file,
-            log_dir: log_dir.map(PathBuf::from).unwrap_or_else(|| PathBuf::from("logs")),
+            log_dir: log_dir
+                .map(PathBuf::from)
+                .unwrap_or_else(|| PathBuf::from("logs")),
             enable_colors: true,
             enable_json: false,
         };
@@ -150,7 +148,7 @@ impl Engine {
     }
 
     /// Run the engine with a window
-    /// 
+    ///
     /// This method takes a mutable reference to the engine and runs the event loop.
     /// It creates a window and render manager, then enters the main game loop.
     pub fn run(&mut self, window_config: WindowConfig) -> Result<(), Box<dyn std::error::Error>> {
@@ -182,7 +180,7 @@ impl Engine {
     }
 
     /// Add a game object to the engine
-    /// 
+    ///
     /// Takes ownership of the GameObject and adds it to the engine's object manager.
     /// Returns the ID of the added object, or None if the object manager is not initialized.
     pub fn add_game_object(&mut self, object: GameObject) -> Option<u32> {
@@ -195,7 +193,7 @@ impl Engine {
     }
 
     /// Create a new GameObject and add it to the engine
-    /// 
+    ///
     /// Creates a new GameObject with a default name and adds it to the engine's object manager.
     /// Returns the ID of the created object, or None if the object manager is not initialized.
     pub fn create_game_object(&mut self) -> Option<u32> {
@@ -203,7 +201,7 @@ impl Engine {
     }
 
     /// Create a new named GameObject and add it to the engine
-    /// 
+    ///
     /// Creates a new GameObject with the specified name and adds it to the engine's object manager.
     /// Returns the ID of the created object, or None if the object manager is not initialized.
     pub fn create_game_object_named(&mut self, name: String) -> Option<u32> {
@@ -404,8 +402,15 @@ impl Engine {
         layer: i32,
         z_index: f32,
     ) {
-        self.draw_manager
-            .draw_image_with_options(x, y, width, height, texture_path, layer, z_index);
+        self.draw_manager.draw_image_with_options(
+            x,
+            y,
+            width,
+            height,
+            texture_path,
+            layer,
+            z_index,
+        );
         self.request_render_redraw();
     }
 
@@ -437,6 +442,36 @@ impl Engine {
         )?;
         self.request_render_redraw();
         Ok(())
+    }
+
+    /// Draw text with optional custom font path and spacing controls.
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_text_with_options(
+        &mut self,
+        text: String,
+        x: f32,
+        y: f32,
+        font_size: f32,
+        color: Color,
+        font_path: Option<String>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        layer: i32,
+        z_index: f32,
+    ) {
+        self.draw_manager.draw_text_with_options(
+            text,
+            x,
+            y,
+            font_size,
+            color,
+            font_path,
+            letter_spacing,
+            line_spacing,
+            layer,
+            z_index,
+        );
+        self.request_render_redraw();
     }
 
     /// Push a fully-custom direct draw command.
@@ -473,17 +508,59 @@ impl Engine {
                 EngineCommand::AddDrawCommands(commands) => {
                     self.add_draw_commands(commands);
                 }
-                EngineCommand::DrawPixel { x, y, color, layer, z_index } => {
+                EngineCommand::DrawPixel {
+                    x,
+                    y,
+                    color,
+                    layer,
+                    z_index,
+                } => {
                     self.draw_pixel_with_order(x, y, color, layer, z_index);
                 }
-                EngineCommand::DrawLine { start_x, start_y, end_x, end_y, thickness, color, layer, z_index } => {
-                    self.draw_line_with_options(start_x, start_y, end_x, end_y, thickness, color, layer, z_index);
+                EngineCommand::DrawLine {
+                    start_x,
+                    start_y,
+                    end_x,
+                    end_y,
+                    thickness,
+                    color,
+                    layer,
+                    z_index,
+                } => {
+                    self.draw_line_with_options(
+                        start_x, start_y, end_x, end_y, thickness, color, layer, z_index,
+                    );
                 }
-                EngineCommand::DrawRectangle { x, y, width, height, color, filled, thickness, layer, z_index } => {
-                    self.draw_rectangle_with_options(x, y, width, height, color, filled, thickness, layer, z_index);
+                EngineCommand::DrawRectangle {
+                    x,
+                    y,
+                    width,
+                    height,
+                    color,
+                    filled,
+                    thickness,
+                    layer,
+                    z_index,
+                } => {
+                    self.draw_rectangle_with_options(
+                        x, y, width, height, color, filled, thickness, layer, z_index,
+                    );
                 }
-                EngineCommand::DrawCircle { center_x, center_y, radius, color, filled, thickness, segments, layer, z_index } => {
-                    self.draw_circle_with_options(center_x, center_y, radius, color, filled, thickness, segments, layer, z_index);
+                EngineCommand::DrawCircle {
+                    center_x,
+                    center_y,
+                    radius,
+                    color,
+                    filled,
+                    thickness,
+                    segments,
+                    layer,
+                    z_index,
+                } => {
+                    self.draw_circle_with_options(
+                        center_x, center_y, radius, color, filled, thickness, segments, layer,
+                        z_index,
+                    );
                 }
                 EngineCommand::DrawGradientRect {
                     x,
@@ -548,6 +625,31 @@ impl Engine {
                         logging::log_warn(&format!("Dropped DrawImageBytes command: {err}"));
                     }
                 }
+                EngineCommand::DrawText {
+                    text,
+                    x,
+                    y,
+                    font_size,
+                    color,
+                    font_path,
+                    letter_spacing,
+                    line_spacing,
+                    layer,
+                    z_index,
+                } => {
+                    self.draw_text_with_options(
+                        text,
+                        x,
+                        y,
+                        font_size,
+                        color,
+                        font_path,
+                        letter_spacing,
+                        line_spacing,
+                        layer,
+                        z_index,
+                    );
+                }
             }
         }
     }
@@ -558,7 +660,7 @@ impl Engine {
         // Process Commands First
         // ------------------------------------------------------------
         self.process_commands();
-    
+
         // ------------------------------------------------------------
         // IF NOT HEADLESS, DO THE FOLLOWING:
         // ------------------------------------------------------------
@@ -587,17 +689,14 @@ impl Engine {
         }
 
         // **Fixed update:**
-            // Physics (often fixed-timestep; may run 0..N steps)
+        // Physics (often fixed-timestep; may run 0..N steps)
         let (is_fixed_time, fixed_time) = self.time.tick_fixed();
-        if is_fixed_time 
-            && let Some(object_manager) = &mut self.object_manager {
-
+        if is_fixed_time && let Some(object_manager) = &mut self.object_manager {
             for key in object_manager.get_keys() {
                 if let Some(object) = object_manager.get_object_by_id(key) {
                     object.fixed_update(&self.time, fixed_time);
                 }
             }
-
         }
 
         // Event System - enqueue physics events (collisions/triggers)
@@ -607,8 +706,8 @@ impl Engine {
         // UI - update layout/animations/data-binding (using final game state)
 
         // **Frame rate limiting (optional)**
-            // Rendering - world
-            // Rendering - UI
+        // Rendering - world
+        // Rendering - UI
 
         // ------------------------------------------------------------
         // IF HEADLESS, DO THE FOLLOWING:
@@ -624,7 +723,7 @@ impl Engine {
         // Event System - dispatch deffered events (end-of-tick)
         // Networking/persistance (optional but common): replicate state, process outgoing packets, write snapshots
 
-        // ^^^ Note: Key differences are no rendering, UI is disabled, simulation runs at fixed timestep 
+        // ^^^ Note: Key differences are no rendering, UI is disabled, simulation runs at fixed timestep
     }
 
     /// Render a frame
@@ -666,10 +765,7 @@ impl Engine {
         if elapsed_seconds >= 0.5 {
             let fps = self.fps_frame_counter as f64 / elapsed_seconds;
             if let Some(window_manager) = &self.window_manager {
-                window_manager.set_title(&format!(
-                    "{} | FPS: {:.1}",
-                    self.base_window_title, fps
-                ));
+                window_manager.set_title(&format!("{} | FPS: {:.1}", self.base_window_title, fps));
             }
             self.fps_frame_counter = 0;
             self.fps_last_update = Instant::now();
@@ -734,7 +830,7 @@ impl ApplicationHandler for Engine {
                 match WindowManager::new(event_loop, config) {
                     Ok(window_manager) => {
                         logging::log_info("Window created successfully");
-                        
+
                         // Create render manager with the window Arc
                         let window = window_manager.window_arc();
                         match pollster::block_on(RenderManager::new(
@@ -747,14 +843,17 @@ impl ApplicationHandler for Engine {
                                 logging::log_info("Render manager initialized successfully");
                                 self.render_manager = Some(render_manager);
                                 self.window_manager = Some(window_manager);
-                                
+
                                 // Request initial redraw
                                 if let Some(wm) = &self.window_manager {
                                     wm.request_redraw();
                                 }
                             }
                             Err(e) => {
-                                logging::log_error(&format!("Failed to create render manager: {}", e));
+                                logging::log_error(&format!(
+                                    "Failed to create render manager: {}",
+                                    e
+                                ));
                                 event_loop.exit();
                             }
                         }
@@ -789,11 +888,11 @@ impl ApplicationHandler for Engine {
                     "Window resized to: {}x{}",
                     physical_size.width, physical_size.height
                 ));
-                
+
                 if let Some(window_manager) = &mut self.window_manager {
                     window_manager.update_size(physical_size);
                 }
-                
+
                 if let Some(render_manager) = &mut self.render_manager {
                     render_manager.resize(physical_size);
                 }
@@ -801,7 +900,7 @@ impl ApplicationHandler for Engine {
             WindowEvent::RedrawRequested => {
                 // Update engine state
                 self.update();
-                
+
                 // Render the frame
                 self.render();
             }
@@ -820,10 +919,8 @@ impl ApplicationHandler for Engine {
         if let (Some(window_manager), Some(render_manager)) =
             (&self.window_manager, &self.render_manager)
         {
-            if render_manager.should_request_redraw(
-                &self.object_manager,
-                Some(&self.draw_manager),
-            ) {
+            if render_manager.should_request_redraw(&self.object_manager, Some(&self.draw_manager))
+            {
                 window_manager.request_redraw();
             }
         }

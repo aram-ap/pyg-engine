@@ -8,7 +8,6 @@
 ///
 /// To run:
 /// `cargo run --example draw_primitives_demo --no-default-features`
-
 use pyg_engine_native::core::{Engine, FullscreenMode, WindowConfig};
 use pyg_engine_native::types::Color;
 
