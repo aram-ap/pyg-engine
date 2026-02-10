@@ -5,6 +5,7 @@ include Cargo.toml
 include Cargo.lock
 recursive-include python *.py
 recursive-include python/etc *.png
+recursive-include images *.png
 recursive-include rust *.rs
 recursive-include rust *.toml
 recursive-include examples *.py

@@ -1,11 +1,45 @@
 use super::logging;
 use crate::types::Color;
+use image::load_from_memory;
+use std::path::Path;
 use std::sync::Arc;
 use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event_loop::ActiveEventLoop;
 #[cfg(target_os = "macos")]
 use winit::platform::macos::{WindowAttributesExtMacOS, WindowExtMacOS};
+#[cfg(target_os = "linux")]
+use winit::platform::wayland::WindowAttributesExtWayland;
+#[cfg(target_os = "linux")]
+use winit::platform::x11::WindowAttributesExtX11;
 use winit::window::{Fullscreen, Icon, Window};
+
+const DEFAULT_WINDOW_ICON_BYTES: &[u8] = include_bytes!("../../../images/pyg_logo.png");
+
+fn decode_icon_from_bytes(bytes: &[u8], source: &str) -> Result<Icon, String> {
+    let decoded_image =
+        load_from_memory(bytes).map_err(|err| format!("failed to decode icon '{source}': {err}"))?;
+    let rgba_image = decoded_image.into_rgba8();
+    let (width, height) = rgba_image.dimensions();
+    Icon::from_rgba(rgba_image.into_raw(), width, height)
+        .map_err(|err| format!("failed to build icon '{source}': {err}"))
+}
+
+/// Load a window icon from an image path.
+pub fn load_window_icon_from_path(path: &Path) -> Result<Icon, String> {
+    let bytes =
+        std::fs::read(path).map_err(|err| format!("failed to read icon '{}': {err}", path.display()))?;
+    decode_icon_from_bytes(&bytes, &path.display().to_string())
+}
+
+fn load_default_window_icon() -> Option<Icon> {
+    match decode_icon_from_bytes(DEFAULT_WINDOW_ICON_BYTES, "embedded default icon") {
+        Ok(icon) => Some(icon),
+        Err(err) => {
+            logging::log_warn(&format!("Unable to load default window icon: {err}"));
+            None
+        }
+    }
+}
 
 /// Fullscreen mode options for the window
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -48,7 +82,7 @@ impl Default for WindowConfig {
             min_height: None,
             max_width: None,
             max_height: None,
-            icon: None,
+            icon: load_default_window_icon(),
             background_color: None,
             vsync: true,
             redraw_on_change_only: true,
@@ -166,6 +200,21 @@ impl WindowManager {
             window_attrs = window_attrs.with_borderless_game(false);
         }
 
+        #[cfg(target_os = "linux")]
+        {
+            // Provide a stable WM_CLASS on Linux/X11 for better DE/task switcher grouping.
+            window_attrs =
+                WindowAttributesExtX11::with_name(window_attrs, "pyg-engine", "pyg-engine");
+            // Wayland icons are app-id/desktop-entry driven. Set a stable app id.
+            window_attrs = WindowAttributesExtWayland::with_name(
+                window_attrs,
+                "pyg-engine",
+                "pyg-engine",
+            );
+        }
+
+        let icon_for_runtime = config.icon.clone();
+
         // Apply min/max size constraints
         if let (Some(min_w), Some(min_h)) = (config.min_width, config.min_height) {
             window_attrs = window_attrs.with_min_inner_size(LogicalSize::new(min_w, min_h));
@@ -194,6 +243,10 @@ impl WindowManager {
         }
 
         let window = event_loop.create_window(window_attrs)?;
+        if let Some(icon) = icon_for_runtime {
+            // Some Linux window managers only reflect icon updates post-creation.
+            window.set_window_icon(Some(icon));
+        }
         let current_size = window.inner_size();
 
         #[cfg(target_os = "macos")]
@@ -243,6 +296,11 @@ impl WindowManager {
         let _ = self
             .window
             .request_inner_size(LogicalSize::new(width, height));
+    }
+
+    /// Set the window icon.
+    pub fn set_icon(&self, icon: Icon) {
+        self.window.set_window_icon(Some(icon));
     }
 
     /// Set the fullscreen mode

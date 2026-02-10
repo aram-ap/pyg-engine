@@ -544,6 +544,7 @@ class Engine:
         )
         self._input = Input(self)
         self._runtime_state = _RUNTIME_STATE_IDLE
+        self._window_icon_path: Optional[str] = None
     
     @property
     def input(self) -> Input:
@@ -655,6 +656,16 @@ class Engine:
         """
         self._engine.set_window_title(title)
 
+    def set_window_icon(self, icon_path: str) -> None:
+        """
+        Set the window icon from an image file path.
+
+        The path is remembered and will be reused for future `run()` /
+        `start_manual()` calls unless overridden per call.
+        """
+        self._window_icon_path = icon_path
+        self._engine.set_window_icon(icon_path)
+
     def get_display_size(self) -> tuple[int, int]:
         """Get the current display size (window client size) in pixels."""
         return self._engine.get_display_size()
@@ -669,6 +680,7 @@ class Engine:
         vsync: bool = True,
         redraw_on_change_only: bool = True,
         show_fps_in_title: bool = False,
+        icon_path: Optional[str] = None,
     ) -> None:
         """
         Start the engine in manual-loop mode without entering a blocking loop.
@@ -689,8 +701,14 @@ class Engine:
             vsync: Enable/disable vertical sync.
             redraw_on_change_only: When True (default), only redraw on scene changes.
             show_fps_in_title: When True, appends current FPS to window title.
+            icon_path: Optional icon file path. If omitted, uses the most recent
+                `set_window_icon(...)` value when present, otherwise the built-in
+                default icon.
         """
         self._ensure_not_running("start_manual()")
+        resolved_icon_path = (
+            icon_path if icon_path is not None else self._window_icon_path
+        )
         self._engine.initialize(
             title=title,
             width=width,
@@ -700,6 +718,7 @@ class Engine:
             vsync=vsync,
             redraw_on_change_only=redraw_on_change_only,
             show_fps_in_title=show_fps_in_title,
+            icon_path=resolved_icon_path,
         )
         self._runtime_state = _RUNTIME_STATE_MANUAL
 
@@ -736,6 +755,7 @@ class Engine:
         vsync: bool = True,
         redraw_on_change_only: bool = True,
         show_fps_in_title: bool = False,
+        icon_path: Optional[str] = None,
         *,
         update: Optional[Callable[..., object]] = None,
         max_delta_time: Optional[float] = 0.1,
@@ -766,6 +786,9 @@ class Engine:
             vsync: Enable/disable vertical sync.
             redraw_on_change_only: When True (default), only redraw on scene changes.
             show_fps_in_title: When True, appends current FPS to window title.
+            icon_path: Optional icon file path. If omitted, uses the most recent
+                `set_window_icon(...)` value when present, otherwise the built-in
+                default icon.
             update: Optional callback invoked once per frame. When omitted,
                 the native blocking run loop is used.
             max_delta_time: Clamp callback `dt` to this value in seconds.
@@ -776,6 +799,9 @@ class Engine:
         self._ensure_not_running("run()")
 
         if update is None:
+            resolved_icon_path = (
+                icon_path if icon_path is not None else self._window_icon_path
+            )
             self._runtime_state = _RUNTIME_STATE_RUNNING_BLOCKING
             try:
                 self._engine.run(
@@ -787,6 +813,7 @@ class Engine:
                     vsync=vsync,
                     redraw_on_change_only=redraw_on_change_only,
                     show_fps_in_title=show_fps_in_title,
+                    icon_path=resolved_icon_path,
                 )
             finally:
                 self._runtime_state = _RUNTIME_STATE_IDLE
@@ -806,6 +833,7 @@ class Engine:
             vsync=vsync,
             redraw_on_change_only=redraw_on_change_only,
             show_fps_in_title=show_fps_in_title,
+            icon_path=icon_path,
         )
         self._runtime_state = _RUNTIME_STATE_RUNNING_CALLBACK
 

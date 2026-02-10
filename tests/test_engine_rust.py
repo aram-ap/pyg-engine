@@ -72,6 +72,7 @@ def test_engine_render_api_methods_exist() -> None:
 
     assert hasattr(engine, "run")
     assert hasattr(engine, "start_manual")
+    assert hasattr(engine, "set_window_icon")
     assert hasattr(engine, "add_game_object")
     assert hasattr(engine, "create_game_object")
     assert hasattr(engine, "remove_game_object")
@@ -82,6 +83,13 @@ def test_engine_render_api_methods_exist() -> None:
     assert hasattr(engine, "draw_circle")
     assert not hasattr(engine, "run_with_update")
     assert not hasattr(engine, "initialize")
+
+
+def test_set_window_icon_invalid_path_raises() -> None:
+    """Test set_window_icon raises for missing icon files."""
+    engine = pyg.Engine()
+    with pytest.raises(RuntimeError):
+        engine.set_window_icon("images/does_not_exist.png")
 
 
 def test_start_manual_guard_raises_when_already_running() -> None:

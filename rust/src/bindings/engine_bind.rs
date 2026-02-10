@@ -1,6 +1,7 @@
 use crossbeam_channel::Sender;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
+use std::path::Path;
 use std::sync::Arc;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
@@ -11,7 +12,7 @@ use crate::core::draw_manager::DrawCommand;
 use crate::core::engine::Engine as RustEngine;
 use crate::core::game_object::GameObject as RustGameObject;
 use crate::core::time::Time as RustTime;
-use crate::core::window_manager::{FullscreenMode, WindowConfig};
+use crate::core::window_manager::{FullscreenMode, WindowConfig, load_window_icon_from_path};
 
 // Import bindings from separate modules
 use super::color_bind::PyColor;
@@ -306,6 +307,42 @@ pub struct PyEngine {
     event_loop: Option<EventLoop<()>>,
 }
 
+impl PyEngine {
+    #[allow(clippy::too_many_arguments)]
+    fn build_window_config(
+        title: String,
+        width: u32,
+        height: u32,
+        resizable: bool,
+        background_color: Option<PyColor>,
+        vsync: bool,
+        redraw_on_change_only: bool,
+        show_fps_in_title: bool,
+        icon_path: Option<String>,
+    ) -> PyResult<WindowConfig> {
+        let mut config = WindowConfig::new()
+            .with_title(title)
+            .with_size(width, height)
+            .with_resizable(resizable)
+            .with_fullscreen(FullscreenMode::None)
+            .with_vsync(vsync)
+            .with_redraw_on_change_only(redraw_on_change_only)
+            .with_show_fps_in_title(show_fps_in_title);
+
+        if let Some(color) = background_color {
+            config = config.with_background_color(color.inner);
+        }
+
+        if let Some(icon_path_value) = icon_path {
+            let icon = load_window_icon_from_path(Path::new(&icon_path_value))
+                .map_err(PyRuntimeError::new_err)?;
+            config = config.with_icon(icon);
+        }
+
+        Ok(config)
+    }
+}
+
 #[pymethods]
 impl PyEngine {
     /// Create a new Engine instance with default logging (console only, INFO level).
@@ -344,7 +381,8 @@ impl PyEngine {
         background_color=None,
         vsync=true,
         redraw_on_change_only=true,
-        show_fps_in_title=false
+        show_fps_in_title=false,
+        icon_path=None
     ))]
     fn initialize(
         &mut self,
@@ -356,19 +394,19 @@ impl PyEngine {
         vsync: bool,
         redraw_on_change_only: bool,
         show_fps_in_title: bool,
+        icon_path: Option<String>,
     ) -> PyResult<()> {
-        let mut config = WindowConfig::new()
-            .with_title(title)
-            .with_size(width, height)
-            .with_resizable(resizable)
-            .with_fullscreen(FullscreenMode::None)
-            .with_vsync(vsync)
-            .with_redraw_on_change_only(redraw_on_change_only)
-            .with_show_fps_in_title(show_fps_in_title);
-
-        if let Some(color) = background_color {
-            config = config.with_background_color(color.inner);
-        }
+        let config = Self::build_window_config(
+            title,
+            width,
+            height,
+            resizable,
+            background_color,
+            vsync,
+            redraw_on_change_only,
+            show_fps_in_title,
+            icon_path,
+        )?;
 
         self.inner.set_window_config(config);
         self.inner.set_auto_step_on_redraw(false);
@@ -433,6 +471,17 @@ impl PyEngine {
         self.inner.set_window_title(title);
     }
 
+    /// Set the window icon from an image path.
+    ///
+    /// In manual mode this can update an already-created window at runtime.
+    /// In initialized-but-not-yet-resumed mode this updates pending window config.
+    fn set_window_icon(&mut self, icon_path: String) -> PyResult<()> {
+        let icon =
+            load_window_icon_from_path(Path::new(&icon_path)).map_err(PyRuntimeError::new_err)?;
+        self.inner.set_window_icon(icon);
+        Ok(())
+    }
+
     /// Get the current display size (window client size) in pixels.
     fn get_display_size(&self) -> (u32, u32) {
         self.inner.get_display_size()
@@ -447,7 +496,8 @@ impl PyEngine {
         background_color=None,
         vsync=true,
         redraw_on_change_only=true,
-        show_fps_in_title=false
+        show_fps_in_title=false,
+        icon_path=None
     ))]
     fn run(
         &mut self,
@@ -459,19 +509,19 @@ impl PyEngine {
         vsync: bool,
         redraw_on_change_only: bool,
         show_fps_in_title: bool,
+        icon_path: Option<String>,
     ) -> PyResult<()> {
-        let mut config = WindowConfig::new()
-            .with_title(title)
-            .with_size(width, height)
-            .with_resizable(resizable)
-            .with_fullscreen(FullscreenMode::None)
-            .with_vsync(vsync)
-            .with_redraw_on_change_only(redraw_on_change_only)
-            .with_show_fps_in_title(show_fps_in_title);
-
-        if let Some(color) = background_color {
-            config = config.with_background_color(color.inner);
-        }
+        let config = Self::build_window_config(
+            title,
+            width,
+            height,
+            resizable,
+            background_color,
+            vsync,
+            redraw_on_change_only,
+            show_fps_in_title,
+            icon_path,
+        )?;
 
         self.inner.set_auto_step_on_redraw(true);
         self.inner

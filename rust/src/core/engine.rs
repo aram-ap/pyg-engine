@@ -17,7 +17,7 @@ use tracing::Level;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
-use winit::window::WindowId;
+use winit::window::{Icon, WindowId};
 
 pub struct Engine {
     version: String,
@@ -141,6 +141,18 @@ impl Engine {
             if !self.show_fps_in_title {
                 window_manager.set_title(&title);
             }
+        }
+    }
+
+    /// Set the window icon from a decoded icon image.
+    ///
+    /// If a window is currently open, this updates the live window immediately.
+    /// If the window has not been created yet, this updates pending window config.
+    pub fn set_window_icon(&mut self, icon: Icon) {
+        if let Some(window_manager) = &self.window_manager {
+            window_manager.set_icon(icon);
+        } else if let Some(config) = &mut self.window_config {
+            config.icon = Some(icon);
         }
     }
 
