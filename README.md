@@ -29,7 +29,7 @@ pip install pyg-engine
 
 ### From Source
 ```bash
-git clone https://github.com/yourusername/pyg-engine.git
+git clone https://github.com/aram-ap/pyg-engine.git
 cd pyg-engine
 pip install -e .
 ```
