@@ -401,10 +401,11 @@ impl InputManager {
     /// This should be called once per frame, after any raw input events have
     /// been applied to the underlying keyboard/mouse/joystick state.
     pub fn update(&mut self) {
-        // Recompute axis values from current device state.
-        // NOTE: previous-frame snapshots are updated at the end of this method
-        // so edge detection (`*_pressed`/`*_released`) remains valid for the
-        // current frame after events have been processed.
+        // Reuse axis buffers by swapping snapshots before recomputation.
+        std::mem::swap(&mut self.axis_values_previous, &mut self.axis_values_current);
+
+        // Recompute axis values from current device state. The previous-axis
+        // snapshot was swapped above so edge detection remains valid.
         self.axis_values_current.clear();
         for (name, binding) in &self.axis_bindings {
             let mut value: f32 = 0.0;
@@ -434,11 +435,12 @@ impl InputManager {
         self.mouse_wheel_delta = (0.0, 0.0);
 
         // Carry over current state for next-frame edge detection.
-        self.keys_previous = self.keys_current.clone();
+        self.keys_previous.clone_from(&self.keys_current);
         self.mouse_position_previous = self.mouse_position;
-        self.mouse_buttons_previous = self.mouse_buttons_current.clone();
-        self.joystick_buttons_previous = self.joystick_buttons_current.clone();
-        self.axis_values_previous = self.axis_values_current.clone();
+        self.mouse_buttons_previous
+            .clone_from(&self.mouse_buttons_current);
+        self.joystick_buttons_previous
+            .clone_from(&self.joystick_buttons_current);
     }
 
     /// Get the current value of a logical axis.
