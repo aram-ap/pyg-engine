@@ -1,127 +1,134 @@
-<!-- ![Logo](images/1_zoomed.png) -->
 ![Logo](images/1_lower-res.png)
+
 # PyG Engine
 
-A Python game engine built on Rust and WebGPU. 
-Automatic Hardware Acceleration on Vulkan, DX12, OpenGL, Metal through the WGPU API.
-Inspired by the Unity game engine's Monobehavior system with scriptable game objects, rigidbody and collider system.
-Built-in physics materials, update system, event system and mouse+keyboard input system. Built-in window resizing.
+A high-performance Python game engine built on **Rust** and **WebGPU (wgpu)**.
 
-> **NOTE:** This is in alpha development stage. Everything is under active development and large changes will likely be made.
+PyG Engine combines the ease of use of Python with the raw performance and safety of Rust. It leverages `wgpu` for modern, hardware-accelerated rendering across all major platforms (Vulkan, DirectX 12, Metal, OpenGL).
 
-## Features (SOON)
+> **NOTE:** This project is currently in **Alpha**. Features are under active development.
 
-- **OOP Model**: Simple game object implementation system
-- **2D Physics**: Built-in physics and rigidbody simulations
-- **Input**: Mouse, keyboard, and joystick input handling
-- **Components**: Modular component-based architecture
-- **Scripts**: Dynamic script loading and execution
-- **Camera**: Flexible camera with multiple scaling modes
-- **Event System**: Thread-safe event-driven communication with priority-based handling
-- **Documentation**: Comprehensive CORE_SYSTEMS_GUIDE with examples and best practices
+## 🚀 Key Features
 
-## Installation
+*   **Modern Rendering**: Powered by **wgpu** for cross-platform, high-performance graphics.
+*   **Rust Core**: The heavy lifting is done in Rust, ensuring speed and memory safety.
+*   **Pythonic API**: Designed to feel natural for Python developers.
+*   **Immediate Mode Drawing**: Easily draw lines, rectangles, circles, and pixels using pixel coordinates.
+*   **Mesh System**: Render textured quads and game objects with a component-based architecture (using normalized coordinates).
+*   **Thread Safety**: Unique `EngineHandle` system allows you to safely issue rendering commands from background Python threads.
+*   **Robust Logging**: Integrated tracing-based logging system with file support and configurable levels.
 
-Requires Python 3.7+.
+## 📦 Installation
 
-Install via pip:
+Requires **Python 3.7+**.
 
+### From PyPI (Coming Soon)
 ```bash
 pip install pyg-engine
 ```
 
-Or install from source:
-
+### From Source
 ```bash
-git clone <repository-url>
+git clone https://github.com/yourusername/pyg-engine.git
 cd pyg-engine
 pip install -e .
 ```
 
-# Building and Testing
+## ⚡ Quick Start
 
-```bash
-# Install for development
-pip install -e .
-
-# Build wheel for PyPI
-python -m build --wheel
-
-# Run tests
-pytest tests/test_engine_rust.py -v
-```
-
-## Quick Start
-
+### 1. Basic Window & Logging
 ```python
 import pyg_engine as pyg
 
-# Create the engine
-engine = pyg.Engine()
+# Initialize the engine
+engine = pyg.Engine(log_level="INFO")
+engine.log_info("Welcome to PyG Engine!")
 
-# Log the version
-engine.log(f"Welcome to pyg-engine!")
-
+# Run a window (blocks until closed)
+engine.run(title="My First Window", width=800, height=600)
 ```
 
-## Python Rendering Examples
-
-After installation (`pip install -e .`), try:
-
-- `python examples/python_direct_draw_demo.py`
-- `python examples/python_mesh_demo.py`
-
-Direct draw from Python:
-
+### 2. Drawing Primitives (Pixel Coordinates)
 ```python
 import pyg_engine as pyg
 
 engine = pyg.Engine()
+
+# Draw a cyan line
 engine.draw_line(20, 20, 220, 80, pyg.Color.CYAN, thickness=2.0)
+
+# Draw an orange rectangle outline
 engine.draw_rectangle(60, 120, 180, 90, pyg.Color.ORANGE, filled=False, thickness=3.0)
-engine.run(title="Python Direct Draw", show_fps_in_title=True, redraw_on_change_only=False)
+
+# Start the application
+engine.run(title="Direct Draw Demo", show_fps_in_title=True)
 ```
 
-GameObject + Mesh from Python:
-
+### 3. Using Game Objects & Meshes (Normalized Coordinates)
 ```python
 import pyg_engine as pyg
 
 engine = pyg.Engine()
-go = pyg.GameObject("Quad")
-mesh = pyg.MeshComponent("QuadMesh")
-mesh.set_geometry_rectangle(1.0, 1.0)
-mesh.set_fill_color(pyg.Color.WHITE)
-mesh.set_image_path("images/1.png")
+
+# Create a Game Object
+go = pyg.GameObject("Player")
+
+# Add a Mesh Component
+mesh = pyg.MeshComponent("PlayerSprite")
+mesh.set_geometry_rectangle(1.0, 1.0) # 1.0 width/height in normalized units
+mesh.set_fill_color(pyg.Color.RED)
+# mesh.set_image_path("path/to/image.png") # Optional texture
+
 go.set_mesh_component(mesh)
+
+# Position is in Normalized Device Coordinates (NDC)
+# (0,0) is center, (-1, -1) bottom-left, (1, 1) top-right
+go.position = pyg.Vec2(0.0, 0.0)
+go.scale = pyg.Vec2(0.5, 0.5)
+
 engine.add_game_object(go)
-engine.run(title="Python Mesh")
+
+engine.run(title="Game Object Demo")
 ```
 
-## Documentation
+## 🔧 Architecture & Roadmap
 
-See the `docs/` directory for detailed guides:
+### Current Capabilities
+- **Window Management**: Resizable windows, VSync control, Fullscreen support.
+- **2D Rendering**:
+    - **Primitives**: Immediate mode drawing using pixel coordinates.
+    - **Meshes**: Component-based rendering using normalized device coordinates.
+    - **Layers**: Z-indexing and integer layering for draw order control.
+- **Component System**: Basic `GameObject` with `TransformComponent` and `MeshComponent`.
 
-## Testing
+### Planned Features (Roadmap)
+- **Input System Exposure**: Exposing the internal Rust input manager (Keyboard, Mouse, Gamepad) to Python.
+- **Physics Engine**: 2D rigid body physics and collision detection.
+- **Scripting**: Enhanced script attachment to GameObjects.
+- **Advanced Rendering**: Shaders, Particles, and Post-processing.
+- **UI System**: Built-in UI components.
 
-Run the test suite (tests are located in the `tests/` directory):
+## 📂 Examples
 
-```bash
-pytest tests -v
-```
+Check the `examples/` directory for more complete demonstrations:
 
-## Development
+- `python_direct_draw_demo.py`: Shows how to draw basic shapes (pixels, lines, rects).
+- `python_mesh_demo.py`: Demonstrates the GameObject and Mesh system.
+- `python_threading_demo.py`: **Advanced**: Spawns a background thread that safely updates the UI using `engine.get_handle()`.
+- `python_manual_loop.py`: Shows how to control the game loop manually (initialize -> poll -> update -> render).
+
+## 🛠️ Development & Testing
 
 To set up the development environment:
 
 ```bash
+# Install in editable mode
 pip install -e .
+
+# Run tests
+pytest tests/ -v
 ```
 
-## License
+## 📄 License
 
 MIT License
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
