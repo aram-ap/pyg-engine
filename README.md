@@ -120,6 +120,7 @@ Check the `examples/` directory for more complete demonstrations:
 - `python_mesh_demo.py`: Demonstrates the GameObject and Mesh system.
 - `python_threading_demo.py`: **Advanced**: Spawns a background thread that safely updates the UI using `engine.get_handle()`.
 - `python_manual_loop.py`: Shows how to control the game loop manually (initialize -> poll -> update -> render).
+- `python_snake_demo.py`: Playable Snake game using immediate-mode drawing and keyboard input.
 
 ## 🛠️ Development & Testing
 

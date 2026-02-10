@@ -38,6 +38,7 @@ pub struct Engine {
     show_fps_in_title: bool,
     fps_frame_counter: u32,
     fps_last_update: Instant,
+    auto_step_on_redraw: bool,
 }
 
 pub const VERSION: &str = "1.2.0";
@@ -63,6 +64,7 @@ impl Engine {
             show_fps_in_title: false,
             fps_frame_counter: 0,
             fps_last_update: Instant::now(),
+            auto_step_on_redraw: true,
         }
     }
 
@@ -109,6 +111,7 @@ impl Engine {
             show_fps_in_title: false,
             fps_frame_counter: 0,
             fps_last_update: Instant::now(),
+            auto_step_on_redraw: true,
         }
     }
 
@@ -120,6 +123,14 @@ impl Engine {
     /// Set the window configuration for the engine
     pub fn set_window_config(&mut self, config: WindowConfig) {
         self.window_config = Some(config);
+    }
+
+    /// Configure whether redraw events should automatically step and render.
+    ///
+    /// This should remain enabled for `run(...)` mode and be disabled when a host
+    /// drives the loop manually via `poll_events()`, `update()`, and `render()`.
+    pub fn set_auto_step_on_redraw(&mut self, enabled: bool) {
+        self.auto_step_on_redraw = enabled;
     }
 
     /// Set the window title
@@ -898,11 +909,13 @@ impl ApplicationHandler for Engine {
                 }
             }
             WindowEvent::RedrawRequested => {
-                // Update engine state
-                self.update();
+                if self.auto_step_on_redraw {
+                    // Update engine state
+                    self.update();
 
-                // Render the frame
-                self.render();
+                    // Render the frame
+                    self.render();
+                }
             }
             _ => {}
         }

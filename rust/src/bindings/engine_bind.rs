@@ -370,6 +370,7 @@ impl PyEngine {
         }
 
         self.inner.set_window_config(config);
+        self.inner.set_auto_step_on_redraw(false);
 
         // Create the event loop here
         let event_loop = EventLoop::new().map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
@@ -450,6 +451,7 @@ impl PyEngine {
             config = config.with_background_color(color.inner);
         }
 
+        self.inner.set_auto_step_on_redraw(true);
         self.inner
             .run(config)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))

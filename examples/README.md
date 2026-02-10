@@ -171,6 +171,19 @@ Demonstrates Python-side scene setup with GameObject + MeshComponent:
 python examples/python_mesh_demo.py
 ```
 
+### python_snake_demo.py
+
+Playable Snake game built with the Python API:
+- Grid-based game loop with fixed-step movement
+- Keyboard input (`WASD` + arrow keys)
+- Score tracking and snake growth from food pickups
+- Pause (`Space`/`P`) and restart (`R`) controls
+
+**Run:**
+```bash
+python examples/python_snake_demo.py
+```
+
 See `examples/PYTHON_RENDERING_GUIDE.md` for API details.
 
 ## Creating New Examples
