@@ -2,7 +2,7 @@
 
 # PyG Engine
 
-A high-performance Python game engine built on **Rust** and **WebGPU (wgpu)**.
+A Python game engine built on **Rust** and **WebGPU (wgpu)** with GPU rendering enabled <u>*by default*</u>
 
 PyG Engine combines the ease of use of Python with the raw performance and safety of Rust. It leverages `wgpu` for modern, hardware-accelerated rendering across all major platforms (Vulkan, DirectX 12, Metal, OpenGL).
 
@@ -104,13 +104,17 @@ engine.run(title="Game Object Demo")
     - **Meshes**: Component-based rendering using normalized device coordinates.
     - **Layers**: Z-indexing and integer layering for draw order control.
 - **Component System**: Basic `GameObject` with `TransformComponent` and `MeshComponent`.
+- **Input System**: Rust input manager (Keyboard, Mouse, Gamepad) to Python.
 
 ### Planned Features (Roadmap)
-- **Input System Exposure**: Exposing the internal Rust input manager (Keyboard, Mouse, Gamepad) to Python.
+- **Audio Manager**: Audio loading, playback, mixing, and timing.
+- **World-Based Camera**: A straightforward method for keeping your game objects in frame.
+- **Engine Loop (Upgrade)**: Function-passed update loops, coroutines, and global event systems.
 - **Physics Engine**: 2D rigid body physics and collision detection.
 - **Scripting**: Enhanced script attachment to GameObjects.
-- **Advanced Rendering**: Shaders, Particles, and Post-processing.
 - **UI System**: Built-in UI components.
+- **Additional Primitives**: Added capabilities for more basic shapes, arcs, SVGs, and function-based shapes.
+- **Advanced Rendering**: Shaders, Particles, and Post-processing.
 
 ## 📂 Examples
 
