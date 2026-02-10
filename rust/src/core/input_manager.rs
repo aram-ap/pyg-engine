@@ -221,6 +221,12 @@ impl InputManager {
     /// This method should be called from your window event loop for each event.
     pub fn handle_window_event(&mut self, event: &WindowEvent) {
         match event {
+            WindowEvent::Focused(false) => {
+                // macOS fullscreen transitions can temporarily drop focus.
+                // If we do not clear state here, keys/buttons may remain
+                // "stuck" because release events are not guaranteed.
+                self.clear_on_focus_lost();
+            }
             WindowEvent::KeyboardInput { event, .. } => {
                 let key = event.logical_key.clone();
                 let pressed = event.state == ElementState::Pressed;
@@ -268,6 +274,14 @@ impl InputManager {
             }
             _ => {}
         }
+    }
+
+    /// Clear transient input state when window focus is lost.
+    fn clear_on_focus_lost(&mut self) {
+        self.keys_current.clear();
+        self.mouse_buttons_current.clear();
+        self.mouse_wheel_delta = (0.0, 0.0);
+        self.mouse_position_previous = self.mouse_position;
     }
 
     /// Build the default axis bindings used by `new`.
@@ -387,14 +401,10 @@ impl InputManager {
     /// This should be called once per frame, after any raw input events have
     /// been applied to the underlying keyboard/mouse/joystick state.
     pub fn update(&mut self) {
-        // Carry over previous frame state for edge detection
-        self.keys_previous = self.keys_current.clone();
-        self.mouse_position_previous = self.mouse_position;
-        self.mouse_buttons_previous = self.mouse_buttons_current.clone();
-        self.joystick_buttons_previous = self.joystick_buttons_current.clone();
-        self.axis_values_previous = self.axis_values_current.clone();
-
-        // Recompute axis values from current device state
+        // Recompute axis values from current device state.
+        // NOTE: previous-frame snapshots are updated at the end of this method
+        // so edge detection (`*_pressed`/`*_released`) remains valid for the
+        // current frame after events have been processed.
         self.axis_values_current.clear();
         for (name, binding) in &self.axis_bindings {
             let mut value: f32 = 0.0;
@@ -422,6 +432,13 @@ impl InputManager {
         // Clear per-frame accumulators that should not persist
         self.event_queue.clear();
         self.mouse_wheel_delta = (0.0, 0.0);
+
+        // Carry over current state for next-frame edge detection.
+        self.keys_previous = self.keys_current.clone();
+        self.mouse_position_previous = self.mouse_position;
+        self.mouse_buttons_previous = self.mouse_buttons_current.clone();
+        self.joystick_buttons_previous = self.joystick_buttons_current.clone();
+        self.axis_values_previous = self.axis_values_current.clone();
     }
 
     /// Get the current value of a logical axis.

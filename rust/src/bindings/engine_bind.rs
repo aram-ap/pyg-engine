@@ -372,8 +372,29 @@ impl PyEngine {
         self.inner.set_window_config(config);
         self.inner.set_auto_step_on_redraw(false);
 
-        // Create the event loop here
-        let event_loop = EventLoop::new().map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        // Create the event loop here.
+        // On macOS, force regular activation/menu policy so OS fullscreen behavior
+        // (menu bar reveal, focus transitions) matches native app expectations.
+        let event_loop = {
+            #[cfg(target_os = "macos")]
+            {
+                use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
+
+                let mut builder = EventLoop::builder();
+                builder.with_activation_policy(ActivationPolicy::Regular);
+                builder.with_default_menu(true);
+                builder
+                    .build()
+                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                EventLoop::new().map_err(|e| PyRuntimeError::new_err(e.to_string()))?
+            }
+        };
+        #[cfg(target_os = "macos")]
+        event_loop.set_control_flow(ControlFlow::Wait);
+        #[cfg(not(target_os = "macos"))]
         event_loop.set_control_flow(ControlFlow::Poll);
         self.event_loop = Some(event_loop);
 

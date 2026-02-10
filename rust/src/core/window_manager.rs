@@ -3,6 +3,8 @@ use crate::types::Color;
 use std::sync::Arc;
 use winit::dpi::{LogicalSize, PhysicalSize};
 use winit::event_loop::ActiveEventLoop;
+#[cfg(target_os = "macos")]
+use winit::platform::macos::{WindowAttributesExtMacOS, WindowExtMacOS};
 use winit::window::{Fullscreen, Icon, Window};
 
 /// Fullscreen mode options for the window
@@ -157,6 +159,13 @@ impl WindowManager {
             .with_inner_size(LogicalSize::new(config.width, config.height))
             .with_resizable(config.resizable);
 
+        #[cfg(target_os = "macos")]
+        {
+            // Keep native fullscreen behavior aligned with normal macOS apps:
+            // menu bar and dock should auto-hide/reveal instead of being forced hidden.
+            window_attrs = window_attrs.with_borderless_game(false);
+        }
+
         // Apply min/max size constraints
         if let (Some(min_w), Some(min_h)) = (config.min_width, config.min_height) {
             window_attrs = window_attrs.with_min_inner_size(LogicalSize::new(min_w, min_h));
@@ -186,6 +195,11 @@ impl WindowManager {
 
         let window = event_loop.create_window(window_attrs)?;
         let current_size = window.inner_size();
+
+        #[cfg(target_os = "macos")]
+        {
+            window.set_borderless_game(false);
+        }
 
         // Log window creation details
         logging::log_info(&format!(
@@ -233,6 +247,12 @@ impl WindowManager {
 
     /// Set the fullscreen mode
     pub fn set_fullscreen(&self, mode: FullscreenMode) {
+        #[cfg(target_os = "macos")]
+        {
+            // Explicitly preserve native fullscreen menu/dock reveal behavior.
+            self.window.set_borderless_game(false);
+        }
+
         let fullscreen = match mode {
             FullscreenMode::None => None,
             FullscreenMode::Borderless => Some(Fullscreen::Borderless(None)),

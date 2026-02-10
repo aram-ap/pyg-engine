@@ -170,8 +170,27 @@ impl Engine {
 
         self.window_config = Some(window_config);
 
-        // Create the event loop
-        let event_loop = EventLoop::new()?;
+        // Create the event loop.
+        // On macOS, force a regular app activation policy so native fullscreen
+        // integrates with the standard menu bar behavior.
+        let event_loop = {
+            #[cfg(target_os = "macos")]
+            {
+                use winit::platform::macos::{ActivationPolicy, EventLoopBuilderExtMacOS};
+
+                let mut builder = EventLoop::builder();
+                builder.with_activation_policy(ActivationPolicy::Regular);
+                builder.with_default_menu(true);
+                builder.build()?
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                EventLoop::new()?
+            }
+        };
+        #[cfg(target_os = "macos")]
+        event_loop.set_control_flow(ControlFlow::Wait);
+        #[cfg(not(target_os = "macos"))]
         event_loop.set_control_flow(ControlFlow::Poll);
 
         // Run the event loop
@@ -769,6 +788,29 @@ impl Engine {
         }
     }
 
+    /// Synchronize window and renderer with a new physical size.
+    ///
+    /// This is used for both direct resize events and scale-factor changes,
+    /// which can happen during macOS fullscreen transitions.
+    fn apply_window_resize(&mut self, physical_size: winit::dpi::PhysicalSize<u32>) {
+        logging::log_debug(&format!(
+            "Window resized to: {}x{}",
+            physical_size.width, physical_size.height
+        ));
+
+        if let Some(window_manager) = &mut self.window_manager {
+            window_manager.update_size(physical_size);
+        }
+
+        if let Some(render_manager) = &mut self.render_manager {
+            render_manager.resize(physical_size);
+        }
+
+        if let Some(window_manager) = &self.window_manager {
+            window_manager.request_redraw();
+        }
+    }
+
     /// Update FPS counter in window title
     fn update_fps_counter(&mut self) {
         self.fps_frame_counter += 1;
@@ -895,17 +937,25 @@ impl ApplicationHandler for Engine {
                 event_loop.exit();
             }
             WindowEvent::Resized(physical_size) => {
-                logging::log_debug(&format!(
-                    "Window resized to: {}x{}",
-                    physical_size.width, physical_size.height
-                ));
-
-                if let Some(window_manager) = &mut self.window_manager {
-                    window_manager.update_size(physical_size);
+                self.apply_window_resize(physical_size);
+            }
+            WindowEvent::ScaleFactorChanged { .. } => {
+                if let Some(window_manager) = &self.window_manager {
+                    // Pull the post-scale physical size directly from winit.
+                    // On macOS fullscreen transitions this path may fire
+                    // without a corresponding Resized event.
+                    let physical_size = window_manager.window().inner_size();
+                    self.apply_window_resize(physical_size);
                 }
+            }
+            WindowEvent::Focused(focused) => {
+                logging::log_debug(&format!("Window focus changed: {}", focused));
 
-                if let Some(render_manager) = &mut self.render_manager {
-                    render_manager.resize(physical_size);
+                if focused && let Some(window_manager) = &self.window_manager {
+                    // Ensure the OS key window / first-responder chain is restored
+                    // after fullscreen transition focus hops.
+                    window_manager.window().focus_window();
+                    window_manager.request_redraw();
                 }
             }
             WindowEvent::RedrawRequested => {
