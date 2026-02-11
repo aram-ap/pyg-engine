@@ -33,8 +33,7 @@ pub enum EngineCommand {
         x: u32,
         y: u32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
 
     /// Draw a line (helper wrapper around AddDrawCommand)
@@ -45,8 +44,7 @@ pub enum EngineCommand {
         end_y: f32,
         thickness: f32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
 
     /// Draw a rectangle (helper wrapper around AddDrawCommand)
@@ -58,8 +56,7 @@ pub enum EngineCommand {
         color: Color,
         filled: bool,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
 
     /// Draw a circle (helper wrapper around AddDrawCommand)
@@ -71,8 +68,7 @@ pub enum EngineCommand {
         filled: bool,
         thickness: f32,
         segments: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
 
     /// Draw a gradient rectangle (helper wrapper around AddDrawCommand)
@@ -85,8 +81,7 @@ pub enum EngineCommand {
         bottom_left: Color,
         bottom_right: Color,
         top_right: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
 
     /// Draw an image from disk path (helper wrapper around AddDrawCommand)
@@ -96,8 +91,7 @@ pub enum EngineCommand {
         width: f32,
         height: f32,
         texture_path: String,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
 
     /// Draw an image from raw RGBA bytes (helper wrapper around AddDrawCommand)
@@ -110,8 +104,7 @@ pub enum EngineCommand {
         rgba: Arc<[u8]>,
         texture_width: u32,
         texture_height: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
 
     /// Draw text with optional custom font (helper wrapper around AddDrawCommand)
@@ -124,7 +117,6 @@ pub enum EngineCommand {
         font_path: Option<String>,
         letter_spacing: f32,
         line_spacing: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
 }

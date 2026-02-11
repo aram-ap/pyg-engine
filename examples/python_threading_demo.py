@@ -58,8 +58,7 @@ def background_spawner(handle: pyg.EngineHandle, stop_event: threading.Event, co
             float(x), float(y), 
             pyg.Color.WHITE, 
             thickness=1.0,
-            layer=0,
-            z_index=0.1
+            draw_order=0.1
         )
         
         # Increment line count

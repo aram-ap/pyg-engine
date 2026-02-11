@@ -2,7 +2,7 @@
 ///
 /// Demonstrates GameObject + MeshComponent rendering with:
 /// - Transform (position, scale, rotation)
-/// - Layer + z-index ordering
+/// - Single draw-order value
 /// - Solid-color mesh
 /// - Textured mesh (with optional color tint)
 ///
@@ -30,8 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         MeshComponent::new("background")
             .with_geometry(MeshGeometry::rectangle(1.8, 1.2))
             .with_fill_color(Some(Color::rgb(20, 24, 32)))
-            .with_layer(0)
-            .with_z_index(-0.8),
+            .with_draw_order(-0.8),
     );
 
     let mut solid_quad = GameObject::new_named("SolidQuad".to_string());
@@ -44,8 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         MeshComponent::new("solid_quad")
             .with_geometry(MeshGeometry::rectangle(1.0, 1.0))
             .with_fill_color(Some(Color::ORANGE))
-            .with_layer(1)
-            .with_z_index(0.1),
+            .with_draw_order(1.1),
     );
 
     let mut textured_quad = GameObject::new_named("TexturedQuad".to_string());
@@ -61,8 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_geometry(MeshGeometry::rectangle(1.0, 1.0))
             .with_fill_color(Some(Color::WHITE))
             .with_image_path(Some("images/1.png".to_string()))
-            .with_layer(2)
-            .with_z_index(0.3),
+            .with_draw_order(2.3),
     );
 
     engine.add_game_object(background);

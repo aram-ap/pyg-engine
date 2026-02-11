@@ -60,7 +60,7 @@ Demonstrates mesh rendering through Rust-side GameObject + MeshComponent:
 - Color-filled mesh rendering
 - Textured mesh rendering
 - Transform (position, scale, rotation)
-- Layer and z-index ordering
+- Single draw-order value
 
 **Run:**
 ```bash
@@ -152,7 +152,7 @@ python examples/rendering_showcase_side_by_side.py
 Demonstrates Phase 1 visualization APIs:
 - Per-corner gradient rectangles
 - Drawing textures from raw RGBA bytes
-- Layered composition (gradient background + image overlay)
+- Draw-order composition (gradient background + image overlay)
 
 **Run:**
 ```bash

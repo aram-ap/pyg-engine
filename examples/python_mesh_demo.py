@@ -6,7 +6,7 @@ Demonstrates:
 - creating GameObject instances in Python
 - adding MeshComponent with fill and optional image
 - transform controls (position, rotation, scale)
-- draw ordering with layer and z-index
+- draw ordering with a single draw_order value
 
 Run from project root after installing the package in editable mode:
     pip install -e .
@@ -28,8 +28,7 @@ def create_background() -> pyg.GameObject:
     mesh = pyg.MeshComponent("BackgroundMesh")
     mesh.set_geometry_rectangle(1.8, 1.2)
     mesh.set_fill_color(pyg.Color.rgb(20, 24, 32))
-    mesh.layer = 0
-    mesh.z_index = -0.8
+    mesh.draw_order = -0.8
     bg.set_mesh_component(mesh)
     return bg
 
@@ -43,8 +42,7 @@ def create_solid_quad() -> pyg.GameObject:
     mesh = pyg.MeshComponent("SolidQuadMesh")
     mesh.set_geometry_rectangle(1.0, 1.0)
     mesh.set_fill_color(pyg.Color.ORANGE)
-    mesh.layer = 1
-    mesh.z_index = 0.1
+    mesh.draw_order = 1.1
     quad.set_mesh_component(mesh)
     return quad
 
@@ -63,8 +61,7 @@ def create_textured_quad(use_texture: bool = True) -> pyg.GameObject:
         mesh.set_image_path("images/1_lower-res.png")
     else:
         mesh.set_fill_color(pyg.Color.CYAN)
-    mesh.layer = 2
-    mesh.z_index = 0.3
+    mesh.draw_order = 2.3
     quad.set_mesh_component(mesh)
     return quad
 

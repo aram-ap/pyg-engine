@@ -60,7 +60,7 @@ def main() -> None:
             checkerboard,
             texture_width,
             texture_height,
-            layer=1,
+            draw_order=1.0,
         )
         engine.draw_text(
             "Visualization/Texture Demo",
@@ -69,8 +69,7 @@ def main() -> None:
             Color(0.97, 0.99, 1.0, 0.98),
             font_size=24.0,
             letter_spacing=1.0,
-            layer=10,
-            z_index=1.0,
+            draw_order=11.0,
         )
         engine.draw_text(
             f"elapsed: {t:0.2f}s\nfont: built-in open-source default",
@@ -79,8 +78,7 @@ def main() -> None:
             Color(0.90, 0.95, 1.0, 0.95),
             font_size=16.0,
             line_spacing=4.0,
-            layer=10,
-            z_index=1.01,
+            draw_order=11.01,
         )
 
         engine.update()

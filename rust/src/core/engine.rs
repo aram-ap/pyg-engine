@@ -302,17 +302,16 @@ impl Engine {
         self.request_render_redraw();
     }
 
-    /// Draw a single pixel with explicit layer/z ordering.
+    /// Draw a single pixel with explicit draw ordering.
     pub fn draw_pixel_with_order(
         &mut self,
         x: u32,
         y: u32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.draw_manager
-            .draw_pixel_with_order(x, y, color, layer, z_index);
+            .draw_pixel_with_order(x, y, color, draw_order);
         self.request_render_redraw();
     }
 
@@ -323,7 +322,7 @@ impl Engine {
         self.request_render_redraw();
     }
 
-    /// Draw a line with explicit thickness/layer/z options.
+    /// Draw a line with explicit thickness/draw-order options.
     pub fn draw_line_with_options(
         &mut self,
         start_x: f32,
@@ -332,11 +331,10 @@ impl Engine {
         end_y: f32,
         thickness: f32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.draw_manager.draw_line_with_options(
-            start_x, start_y, end_x, end_y, thickness, color, layer, z_index,
+            start_x, start_y, end_x, end_y, thickness, color, draw_order,
         );
         self.request_render_redraw();
     }
@@ -362,7 +360,7 @@ impl Engine {
         self.request_render_redraw();
     }
 
-    /// Draw a rectangle with explicit fill/layer/z options.
+    /// Draw a rectangle with explicit fill/draw-order options.
     pub fn draw_rectangle_with_options(
         &mut self,
         x: f32,
@@ -372,11 +370,10 @@ impl Engine {
         color: Color,
         filled: bool,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.draw_manager.draw_rectangle_with_options(
-            x, y, width, height, color, filled, thickness, layer, z_index,
+            x, y, width, height, color, filled, thickness, draw_order,
         );
         self.request_render_redraw();
     }
@@ -402,7 +399,7 @@ impl Engine {
         self.request_render_redraw();
     }
 
-    /// Draw a circle with explicit fill/tessellation/layer/z options.
+    /// Draw a circle with explicit fill/tessellation/draw-order options.
     pub fn draw_circle_with_options(
         &mut self,
         center_x: f32,
@@ -412,11 +409,10 @@ impl Engine {
         filled: bool,
         thickness: f32,
         segments: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.draw_manager.draw_circle_with_options(
-            center_x, center_y, radius, color, filled, thickness, segments, layer, z_index,
+            center_x, center_y, radius, color, filled, thickness, segments, draw_order,
         );
         self.request_render_redraw();
     }
@@ -432,8 +428,7 @@ impl Engine {
         bottom_left: Color,
         bottom_right: Color,
         top_right: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.draw_manager.draw_gradient_rect_with_options(
             x,
@@ -444,8 +439,7 @@ impl Engine {
             bottom_left,
             bottom_right,
             top_right,
-            layer,
-            z_index,
+            draw_order,
         );
         self.request_render_redraw();
     }
@@ -458,8 +452,7 @@ impl Engine {
         width: f32,
         height: f32,
         texture_path: String,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.draw_manager.draw_image_with_options(
             x,
@@ -467,8 +460,7 @@ impl Engine {
             width,
             height,
             texture_path,
-            layer,
-            z_index,
+            draw_order,
         );
         self.request_render_redraw();
     }
@@ -484,8 +476,7 @@ impl Engine {
         rgba: Vec<u8>,
         texture_width: u32,
         texture_height: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Result<(), String> {
         self.draw_image_from_bytes_with_options_shared(
             x,
@@ -496,8 +487,7 @@ impl Engine {
             Arc::from(rgba),
             texture_width,
             texture_height,
-            layer,
-            z_index,
+            draw_order,
         )
     }
 
@@ -511,8 +501,7 @@ impl Engine {
         rgba: Arc<[u8]>,
         texture_width: u32,
         texture_height: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Result<(), String> {
         self.draw_manager.draw_image_from_bytes_with_options(
             x,
@@ -523,8 +512,7 @@ impl Engine {
             rgba,
             texture_width,
             texture_height,
-            layer,
-            z_index,
+            draw_order,
         )?;
         self.request_render_redraw();
         Ok(())
@@ -542,8 +530,7 @@ impl Engine {
         font_path: Option<String>,
         letter_spacing: f32,
         line_spacing: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.draw_manager.draw_text_with_options(
             text,
@@ -554,8 +541,7 @@ impl Engine {
             font_path,
             letter_spacing,
             line_spacing,
-            layer,
-            z_index,
+            draw_order,
         );
         self.request_render_redraw();
     }
@@ -601,10 +587,9 @@ impl Engine {
                     x,
                     y,
                     color,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
-                    self.draw_pixel_with_order(x, y, color, layer, z_index);
+                    self.draw_pixel_with_order(x, y, color, draw_order);
                 }
                 EngineCommand::DrawLine {
                     start_x,
@@ -613,11 +598,10 @@ impl Engine {
                     end_y,
                     thickness,
                     color,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     self.draw_line_with_options(
-                        start_x, start_y, end_x, end_y, thickness, color, layer, z_index,
+                        start_x, start_y, end_x, end_y, thickness, color, draw_order,
                     );
                 }
                 EngineCommand::DrawRectangle {
@@ -628,11 +612,10 @@ impl Engine {
                     color,
                     filled,
                     thickness,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     self.draw_rectangle_with_options(
-                        x, y, width, height, color, filled, thickness, layer, z_index,
+                        x, y, width, height, color, filled, thickness, draw_order,
                     );
                 }
                 EngineCommand::DrawCircle {
@@ -643,12 +626,10 @@ impl Engine {
                     filled,
                     thickness,
                     segments,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     self.draw_circle_with_options(
-                        center_x, center_y, radius, color, filled, thickness, segments, layer,
-                        z_index,
+                        center_x, center_y, radius, color, filled, thickness, segments, draw_order,
                     );
                 }
                 EngineCommand::DrawGradientRect {
@@ -660,8 +641,7 @@ impl Engine {
                     bottom_left,
                     bottom_right,
                     top_right,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     self.draw_gradient_rect_with_options(
                         x,
@@ -672,8 +652,7 @@ impl Engine {
                         bottom_left,
                         bottom_right,
                         top_right,
-                        layer,
-                        z_index,
+                        draw_order,
                     );
                 }
                 EngineCommand::DrawImage {
@@ -682,10 +661,9 @@ impl Engine {
                     width,
                     height,
                     texture_path,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
-                    self.draw_image_with_options(x, y, width, height, texture_path, layer, z_index);
+                    self.draw_image_with_options(x, y, width, height, texture_path, draw_order);
                 }
                 EngineCommand::DrawImageBytes {
                     x,
@@ -696,8 +674,7 @@ impl Engine {
                     rgba,
                     texture_width,
                     texture_height,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     if let Err(err) = self.draw_image_from_bytes_with_options_shared(
                         x,
@@ -708,8 +685,7 @@ impl Engine {
                         rgba,
                         texture_width,
                         texture_height,
-                        layer,
-                        z_index,
+                        draw_order,
                     ) {
                         logging::log_warn(&format!("Dropped DrawImageBytes command: {err}"));
                     }
@@ -723,8 +699,7 @@ impl Engine {
                     font_path,
                     letter_spacing,
                     line_spacing,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     self.draw_text_with_options(
                         text,
@@ -735,8 +710,7 @@ impl Engine {
                         font_path,
                         letter_spacing,
                         line_spacing,
-                        layer,
-                        z_index,
+                        draw_order,
                     );
                 }
             }

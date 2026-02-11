@@ -32,21 +32,20 @@ pub struct PyDrawCommand {
 #[pymethods]
 impl PyDrawCommand {
     #[staticmethod]
-    #[pyo3(signature = (x, y, color, layer=0, z_index=0.0))]
-    fn pixel(x: u32, y: u32, color: &PyColor, layer: i32, z_index: f32) -> Self {
+    #[pyo3(signature = (x, y, color, draw_order=0.0))]
+    fn pixel(x: u32, y: u32, color: &PyColor, draw_order: f32) -> Self {
         Self {
             inner: DrawCommand::Pixel {
                 x: x as f32,
                 y: y as f32,
                 color: color.inner,
-                layer,
-                z_index,
+                draw_order,
             },
         }
     }
 
     #[staticmethod]
-    #[pyo3(signature = (start_x, start_y, end_x, end_y, color, thickness=1.0, layer=0, z_index=0.0))]
+    #[pyo3(signature = (start_x, start_y, end_x, end_y, color, thickness=1.0, draw_order=0.0))]
     fn line(
         start_x: f32,
         start_y: f32,
@@ -54,8 +53,7 @@ impl PyDrawCommand {
         end_y: f32,
         color: &PyColor,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Self {
         Self {
             inner: DrawCommand::Line {
@@ -65,14 +63,13 @@ impl PyDrawCommand {
                 end_y,
                 thickness,
                 color: color.inner,
-                layer,
-                z_index,
+                draw_order,
             },
         }
     }
 
     #[staticmethod]
-    #[pyo3(signature = (x, y, width, height, color, filled=true, thickness=1.0, layer=0, z_index=0.0))]
+    #[pyo3(signature = (x, y, width, height, color, filled=true, thickness=1.0, draw_order=0.0))]
     fn rectangle(
         x: f32,
         y: f32,
@@ -81,8 +78,7 @@ impl PyDrawCommand {
         color: &PyColor,
         filled: bool,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Self {
         Self {
             inner: DrawCommand::Rectangle {
@@ -93,8 +89,7 @@ impl PyDrawCommand {
                 color: color.inner,
                 filled,
                 thickness,
-                layer,
-                z_index,
+                draw_order,
             },
         }
     }
@@ -108,8 +103,7 @@ impl PyDrawCommand {
         filled=true,
         thickness=1.0,
         segments=32,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn circle(
         center_x: f32,
@@ -119,8 +113,7 @@ impl PyDrawCommand {
         filled: bool,
         thickness: f32,
         segments: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Self {
         Self {
             inner: DrawCommand::Circle {
@@ -131,8 +124,7 @@ impl PyDrawCommand {
                 filled,
                 thickness,
                 segments,
-                layer,
-                z_index,
+                draw_order,
             },
         }
     }
@@ -147,8 +139,7 @@ impl PyDrawCommand {
         bottom_left,
         bottom_right,
         top_right,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn gradient_rect(
         x: f32,
@@ -159,8 +150,7 @@ impl PyDrawCommand {
         bottom_left: &PyColor,
         bottom_right: &PyColor,
         top_right: &PyColor,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Self {
         Self {
             inner: DrawCommand::GradientRect {
@@ -172,22 +162,20 @@ impl PyDrawCommand {
                 bottom_left: bottom_left.inner,
                 bottom_right: bottom_right.inner,
                 top_right: top_right.inner,
-                layer,
-                z_index,
+                draw_order,
             },
         }
     }
 
     #[staticmethod]
-    #[pyo3(signature = (x, y, width, height, texture_path, layer=0, z_index=0.0))]
+    #[pyo3(signature = (x, y, width, height, texture_path, draw_order=0.0))]
     fn image(
         x: f32,
         y: f32,
         width: f32,
         height: f32,
         texture_path: String,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Self {
         Self {
             inner: DrawCommand::Image {
@@ -196,8 +184,7 @@ impl PyDrawCommand {
                 width,
                 height,
                 texture_path,
-                layer,
-                z_index,
+                draw_order,
             },
         }
     }
@@ -212,8 +199,7 @@ impl PyDrawCommand {
         rgba,
         texture_width,
         texture_height,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn image_from_bytes(
         x: f32,
@@ -224,8 +210,7 @@ impl PyDrawCommand {
         rgba: Vec<u8>,
         texture_width: u32,
         texture_height: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> PyResult<Self> {
         let expected_size = (texture_width as usize)
             .checked_mul(texture_height as usize)
@@ -253,8 +238,7 @@ impl PyDrawCommand {
                 rgba: Arc::from(rgba),
                 texture_width,
                 texture_height,
-                layer,
-                z_index,
+                draw_order,
             },
         })
     }
@@ -269,8 +253,7 @@ impl PyDrawCommand {
         font_path=None,
         letter_spacing=0.0,
         line_spacing=0.0,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn text(
         text: String,
@@ -281,8 +264,7 @@ impl PyDrawCommand {
         font_path: Option<String>,
         letter_spacing: f32,
         line_spacing: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Self {
         Self {
             inner: DrawCommand::Text {
@@ -294,8 +276,7 @@ impl PyDrawCommand {
                 font_path,
                 letter_spacing,
                 line_spacing,
-                layer,
-                z_index,
+                draw_order,
             },
         }
     }
@@ -578,14 +559,14 @@ impl PyEngine {
     }
 
     /// Draw a pixel at window coordinates.
-    #[pyo3(signature = (x, y, color, layer=0, z_index=0.0))]
-    fn draw_pixel(&mut self, x: u32, y: u32, color: &PyColor, layer: i32, z_index: f32) {
+    #[pyo3(signature = (x, y, color, draw_order=0.0))]
+    fn draw_pixel(&mut self, x: u32, y: u32, color: &PyColor, draw_order: f32) {
         self.inner
-            .draw_pixel_with_order(x, y, color.inner, layer, z_index);
+            .draw_pixel_with_order(x, y, color.inner, draw_order);
     }
 
     /// Draw a line at window coordinates.
-    #[pyo3(signature = (start_x, start_y, end_x, end_y, color, thickness=1.0, layer=0, z_index=0.0))]
+    #[pyo3(signature = (start_x, start_y, end_x, end_y, color, thickness=1.0, draw_order=0.0))]
     fn draw_line(
         &mut self,
         start_x: f32,
@@ -594,8 +575,7 @@ impl PyEngine {
         end_y: f32,
         color: &PyColor,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.inner.draw_line_with_options(
             start_x,
@@ -604,13 +584,12 @@ impl PyEngine {
             end_y,
             thickness,
             color.inner,
-            layer,
-            z_index,
+            draw_order,
         );
     }
 
     /// Draw a rectangle at window coordinates.
-    #[pyo3(signature = (x, y, width, height, color, filled=true, thickness=1.0, layer=0, z_index=0.0))]
+    #[pyo3(signature = (x, y, width, height, color, filled=true, thickness=1.0, draw_order=0.0))]
     fn draw_rectangle(
         &mut self,
         x: f32,
@@ -620,8 +599,7 @@ impl PyEngine {
         color: &PyColor,
         filled: bool,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.inner.draw_rectangle_with_options(
             x,
@@ -631,8 +609,7 @@ impl PyEngine {
             color.inner,
             filled,
             thickness,
-            layer,
-            z_index,
+            draw_order,
         );
     }
 
@@ -645,8 +622,7 @@ impl PyEngine {
         filled=true,
         thickness=1.0,
         segments=32,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn draw_circle(
         &mut self,
@@ -657,8 +633,7 @@ impl PyEngine {
         filled: bool,
         thickness: f32,
         segments: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.inner.draw_circle_with_options(
             center_x,
@@ -668,8 +643,7 @@ impl PyEngine {
             filled,
             thickness,
             segments,
-            layer,
-            z_index,
+            draw_order,
         );
     }
 
@@ -683,8 +657,7 @@ impl PyEngine {
         bottom_left,
         bottom_right,
         top_right,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn draw_gradient_rect(
         &mut self,
@@ -696,8 +669,7 @@ impl PyEngine {
         bottom_left: &PyColor,
         bottom_right: &PyColor,
         top_right: &PyColor,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.inner.draw_gradient_rect_with_options(
             x,
@@ -708,13 +680,12 @@ impl PyEngine {
             bottom_left.inner,
             bottom_right.inner,
             top_right.inner,
-            layer,
-            z_index,
+            draw_order,
         );
     }
 
     /// Draw an image from a filesystem path at window coordinates.
-    #[pyo3(signature = (x, y, width, height, texture_path, layer=0, z_index=0.0))]
+    #[pyo3(signature = (x, y, width, height, texture_path, draw_order=0.0))]
     fn draw_image(
         &mut self,
         x: f32,
@@ -722,11 +693,10 @@ impl PyEngine {
         width: f32,
         height: f32,
         texture_path: String,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.inner
-            .draw_image_with_options(x, y, width, height, texture_path, layer, z_index);
+            .draw_image_with_options(x, y, width, height, texture_path, draw_order);
     }
 
     /// Draw an image from raw RGBA bytes at window coordinates.
@@ -739,8 +709,7 @@ impl PyEngine {
         rgba,
         texture_width,
         texture_height,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn draw_image_from_bytes(
         &mut self,
@@ -752,8 +721,7 @@ impl PyEngine {
         rgba: Vec<u8>,
         texture_width: u32,
         texture_height: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> PyResult<()> {
         self.inner
             .draw_image_from_bytes_with_options(
@@ -765,8 +733,7 @@ impl PyEngine {
                 rgba,
                 texture_width,
                 texture_height,
-                layer,
-                z_index,
+                draw_order,
             )
             .map_err(PyRuntimeError::new_err)
     }
@@ -782,8 +749,7 @@ impl PyEngine {
         font_path=None,
         letter_spacing=0.0,
         line_spacing=0.0,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn draw_text(
         &mut self,
@@ -795,8 +761,7 @@ impl PyEngine {
         font_path: Option<String>,
         letter_spacing: f32,
         line_spacing: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.inner.draw_text_with_options(
             text,
@@ -807,8 +772,7 @@ impl PyEngine {
             font_path,
             letter_spacing,
             line_spacing,
-            layer,
-            z_index,
+            draw_order,
         );
     }
 
@@ -1012,19 +976,18 @@ impl PyEngineHandle {
     }
 
     /// Draw a pixel at window coordinates via command queue.
-    #[pyo3(signature = (x, y, color, layer=0, z_index=0.0))]
-    fn draw_pixel(&self, x: u32, y: u32, color: &PyColor, layer: i32, z_index: f32) {
+    #[pyo3(signature = (x, y, color, draw_order=0.0))]
+    fn draw_pixel(&self, x: u32, y: u32, color: &PyColor, draw_order: f32) {
         let _ = self.sender.send(EngineCommand::DrawPixel {
             x,
             y,
             color: color.inner,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
     /// Draw a line at window coordinates via command queue.
-    #[pyo3(signature = (start_x, start_y, end_x, end_y, color, thickness=1.0, layer=0, z_index=0.0))]
+    #[pyo3(signature = (start_x, start_y, end_x, end_y, color, thickness=1.0, draw_order=0.0))]
     fn draw_line(
         &self,
         start_x: f32,
@@ -1033,8 +996,7 @@ impl PyEngineHandle {
         end_y: f32,
         color: &PyColor,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawLine {
             start_x,
@@ -1043,13 +1005,12 @@ impl PyEngineHandle {
             end_y,
             thickness,
             color: color.inner,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
     /// Draw a rectangle at window coordinates via command queue.
-    #[pyo3(signature = (x, y, width, height, color, filled=true, thickness=1.0, layer=0, z_index=0.0))]
+    #[pyo3(signature = (x, y, width, height, color, filled=true, thickness=1.0, draw_order=0.0))]
     fn draw_rectangle(
         &self,
         x: f32,
@@ -1059,8 +1020,7 @@ impl PyEngineHandle {
         color: &PyColor,
         filled: bool,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawRectangle {
             x,
@@ -1070,8 +1030,7 @@ impl PyEngineHandle {
             color: color.inner,
             filled,
             thickness,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
@@ -1084,8 +1043,7 @@ impl PyEngineHandle {
         filled=true,
         thickness=1.0,
         segments=32,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn draw_circle(
         &self,
@@ -1096,8 +1054,7 @@ impl PyEngineHandle {
         filled: bool,
         thickness: f32,
         segments: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawCircle {
             center_x,
@@ -1107,8 +1064,7 @@ impl PyEngineHandle {
             filled,
             thickness,
             segments,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
@@ -1122,8 +1078,7 @@ impl PyEngineHandle {
         bottom_left,
         bottom_right,
         top_right,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn draw_gradient_rect(
         &self,
@@ -1135,8 +1090,7 @@ impl PyEngineHandle {
         bottom_left: &PyColor,
         bottom_right: &PyColor,
         top_right: &PyColor,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawGradientRect {
             x,
@@ -1147,13 +1101,12 @@ impl PyEngineHandle {
             bottom_left: bottom_left.inner,
             bottom_right: bottom_right.inner,
             top_right: top_right.inner,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
     /// Draw an image from a filesystem path via command queue.
-    #[pyo3(signature = (x, y, width, height, texture_path, layer=0, z_index=0.0))]
+    #[pyo3(signature = (x, y, width, height, texture_path, draw_order=0.0))]
     fn draw_image(
         &self,
         x: f32,
@@ -1161,8 +1114,7 @@ impl PyEngineHandle {
         width: f32,
         height: f32,
         texture_path: String,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawImage {
             x,
@@ -1170,8 +1122,7 @@ impl PyEngineHandle {
             width,
             height,
             texture_path,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
@@ -1185,8 +1136,7 @@ impl PyEngineHandle {
         rgba,
         texture_width,
         texture_height,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn draw_image_from_bytes(
         &self,
@@ -1198,8 +1148,7 @@ impl PyEngineHandle {
         rgba: Vec<u8>,
         texture_width: u32,
         texture_height: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawImageBytes {
             x,
@@ -1210,8 +1159,7 @@ impl PyEngineHandle {
             rgba: Arc::from(rgba),
             texture_width,
             texture_height,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
@@ -1225,8 +1173,7 @@ impl PyEngineHandle {
         font_path=None,
         letter_spacing=0.0,
         line_spacing=0.0,
-        layer=0,
-        z_index=0.0
+        draw_order=0.0
     ))]
     fn draw_text(
         &self,
@@ -1238,8 +1185,7 @@ impl PyEngineHandle {
         font_path: Option<String>,
         letter_spacing: f32,
         line_spacing: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         let _ = self.sender.send(EngineCommand::DrawText {
             text,
@@ -1250,8 +1196,7 @@ impl PyEngineHandle {
             font_path,
             letter_spacing,
             line_spacing,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 }
@@ -1495,22 +1440,13 @@ impl PyGameObject {
         self.inner.mesh_component().map(|mesh| mesh.visible())
     }
 
-    fn set_mesh_layer(&mut self, layer: i32) {
+    fn set_mesh_draw_order(&mut self, draw_order: f32) {
         let mesh = self.ensure_mesh_component();
-        mesh.set_layer(layer);
+        mesh.set_draw_order(draw_order);
     }
 
-    fn mesh_layer(&self) -> Option<i32> {
-        self.inner.mesh_component().map(|mesh| mesh.layer())
-    }
-
-    fn set_mesh_z_index(&mut self, z_index: f32) {
-        let mesh = self.ensure_mesh_component();
-        mesh.set_z_index(z_index);
-    }
-
-    fn mesh_z_index(&self) -> Option<f32> {
-        self.inner.mesh_component().map(|mesh| mesh.z_index())
+    fn mesh_draw_order(&self) -> Option<f32> {
+        self.inner.mesh_component().map(|mesh| mesh.draw_order())
     }
 }
 
@@ -1579,23 +1515,13 @@ impl PyMeshComponent {
     }
 
     #[getter]
-    fn layer(&self) -> i32 {
-        self.inner.layer()
+    fn draw_order(&self) -> f32 {
+        self.inner.draw_order()
     }
 
     #[setter]
-    fn set_layer(&mut self, layer: i32) {
-        self.inner.set_layer(layer);
-    }
-
-    #[getter]
-    fn z_index(&self) -> f32 {
-        self.inner.z_index()
-    }
-
-    #[setter]
-    fn set_z_index(&mut self, z_index: f32) {
-        self.inner.set_z_index(z_index);
+    fn set_draw_order(&mut self, draw_order: f32) {
+        self.inner.set_draw_order(draw_order);
     }
 }
 

@@ -22,8 +22,7 @@ def create_circle_object() -> pyg.GameObject:
     mesh = pyg.MeshComponent("MovingCircleMesh")
     mesh.set_geometry_circle(1.0, segments=48)
     mesh.set_fill_color(pyg.Color.CYAN)
-    mesh.layer = 2
-    mesh.z_index = 0.2
+    mesh.draw_order = 2.2
     circle.set_mesh_component(mesh)
 
     return circle
@@ -66,8 +65,7 @@ def main() -> None:
             24.0,
             pyg.Color.WHITE,
             font_size=21.0,
-            layer=10,
-            z_index=1.0,
+            draw_order=11.0,
         )
         engine.draw_text(
             f"position=({pos_x:.2f}, {pos_y:.2f})  |  ESC to quit",
@@ -75,8 +73,7 @@ def main() -> None:
             56.0,
             pyg.Color.CYAN,
             font_size=18.0,
-            layer=10,
-            z_index=1.0,
+            draw_order=11.0,
         )
         engine.draw_text(
             "Mesh transforms currently use clip-space style coordinates (~[-1, 1]).",
@@ -84,8 +81,7 @@ def main() -> None:
             84.0,
             pyg.Color.rgb(180, 180, 190),
             font_size=16.0,
-            layer=10,
-            z_index=1.0,
+            draw_order=11.0,
         )
 
         engine.update()

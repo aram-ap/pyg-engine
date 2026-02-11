@@ -65,11 +65,10 @@ class EngineHandle:
         x: int,
         y: int,
         color: Any,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a pixel in window coordinates via command queue."""
-        self._inner.draw_pixel(x, y, color, layer=layer, z_index=z_index)
+        self._inner.draw_pixel(x, y, color, draw_order=draw_order)
 
     def draw_line(
         self,
@@ -79,8 +78,7 @@ class EngineHandle:
         end_y: float,
         color: Any,
         thickness: float = 1.0,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a line in window coordinates via command queue."""
         self._inner.draw_line(
@@ -90,8 +88,7 @@ class EngineHandle:
             end_y,
             color,
             thickness=thickness,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_rectangle(
@@ -103,8 +100,7 @@ class EngineHandle:
         color: Any,
         filled: bool = True,
         thickness: float = 1.0,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a rectangle in window coordinates via command queue."""
         self._inner.draw_rectangle(
@@ -115,8 +111,7 @@ class EngineHandle:
             color,
             filled=filled,
             thickness=thickness,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_circle(
@@ -128,8 +123,7 @@ class EngineHandle:
         filled: bool = True,
         thickness: float = 1.0,
         segments: int = 32,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a circle in window coordinates via command queue."""
         self._inner.draw_circle(
@@ -140,8 +134,7 @@ class EngineHandle:
             filled=filled,
             thickness=thickness,
             segments=segments,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_gradient_rect(
@@ -154,8 +147,7 @@ class EngineHandle:
         bottom_left: Any,
         bottom_right: Any,
         top_right: Any,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a gradient rectangle with per-corner colors via command queue."""
         self._inner.draw_gradient_rect(
@@ -167,8 +159,7 @@ class EngineHandle:
             bottom_left,
             bottom_right,
             top_right,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_image(
@@ -178,8 +169,7 @@ class EngineHandle:
         width: float,
         height: float,
         texture_path: str,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw an image from a file path via command queue."""
         self._inner.draw_image(
@@ -188,8 +178,7 @@ class EngineHandle:
             width,
             height,
             texture_path,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_image_from_bytes(
@@ -202,8 +191,7 @@ class EngineHandle:
         rgba: bytes,
         texture_width: int,
         texture_height: int,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw an image from raw RGBA bytes via command queue."""
         self._inner.draw_image_from_bytes(
@@ -215,8 +203,7 @@ class EngineHandle:
             rgba,
             texture_width,
             texture_height,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_text(
@@ -229,8 +216,7 @@ class EngineHandle:
         font_path: Optional[str] = None,
         letter_spacing: float = 0.0,
         line_spacing: float = 0.0,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """
         Draw text via command queue.
@@ -247,8 +233,7 @@ class EngineHandle:
             font_path=font_path,
             letter_spacing=letter_spacing,
             line_spacing=line_spacing,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
 
@@ -914,11 +899,10 @@ class Engine:
         x: int,
         y: int,
         color: Any,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a pixel in window coordinates."""
-        self._engine.draw_pixel(x, y, color, layer=layer, z_index=z_index)
+        self._engine.draw_pixel(x, y, color, draw_order=draw_order)
 
     def draw_line(
         self,
@@ -928,8 +912,7 @@ class Engine:
         end_y: float,
         color: Any,
         thickness: float = 1.0,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a line in window coordinates."""
         self._engine.draw_line(
@@ -939,8 +922,7 @@ class Engine:
             end_y,
             color,
             thickness=thickness,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_rectangle(
@@ -952,8 +934,7 @@ class Engine:
         color: Any,
         filled: bool = True,
         thickness: float = 1.0,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a rectangle in window coordinates."""
         self._engine.draw_rectangle(
@@ -964,8 +945,7 @@ class Engine:
             color,
             filled=filled,
             thickness=thickness,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_circle(
@@ -977,8 +957,7 @@ class Engine:
         filled: bool = True,
         thickness: float = 1.0,
         segments: int = 32,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a circle in window coordinates."""
         self._engine.draw_circle(
@@ -989,8 +968,7 @@ class Engine:
             filled=filled,
             thickness=thickness,
             segments=segments,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_gradient_rect(
@@ -1003,8 +981,7 @@ class Engine:
         bottom_left: Any,
         bottom_right: Any,
         top_right: Any,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw a gradient rectangle with per-corner colors."""
         self._engine.draw_gradient_rect(
@@ -1016,8 +993,7 @@ class Engine:
             bottom_left,
             bottom_right,
             top_right,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_image(
@@ -1027,8 +1003,7 @@ class Engine:
         width: float,
         height: float,
         texture_path: str,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw an image from a file path."""
         self._engine.draw_image(
@@ -1037,8 +1012,7 @@ class Engine:
             width,
             height,
             texture_path,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_image_from_bytes(
@@ -1051,8 +1025,7 @@ class Engine:
         rgba: bytes,
         texture_width: int,
         texture_height: int,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """Draw an image from raw RGBA bytes."""
         self._engine.draw_image_from_bytes(
@@ -1064,8 +1037,7 @@ class Engine:
             rgba,
             texture_width,
             texture_height,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
 
     def draw_text(
@@ -1078,8 +1050,7 @@ class Engine:
         font_path: Optional[str] = None,
         letter_spacing: float = 0.0,
         line_spacing: float = 0.0,
-        layer: int = 0,
-        z_index: float = 0.0,
+        draw_order: float = 0.0,
     ) -> None:
         """
         Draw text in window coordinates.
@@ -1096,8 +1067,7 @@ class Engine:
             font_path=font_path,
             letter_spacing=letter_spacing,
             line_spacing=line_spacing,
-            layer=layer,
-            z_index=z_index,
+            draw_order=draw_order,
         )
     
     @property

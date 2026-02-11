@@ -963,14 +963,12 @@ def test_mesh_component_creation_and_properties() -> None:
     mesh.set_fill_color(pyg.Color.ORANGE)
     mesh.set_image_path("images/1.png")
     mesh.visible = True
-    mesh.layer = 3
-    mesh.z_index = 0.25
+    mesh.draw_order = 3.25
 
     assert mesh.fill_color() is not None
     assert mesh.image_path() == "images/1.png"
     assert mesh.visible is True
-    assert mesh.layer == 3
-    assert abs(mesh.z_index - 0.25) < 1e-5
+    assert abs(mesh.draw_order - 3.25) < 1e-5
 
 
 def test_mesh_component_circle_geometry_api() -> None:
@@ -1005,8 +1003,7 @@ def test_game_object_mesh_component_api() -> None:
     go.set_mesh_fill_color(pyg.Color.MAGENTA)
     go.set_mesh_image_path("images/2.png")
     go.set_mesh_visible(True)
-    go.set_mesh_layer(5)
-    go.set_mesh_z_index(0.9)
+    go.set_mesh_draw_order(5.9)
     go.set_mesh_geometry_rectangle(80.0, 40.0)
 
     mesh_color = go.mesh_fill_color()
@@ -1014,8 +1011,7 @@ def test_game_object_mesh_component_api() -> None:
     assert abs(mesh_color.r - pyg.Color.MAGENTA.r) < 1e-5
     assert go.mesh_image_path() == "images/2.png"
     assert go.mesh_visible() is True
-    assert go.mesh_layer() == 5
-    assert abs((go.mesh_z_index() or 0.0) - 0.9) < 1e-5
+    assert abs((go.mesh_draw_order() or 0.0) - 5.9) < 1e-5
 
     removed = go.remove_mesh_component()
     assert removed is not None
@@ -1087,8 +1083,7 @@ def test_text_draw_api_no_crash() -> None:
         font_size=20.0,
         letter_spacing=1.0,
         line_spacing=2.0,
-        layer=2,
-        z_index=0.4,
+        draw_order=2.4,
     )
 
     # Bulk draw command call.
@@ -1100,8 +1095,7 @@ def test_text_draw_api_no_crash() -> None:
         font_size=18.0,
         letter_spacing=0.5,
         line_spacing=1.0,
-        layer=3,
-        z_index=0.5,
+        draw_order=3.5,
     )
     engine.add_draw_commands([text_command])
 
@@ -1113,8 +1107,7 @@ def test_text_draw_api_no_crash() -> None:
         108.0,
         pyg.Color.YELLOW,
         font_size=16.0,
-        layer=4,
-        z_index=0.6,
+        draw_order=4.6,
     )
 
     engine.clear_draw_commands()

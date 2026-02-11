@@ -7,8 +7,7 @@ pub enum DrawCommand {
         x: f32,
         y: f32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
     Line {
         start_x: f32,
@@ -17,8 +16,7 @@ pub enum DrawCommand {
         end_y: f32,
         thickness: f32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
     Rectangle {
         x: f32,
@@ -28,8 +26,7 @@ pub enum DrawCommand {
         color: Color,
         filled: bool,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
     Circle {
         center_x: f32,
@@ -39,8 +36,7 @@ pub enum DrawCommand {
         filled: bool,
         thickness: f32,
         segments: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
     GradientRect {
         x: f32,
@@ -51,8 +47,7 @@ pub enum DrawCommand {
         bottom_left: Color,
         bottom_right: Color,
         top_right: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
     Image {
         x: f32,
@@ -60,8 +55,7 @@ pub enum DrawCommand {
         width: f32,
         height: f32,
         texture_path: String,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
     ImageBytes {
         x: f32,
@@ -72,8 +66,7 @@ pub enum DrawCommand {
         rgba: Arc<[u8]>,
         texture_width: u32,
         texture_height: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
     Text {
         text: String,
@@ -84,8 +77,7 @@ pub enum DrawCommand {
         font_path: Option<String>,
         letter_spacing: f32,
         line_spacing: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     },
 }
 
@@ -143,7 +135,7 @@ impl DrawManager {
     }
 
     pub fn draw_pixel(&mut self, x: u32, y: u32, color: Color) {
-        self.draw_pixel_with_order(x, y, color, 0, 0.0);
+        self.draw_pixel_with_order(x, y, color, 0.0);
     }
 
     pub fn draw_pixel_with_order(
@@ -151,20 +143,18 @@ impl DrawManager {
         x: u32,
         y: u32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.push_command(DrawCommand::Pixel {
             x: x as f32,
             y: y as f32,
             color,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
     pub fn draw_line(&mut self, start_x: f32, start_y: f32, end_x: f32, end_y: f32, color: Color) {
-        self.draw_line_with_options(start_x, start_y, end_x, end_y, 1.0, color, 0, 0.0);
+        self.draw_line_with_options(start_x, start_y, end_x, end_y, 1.0, color, 0.0);
     }
 
     pub fn draw_line_with_options(
@@ -175,8 +165,7 @@ impl DrawManager {
         end_y: f32,
         thickness: f32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.push_command(DrawCommand::Line {
             start_x,
@@ -185,13 +174,12 @@ impl DrawManager {
             end_y,
             thickness,
             color,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
     pub fn draw_rectangle(&mut self, x: f32, y: f32, width: f32, height: f32, color: Color) {
-        self.draw_rectangle_with_options(x, y, width, height, color, true, 1.0, 0, 0.0);
+        self.draw_rectangle_with_options(x, y, width, height, color, true, 1.0, 0.0);
     }
 
     pub fn draw_rectangle_outline(
@@ -203,7 +191,7 @@ impl DrawManager {
         thickness: f32,
         color: Color,
     ) {
-        self.draw_rectangle_with_options(x, y, width, height, color, false, thickness, 0, 0.0);
+        self.draw_rectangle_with_options(x, y, width, height, color, false, thickness, 0.0);
     }
 
     pub fn draw_rectangle_with_options(
@@ -215,8 +203,7 @@ impl DrawManager {
         color: Color,
         filled: bool,
         thickness: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.push_command(DrawCommand::Rectangle {
             x,
@@ -226,13 +213,12 @@ impl DrawManager {
             color,
             filled,
             thickness,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
     pub fn draw_circle(&mut self, center_x: f32, center_y: f32, radius: f32, color: Color) {
-        self.draw_circle_with_options(center_x, center_y, radius, color, true, 1.0, 32, 0, 0.0);
+        self.draw_circle_with_options(center_x, center_y, radius, color, true, 1.0, 32, 0.0);
     }
 
     pub fn draw_circle_outline(
@@ -244,7 +230,7 @@ impl DrawManager {
         color: Color,
     ) {
         self.draw_circle_with_options(
-            center_x, center_y, radius, color, false, thickness, 32, 0, 0.0,
+            center_x, center_y, radius, color, false, thickness, 32, 0.0,
         );
     }
 
@@ -257,8 +243,7 @@ impl DrawManager {
         filled: bool,
         thickness: f32,
         segments: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.push_command(DrawCommand::Circle {
             center_x,
@@ -268,8 +253,7 @@ impl DrawManager {
             filled,
             thickness,
             segments,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
@@ -283,8 +267,7 @@ impl DrawManager {
         bottom_left: Color,
         bottom_right: Color,
         top_right: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.push_command(DrawCommand::GradientRect {
             x,
@@ -295,8 +278,7 @@ impl DrawManager {
             bottom_left,
             bottom_right,
             top_right,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
@@ -307,8 +289,7 @@ impl DrawManager {
         width: f32,
         height: f32,
         texture_path: String,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.push_command(DrawCommand::Image {
             x,
@@ -316,8 +297,7 @@ impl DrawManager {
             width,
             height,
             texture_path,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 
@@ -331,8 +311,7 @@ impl DrawManager {
         rgba: Arc<[u8]>,
         texture_width: u32,
         texture_height: u32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Result<(), String> {
         let expected_size = (texture_width as usize)
             .checked_mul(texture_height as usize)
@@ -357,15 +336,14 @@ impl DrawManager {
             rgba,
             texture_width,
             texture_height,
-            layer,
-            z_index,
+            draw_order,
         });
 
         Ok(())
     }
 
     pub fn draw_text(&mut self, text: String, x: f32, y: f32, color: Color) {
-        self.draw_text_with_options(text, x, y, 24.0, color, None, 0.0, 0.0, 0, 0.0);
+        self.draw_text_with_options(text, x, y, 24.0, color, None, 0.0, 0.0, 0.0);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -379,8 +357,7 @@ impl DrawManager {
         font_path: Option<String>,
         letter_spacing: f32,
         line_spacing: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) {
         self.push_command(DrawCommand::Text {
             text,
@@ -391,8 +368,7 @@ impl DrawManager {
             font_path,
             letter_spacing,
             line_spacing,
-            layer,
-            z_index,
+            draw_order,
         });
     }
 }

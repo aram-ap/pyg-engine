@@ -29,8 +29,7 @@ struct CachedTexture {
 
 #[derive(Clone)]
 struct DrawItem {
-    layer: i32,
-    z_index: f32,
+    draw_order: f32,
     texture_path: Option<String>,
     vertices: Vec<Vertex>,
     indices: Vec<u32>,
@@ -579,8 +578,7 @@ impl RenderManager {
         p2: [f32; 2],
         p3: [f32; 2],
         color: [f32; 4],
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> DrawItem {
         self.build_quad_draw_item_with_options(
             p0,
@@ -590,8 +588,7 @@ impl RenderManager {
             [color, color, color, color],
             [[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]],
             None,
-            layer,
-            z_index,
+            draw_order,
         )
     }
 
@@ -604,31 +601,29 @@ impl RenderManager {
         colors: [[f32; 4]; 4],
         tex_coords: [[f32; 2]; 4],
         texture_path: Option<String>,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> DrawItem {
         DrawItem {
-            layer,
-            z_index,
+            draw_order,
             texture_path,
             vertices: vec![
                 Vertex {
-                    position: [p0[0], p0[1], z_index],
+                    position: [p0[0], p0[1], 0.0],
                     color: colors[0],
                     tex_coords: tex_coords[0],
                 },
                 Vertex {
-                    position: [p1[0], p1[1], z_index],
+                    position: [p1[0], p1[1], 0.0],
                     color: colors[1],
                     tex_coords: tex_coords[1],
                 },
                 Vertex {
-                    position: [p2[0], p2[1], z_index],
+                    position: [p2[0], p2[1], 0.0],
                     color: colors[2],
                     tex_coords: tex_coords[2],
                 },
                 Vertex {
-                    position: [p3[0], p3[1], z_index],
+                    position: [p3[0], p3[1], 0.0],
                     color: colors[3],
                     tex_coords: tex_coords[3],
                 },
@@ -644,8 +639,7 @@ impl RenderManager {
         width: f32,
         height: f32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> DrawItem {
         let x0 = x.min(x + width);
         let x1 = x.max(x + width);
@@ -657,7 +651,14 @@ impl RenderManager {
         let p2 = self.pixel_to_clip(x1, y1);
         let p3 = self.pixel_to_clip(x1, y0);
 
-        self.build_quad_draw_item(p0, p1, p2, p3, Self::color_to_array(color), layer, z_index)
+        self.build_quad_draw_item(
+            p0,
+            p1,
+            p2,
+            p3,
+            Self::color_to_array(color),
+            draw_order,
+        )
     }
 
     fn build_gradient_rect_draw_item(
@@ -670,8 +671,7 @@ impl RenderManager {
         bottom_left: Color,
         bottom_right: Color,
         top_right: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> DrawItem {
         let x0 = x.min(x + width);
         let x1 = x.max(x + width);
@@ -696,8 +696,7 @@ impl RenderManager {
             ],
             [[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]],
             None,
-            layer,
-            z_index,
+            draw_order,
         )
     }
 
@@ -708,8 +707,7 @@ impl RenderManager {
         width: f32,
         height: f32,
         texture_path: String,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> DrawItem {
         let x0 = x.min(x + width);
         let x1 = x.max(x + width);
@@ -730,8 +728,7 @@ impl RenderManager {
             [white, white, white, white],
             [[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]],
             Some(texture_path),
-            layer,
-            z_index,
+            draw_order,
         )
     }
 
@@ -1073,8 +1070,7 @@ impl RenderManager {
         font_path: Option<&str>,
         letter_spacing: f32,
         line_spacing: f32,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Option<(DrawItem, Option<PendingTextureUpload>)> {
         if text.is_empty() {
             return None;
@@ -1098,8 +1094,7 @@ impl RenderManager {
                 cached_texture.width as f32,
                 cached_texture.height as f32,
                 texture_key,
-                layer,
-                z_index,
+                draw_order,
             );
             return Some((item, None));
         }
@@ -1118,8 +1113,7 @@ impl RenderManager {
             rasterized.width as f32,
             rasterized.height as f32,
             texture_key.clone(),
-            layer,
-            z_index,
+            draw_order,
         );
         let upload = PendingTextureUpload {
             key: texture_key,
@@ -1139,8 +1133,7 @@ impl RenderManager {
         end_y: f32,
         thickness: f32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> DrawItem {
         let thickness = thickness.max(1.0);
         let dx = end_x - start_x;
@@ -1149,7 +1142,7 @@ impl RenderManager {
 
         if length <= f32::EPSILON {
             return self.build_filled_rect_draw_item(
-                start_x, start_y, thickness, thickness, color, layer, z_index,
+                start_x, start_y, thickness, thickness, color, draw_order,
             );
         }
 
@@ -1161,7 +1154,7 @@ impl RenderManager {
         let c = self.pixel_to_clip(end_x - nx, end_y - ny);
         let d = self.pixel_to_clip(end_x + nx, end_y + ny);
 
-        self.build_quad_draw_item(a, b, c, d, Self::color_to_array(color), layer, z_index)
+        self.build_quad_draw_item(a, b, c, d, Self::color_to_array(color), draw_order)
     }
 
     fn build_filled_circle_draw_item(
@@ -1171,8 +1164,7 @@ impl RenderManager {
         radius: f32,
         segments: u32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Option<DrawItem> {
         if radius <= 0.0 {
             return None;
@@ -1185,7 +1177,7 @@ impl RenderManager {
 
         let center = self.pixel_to_clip(center_x, center_y);
         vertices.push(Vertex {
-            position: [center[0], center[1], z_index],
+            position: [center[0], center[1], 0.0],
             color,
             tex_coords: [0.5, 0.5],
         });
@@ -1196,7 +1188,7 @@ impl RenderManager {
             let py = center_y + radius * angle.sin();
             let clip = self.pixel_to_clip(px, py);
             vertices.push(Vertex {
-                position: [clip[0], clip[1], z_index],
+                position: [clip[0], clip[1], 0.0],
                 color,
                 tex_coords: [(angle.cos() + 1.0) * 0.5, (angle.sin() + 1.0) * 0.5],
             });
@@ -1207,8 +1199,7 @@ impl RenderManager {
         }
 
         Some(DrawItem {
-            layer,
-            z_index,
+            draw_order,
             texture_path: None,
             vertices,
             indices,
@@ -1223,8 +1214,7 @@ impl RenderManager {
         thickness: f32,
         segments: u32,
         color: Color,
-        layer: i32,
-        z_index: f32,
+        draw_order: f32,
     ) -> Option<DrawItem> {
         if radius <= 0.0 {
             return None;
@@ -1248,12 +1238,12 @@ impl RenderManager {
             let inner_clip = self.pixel_to_clip(center_x + inner * cos_a, center_y + inner * sin_a);
 
             vertices.push(Vertex {
-                position: [outer_clip[0], outer_clip[1], z_index],
+                position: [outer_clip[0], outer_clip[1], 0.0],
                 color,
                 tex_coords: [1.0, 0.0],
             });
             vertices.push(Vertex {
-                position: [inner_clip[0], inner_clip[1], z_index],
+                position: [inner_clip[0], inner_clip[1], 0.0],
                 color,
                 tex_coords: [0.0, 1.0],
             });
@@ -1265,8 +1255,7 @@ impl RenderManager {
         }
 
         Some(DrawItem {
-            layer,
-            z_index,
+            draw_order,
             texture_path: None,
             vertices,
             indices,
@@ -1289,14 +1278,16 @@ impl RenderManager {
                     x,
                     y,
                     color,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
-                    items.push(
-                        self.build_filled_rect_draw_item(
-                            *x, *y, 1.0, 1.0, *color, *layer, *z_index,
-                        ),
-                    );
+                    items.push(self.build_filled_rect_draw_item(
+                        *x,
+                        *y,
+                        1.0,
+                        1.0,
+                        *color,
+                        *draw_order,
+                    ));
                 }
                 DrawCommand::Line {
                     start_x,
@@ -1305,11 +1296,16 @@ impl RenderManager {
                     end_y,
                     thickness,
                     color,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     items.push(self.build_line_draw_item(
-                        *start_x, *start_y, *end_x, *end_y, *thickness, *color, *layer, *z_index,
+                        *start_x,
+                        *start_y,
+                        *end_x,
+                        *end_y,
+                        *thickness,
+                        *color,
+                        *draw_order,
                     ));
                 }
                 DrawCommand::Rectangle {
@@ -1320,12 +1316,16 @@ impl RenderManager {
                     color,
                     filled,
                     thickness,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     if *filled {
                         items.push(self.build_filled_rect_draw_item(
-                            *x, *y, *width, *height, *color, *layer, *z_index,
+                            *x,
+                            *y,
+                            *width,
+                            *height,
+                            *color,
+                            *draw_order,
                         ));
                     } else {
                         items.push(self.build_line_draw_item(
@@ -1335,8 +1335,7 @@ impl RenderManager {
                             *y,
                             *thickness,
                             *color,
-                            *layer,
-                            *z_index,
+                            *draw_order,
                         ));
                         items.push(self.build_line_draw_item(
                             *x + *width,
@@ -1345,8 +1344,7 @@ impl RenderManager {
                             *y + *height,
                             *thickness,
                             *color,
-                            *layer,
-                            *z_index,
+                            *draw_order,
                         ));
                         items.push(self.build_line_draw_item(
                             *x + *width,
@@ -1355,8 +1353,7 @@ impl RenderManager {
                             *y + *height,
                             *thickness,
                             *color,
-                            *layer,
-                            *z_index,
+                            *draw_order,
                         ));
                         items.push(self.build_line_draw_item(
                             *x,
@@ -1365,8 +1362,7 @@ impl RenderManager {
                             *y,
                             *thickness,
                             *color,
-                            *layer,
-                            *z_index,
+                            *draw_order,
                         ));
                     }
                 }
@@ -1378,17 +1374,26 @@ impl RenderManager {
                     filled,
                     thickness,
                     segments,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     let item = if *filled {
                         self.build_filled_circle_draw_item(
-                            *center_x, *center_y, *radius, *segments, *color, *layer, *z_index,
+                            *center_x,
+                            *center_y,
+                            *radius,
+                            *segments,
+                            *color,
+                            *draw_order,
                         )
                     } else {
                         self.build_circle_outline_draw_item(
-                            *center_x, *center_y, *radius, *thickness, *segments, *color, *layer,
-                            *z_index,
+                            *center_x,
+                            *center_y,
+                            *radius,
+                            *thickness,
+                            *segments,
+                            *color,
+                            *draw_order,
                         )
                     };
 
@@ -1405,8 +1410,7 @@ impl RenderManager {
                     bottom_left,
                     bottom_right,
                     top_right,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     items.push(self.build_gradient_rect_draw_item(
                         *x,
@@ -1417,8 +1421,7 @@ impl RenderManager {
                         *bottom_left,
                         *bottom_right,
                         *top_right,
-                        *layer,
-                        *z_index,
+                        *draw_order,
                     ));
                 }
                 DrawCommand::Image {
@@ -1427,8 +1430,7 @@ impl RenderManager {
                     width,
                     height,
                     texture_path,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     items.push(self.build_image_rect_draw_item(
                         *x,
@@ -1436,8 +1438,7 @@ impl RenderManager {
                         *width,
                         *height,
                         texture_path.clone(),
-                        *layer,
-                        *z_index,
+                        *draw_order,
                     ));
                 }
                 DrawCommand::ImageBytes {
@@ -1449,8 +1450,7 @@ impl RenderManager {
                     rgba,
                     texture_width,
                     texture_height,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     items.push(self.build_image_rect_draw_item(
                         *x,
@@ -1458,8 +1458,7 @@ impl RenderManager {
                         *width,
                         *height,
                         texture_key.clone(),
-                        *layer,
-                        *z_index,
+                        *draw_order,
                     ));
                     texture_uploads.push(PendingTextureUpload {
                         key: texture_key.clone(),
@@ -1477,8 +1476,7 @@ impl RenderManager {
                     font_path,
                     letter_spacing,
                     line_spacing,
-                    layer,
-                    z_index,
+                    draw_order,
                 } => {
                     if let Some((item, upload)) = self.build_text_draw_item(
                         text,
@@ -1489,8 +1487,7 @@ impl RenderManager {
                         font_path.as_deref(),
                         *letter_spacing,
                         *line_spacing,
-                        *layer,
-                        *z_index,
+                        *draw_order,
                     ) {
                         items.push(item);
                         if let Some(upload) = upload {
@@ -1561,7 +1558,7 @@ impl RenderManager {
                     position: [
                         pos_x + rotated_x * aspect_correction_x,
                         rotated_y + pos_y,
-                        mesh.z_index(),
+                        0.0,
                     ],
                     color,
                     tex_coords: [vertex.uv().x(), vertex.uv().y()],
@@ -1569,8 +1566,7 @@ impl RenderManager {
             }
 
             items.push(DrawItem {
-                layer: mesh.layer(),
-                z_index: mesh.z_index(),
+                draw_order: mesh.draw_order(),
                 texture_path: mesh.image_path().map(|p| p.to_string()),
                 vertices,
                 indices: mesh.geometry().indices().to_vec(),
@@ -1589,9 +1585,10 @@ impl RenderManager {
         let (direct_draw_items, texture_uploads) = self.collect_direct_draw_items(draw_manager);
         items.extend(direct_draw_items);
 
-        items.sort_by(|a, b| match a.layer.cmp(&b.layer) {
-            Ordering::Equal => a.z_index.partial_cmp(&b.z_index).unwrap_or(Ordering::Equal),
-            ord => ord,
+        items.sort_by(|a, b| {
+            a.draw_order
+                .partial_cmp(&b.draw_order)
+                .unwrap_or(Ordering::Equal)
         });
 
         (items, texture_uploads)

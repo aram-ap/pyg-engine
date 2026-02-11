@@ -9,7 +9,7 @@ This demo combines all rendering paths into one interactive scene:
 - Image rendering from file path
 - Dynamic image rendering from RGBA bytes
 - Bulk draw command submission via DrawCommand builders
-- Layer and z-index ordering
+- Single draw-order value
 
 Controls:
 - WASD / Arrow keys: Move probe
@@ -79,8 +79,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     panel_mesh = MeshComponent("MeshPanelMesh")
     panel_mesh.set_geometry_rectangle(1.25, 1.05)
     panel_mesh.set_fill_color(Color(0.10, 0.11, 0.16, 0.92))
-    panel_mesh.layer = 0
-    panel_mesh.z_index = -0.6
+    panel_mesh.draw_order = -0.6
     panel.set_mesh_component(panel_mesh)
     engine.add_game_object(panel)
 
@@ -92,8 +91,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     textured_mesh.set_geometry_rectangle(1.0, 1.0)
     textured_mesh.set_fill_color(Color.WHITE)
     textured_mesh.set_image_path("images/1_lower-res.png")
-    textured_mesh.layer = 1
-    textured_mesh.z_index = 0.10
+    textured_mesh.draw_order = 1.10
     textured.set_mesh_component(textured_mesh)
     engine.add_game_object(textured)
 
@@ -104,8 +102,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     solid_mesh = MeshComponent("MeshSolidMesh")
     solid_mesh.set_geometry_rectangle(1.0, 1.0)
     solid_mesh.set_fill_color(Color(0.95, 0.50, 0.16, 0.95))
-    solid_mesh.layer = 2
-    solid_mesh.z_index = 0.25
+    solid_mesh.draw_order = 2.25
     solid.set_mesh_component(solid_mesh)
     engine.add_game_object(solid)
 
@@ -115,8 +112,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     accent_mesh = MeshComponent("MeshAccentMesh")
     accent_mesh.set_geometry_rectangle(1.0, 1.0)
     accent_mesh.set_fill_color(Color(0.15, 0.85, 0.90, 0.85))
-    accent_mesh.layer = 3
-    accent_mesh.z_index = 0.30
+    accent_mesh.draw_order = 3.30
     accent.set_mesh_component(accent_mesh)
     engine.add_game_object(accent)
 
@@ -175,7 +171,9 @@ def build_bulk_overlay(
         h = 18.0 + wave * amplitude
         c = 0.35 + wave * 0.55
         color = Color(0.12, c, 0.95, 0.88)
-        commands.append(DrawCommand.rectangle(x, center_y - h, bar_width, h, color, True, 1.0, 9, 0.20))
+        commands.append(
+            DrawCommand.rectangle(x, center_y - h, bar_width, h, color, True, 1.0, 9.20)
+        )
 
     prev_x = left
     prev_y = center_y - (
@@ -186,9 +184,7 @@ def build_bulk_overlay(
         y = center_y - (
             (math.sin((i * 0.12) + t * 1.6) * 0.5 + 0.5) * (amplitude * 0.85) + 12.0
         )
-        commands.append(
-            DrawCommand.line(prev_x, prev_y, x, y, Color(1.0, 0.86, 0.22, 1.0), 2.0, 10, 0.35)
-        )
+        commands.append(DrawCommand.line(prev_x, prev_y, x, y, Color(1.0, 0.86, 0.22, 1.0), 2.0, 10.35))
         prev_x, prev_y = x, y
 
     # Add a ring around the probe using the bulk path too.
@@ -201,8 +197,7 @@ def build_bulk_overlay(
             False,
             2.0,
             36,
-            12,
-            0.92,
+            12.92,
         )
     )
 
@@ -351,8 +346,7 @@ def main() -> None:
             gradient_rgba,
             2,
             2,
-            layer=-10,
-            z_index=0.0,
+            draw_order=-10.0,
         )
 
         # File-path image draw path.
@@ -362,8 +356,7 @@ def main() -> None:
             image_size,
             image_size,
             "images/1_lower-res.png",
-            layer=4,
-            z_index=0.25,
+            draw_order=4.25,
         )
 
         # Dynamic RGBA-bytes image draw path.
@@ -381,11 +374,10 @@ def main() -> None:
                 cached_dynamic_rgba,
                 dyn_tex_w,
                 dyn_tex_h,
-                layer=5,
-                z_index=0.32,
+                draw_order=5.32,
             )
 
-        # Immediate primitive layer.
+        # Immediate primitive draw-order band.
         if show_primitives:
             engine.draw_rectangle(
                 24.0,
@@ -395,8 +387,7 @@ def main() -> None:
                 Color(0.90, 0.93, 1.0, 0.85),
                 filled=False,
                 thickness=2.0,
-                layer=14,
-                z_index=0.95,
+                draw_order=14.95,
             )
             engine.draw_rectangle(
                 dyn_x - 10.0,
@@ -406,8 +397,7 @@ def main() -> None:
                 Color(0.90, 0.93, 1.0, 0.85),
                 filled=False,
                 thickness=2.0,
-                layer=14,
-                z_index=0.95,
+                draw_order=14.95,
             )
             engine.draw_line(
                 probe_x,
@@ -416,8 +406,7 @@ def main() -> None:
                 float(mouse_y),
                 Color(1.0, 1.0, 1.0, 0.45),
                 thickness=1.0,
-                layer=13,
-                z_index=0.90,
+                draw_order=13.90,
             )
             engine.draw_circle(
                 probe_x,
@@ -425,8 +414,7 @@ def main() -> None:
                 10.0,
                 Color(0.98, 0.42, 0.24, 1.0),
                 filled=True,
-                layer=13,
-                z_index=0.91,
+                draw_order=13.91,
             )
             engine.draw_circle(
                 probe_x,
@@ -436,14 +424,13 @@ def main() -> None:
                 filled=False,
                 thickness=2.0,
                 segments=40,
-                layer=13,
-                z_index=0.91,
+                draw_order=13.91,
             )
 
             for i in range(32):
                 px = int(36 + (i % 8) * 3 + math.sin(sim_time * 5.0 + i) * 1.2)
                 py = int(36 + (i // 8) * 3)
-                engine.draw_pixel(px, py, Color.WHITE, layer=15, z_index=1.0)
+                engine.draw_pixel(px, py, Color.WHITE, draw_order=16.0)
 
         if show_bulk:
             commands = build_bulk_overlay(
@@ -469,8 +456,7 @@ def main() -> None:
             font_size=16.0,
             letter_spacing=1.0,
             line_spacing=4.0,
-            layer=18,
-            z_index=1.15,
+            draw_order=19.15,
         )
 
         engine.draw_text(
@@ -480,8 +466,7 @@ def main() -> None:
             Color(0.90, 0.96, 1.0, 0.95),
             font_size=20.0,
             letter_spacing=1.5,
-            layer=18,
-            z_index=1.16,
+            draw_order=19.16,
         )
 
         engine.update()

@@ -202,8 +202,7 @@ pub struct MeshComponent {
     fill_color: Option<Color>,
     image_path: Option<String>,
     visible: bool,
-    layer: i32,
-    z_index: f32,
+    draw_order: f32,
 }
 
 impl ComponentTrait for MeshComponent {
@@ -214,8 +213,7 @@ impl ComponentTrait for MeshComponent {
             fill_color: Some(Color::WHITE),
             image_path: None,
             visible: true,
-            layer: 0,
-            z_index: 0.0,
+            draw_order: 0.0,
         }
     }
 
@@ -251,13 +249,8 @@ impl MeshComponent {
         self
     }
 
-    pub fn with_layer(mut self, layer: i32) -> Self {
-        self.layer = layer;
-        self
-    }
-
-    pub fn with_z_index(mut self, z_index: f32) -> Self {
-        self.z_index = z_index;
+    pub fn with_draw_order(mut self, draw_order: f32) -> Self {
+        self.draw_order = draw_order;
         self
     }
 
@@ -293,20 +286,12 @@ impl MeshComponent {
         self.visible = visible;
     }
 
-    pub fn layer(&self) -> i32 {
-        self.layer
+    pub fn draw_order(&self) -> f32 {
+        self.draw_order
     }
 
-    pub fn set_layer(&mut self, layer: i32) {
-        self.layer = layer;
-    }
-
-    pub fn z_index(&self) -> f32 {
-        self.z_index
-    }
-
-    pub fn set_z_index(&mut self, z_index: f32) {
-        self.z_index = z_index;
+    pub fn set_draw_order(&mut self, draw_order: f32) {
+        self.draw_order = draw_order;
     }
 }
 

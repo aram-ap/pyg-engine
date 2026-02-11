@@ -54,7 +54,7 @@ Demonstrates mesh rendering through Rust-side GameObject + MeshComponent:
 - Color-filled mesh rendering
 - Textured mesh rendering
 - Transform (position, scale, rotation)
-- Layer and z-index ordering
+- Single draw-order value
 
 **Run:**
 ```bash
