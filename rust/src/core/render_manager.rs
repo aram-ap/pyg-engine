@@ -28,6 +28,11 @@ struct CachedTexture {
     height: u32,
 }
 
+struct CachedTextureEntry {
+    cached_texture: CachedTexture,
+    last_used_frame: u64,
+}
+
 #[derive(Clone)]
 struct DrawItem {
     draw_order: f32,
@@ -133,7 +138,7 @@ pub struct RenderManager {
     render_pipeline: wgpu::RenderPipeline,
     texture_bind_group_layout: wgpu::BindGroupLayout,
     default_texture: CachedTexture,
-    texture_cache: HashMap<String, Option<CachedTexture>>,
+    texture_cache: HashMap<String, Option<CachedTextureEntry>>,
     texture_data_signature_cache: HashMap<String, u64>,
     font_cache: HashMap<String, Option<Font>>,
     vertex_buffer_pool: Vec<PooledBuffer>,
@@ -141,6 +146,8 @@ pub struct RenderManager {
     active_camera_object_id: Option<u32>,
     camera_viewport_size: Option<Vec2>,
     camera_aspect_mode: CameraAspectMode,
+    current_frame: u64,
+    texture_ttl_frames: u64,
 }
 
 impl RenderManager {
@@ -331,6 +338,8 @@ impl RenderManager {
             active_camera_object_id: None,
             camera_viewport_size: None,
             camera_aspect_mode: CameraAspectMode::default(),
+            current_frame: 0,
+            texture_ttl_frames: 180, // Clean up textures unused for 180 frames (~3 seconds at 60fps)
         })
     }
 
@@ -463,25 +472,30 @@ impl RenderManager {
             .get(texture_key)
             .is_some_and(|prev| *prev == signature)
         {
+            // Update last used frame even if data hasn't changed
+            if let Some(Some(entry)) = self.texture_cache.get_mut(texture_key) {
+                entry.last_used_frame = self.current_frame;
+            }
             return Ok(());
         }
 
-        if let Some(Some(cached_texture)) = self.texture_cache.get_mut(texture_key) {
-            if cached_texture.width == width && cached_texture.height == height {
+        if let Some(Some(entry)) = self.texture_cache.get_mut(texture_key) {
+            if entry.cached_texture.width == width && entry.cached_texture.height == height {
                 Self::write_rgba_to_texture(
                     &self.queue,
-                    &cached_texture.texture,
+                    &entry.cached_texture.texture,
                     rgba,
                     width,
                     height,
                 );
+                entry.last_used_frame = self.current_frame;
                 self.texture_data_signature_cache
                     .insert(texture_key.to_string(), signature);
                 return Ok(());
             }
         }
 
-        let cached = Self::create_cached_texture(
+        let cached_texture = Self::create_cached_texture(
             &self.device,
             &self.queue,
             &self.texture_bind_group_layout,
@@ -490,8 +504,12 @@ impl RenderManager {
             height,
             texture_key,
         );
+        let entry = CachedTextureEntry {
+            cached_texture,
+            last_used_frame: self.current_frame,
+        };
         self.texture_cache
-            .insert(texture_key.to_string(), Some(cached));
+            .insert(texture_key.to_string(), Some(entry));
         self.texture_data_signature_cache
             .insert(texture_key.to_string(), signature);
 
@@ -577,7 +595,10 @@ impl RenderManager {
         if let Some(path) = texture_path {
             if !self.texture_cache.contains_key(path) {
                 let loaded = match self.load_texture_from_path(path) {
-                    Ok(texture) => Some(texture),
+                    Ok(cached_texture) => Some(CachedTextureEntry {
+                        cached_texture,
+                        last_used_frame: self.current_frame,
+                    }),
                     Err(err) => {
                         logging::log_warn(&format!("Texture load failed: {err}"));
                         None
@@ -586,8 +607,9 @@ impl RenderManager {
                 self.texture_cache.insert(path.to_string(), loaded);
             }
 
-            if let Some(Some(texture)) = self.texture_cache.get(path) {
-                return texture.bind_group.clone();
+            if let Some(Some(entry)) = self.texture_cache.get_mut(path) {
+                entry.last_used_frame = self.current_frame;
+                return entry.cached_texture.bind_group.clone();
             }
         }
 
@@ -1263,12 +1285,19 @@ impl RenderManager {
         );
 
         // Fast path: skip CPU rasterization when this text texture is already cached.
-        if let Some(Some(cached_texture)) = self.texture_cache.get(&texture_key) {
+        let cached_dimensions = if let Some(Some(entry)) = self.texture_cache.get_mut(&texture_key) {
+            entry.last_used_frame = self.current_frame;
+            Some((entry.cached_texture.width, entry.cached_texture.height))
+        } else {
+            None
+        };
+
+        if let Some((width, height)) = cached_dimensions {
             let item = self.build_image_rect_draw_item(
                 x,
                 y,
-                cached_texture.width as f32,
-                cached_texture.height as f32,
+                width as f32,
+                height as f32,
                 texture_key,
                 draw_order,
             );
@@ -1818,6 +1847,47 @@ impl RenderManager {
         self.render_state_epoch = self.render_state_epoch.wrapping_add(1);
     }
 
+    /// Clean up textures that haven't been used recently.
+    ///
+    /// Removes cached textures (typically text textures) that haven't been
+    /// accessed for more than `texture_ttl_frames` frames. This prevents
+    /// memory leaks from dynamically generated text that changes every frame.
+    fn cleanup_unused_textures(&mut self) {
+        if self.current_frame < self.texture_ttl_frames {
+            return; // Not enough frames have passed yet
+        }
+
+        let cutoff_frame = self.current_frame - self.texture_ttl_frames;
+        let keys_to_remove: Vec<String> = self
+            .texture_cache
+            .iter()
+            .filter_map(|(key, entry)| {
+                // Only clean up text textures (they have the __pyg_text_ prefix)
+                if key.starts_with("__pyg_text_") {
+                    if let Some(cached_entry) = entry {
+                        if cached_entry.last_used_frame < cutoff_frame {
+                            return Some(key.clone());
+                        }
+                    }
+                }
+                None
+            })
+            .collect();
+
+        if !keys_to_remove.is_empty() {
+            logging::log_debug(&format!(
+                "Cleaning up {} unused text textures (older than {} frames)",
+                keys_to_remove.len(),
+                self.texture_ttl_frames
+            ));
+
+            for key in keys_to_remove {
+                self.texture_cache.remove(&key);
+                self.texture_data_signature_cache.remove(&key);
+            }
+        }
+    }
+
     /// Invalidate any scene version precomputed before a simulation update.
     pub fn invalidate_precomputed_scene_signature(&mut self) {
         self.precomputed_scene_version = None;
@@ -2012,6 +2082,13 @@ impl RenderManager {
 
         self.requires_redraw = false;
         self.last_scene_version = Some(scene_version);
+
+        // Increment frame counter and periodically clean up unused textures
+        self.current_frame = self.current_frame.wrapping_add(1);
+        if self.current_frame % 60 == 0 {
+            // Clean up every 60 frames to avoid overhead
+            self.cleanup_unused_textures();
+        }
 
         Ok(())
     }
