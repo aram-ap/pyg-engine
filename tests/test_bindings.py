@@ -973,6 +973,20 @@ def test_mesh_component_creation_and_properties() -> None:
     assert abs(mesh.z_index - 0.25) < 1e-5
 
 
+def test_mesh_component_circle_geometry_api() -> None:
+    """
+    Test that circle geometry can be configured from Python.
+    """
+    mesh = pyg.MeshComponent("CircleMesh")
+    mesh.set_geometry_circle(24.0, segments=40)
+    mesh.set_fill_color(pyg.Color.CYAN)
+    mesh.visible = True
+
+    assert mesh.name == "CircleMesh"
+    assert mesh.fill_color() is not None
+    assert mesh.visible is True
+
+
 def test_game_object_mesh_component_api() -> None:
     """
     Test mesh component APIs on GameObject bindings.
@@ -1006,6 +1020,30 @@ def test_game_object_mesh_component_api() -> None:
     removed = go.remove_mesh_component()
     assert removed is not None
     assert go.has_mesh_component() is False
+
+
+def test_engine_runtime_position_update_api() -> None:
+    """
+    Test runtime position updates by object id.
+    """
+    engine = pyg.Engine()
+    go = pyg.GameObject("Mover")
+    go.set_mesh_geometry_circle(20.0, segments=24)
+    go.set_mesh_fill_color(pyg.Color.GREEN)
+
+    obj_id = engine.add_game_object(go)
+    assert obj_id is None or isinstance(obj_id, int)
+
+    if obj_id is not None:
+        # Property updates on bound GameObject should queue runtime updates.
+        go.position = pyg.Vec2(12.0, -8.0)
+        engine.update()
+
+        updated = engine.set_game_object_position(obj_id, pyg.Vec2(12.0, -8.0))
+        assert updated is True
+
+    missing = engine.set_game_object_position(999_999, pyg.Vec2(0.0, 0.0))
+    assert missing is False
 
 
 def test_engine_direct_draw_and_add_object_no_crash() -> None:

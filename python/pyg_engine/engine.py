@@ -48,6 +48,10 @@ class EngineHandle:
         """Remove a runtime GameObject by id via command queue."""
         self._inner.remove_game_object(object_id)
 
+    def set_game_object_position(self, object_id: int, position: Any) -> None:
+        """Update a runtime GameObject position by id via command queue."""
+        self._inner.set_game_object_position(object_id, position)
+
     def clear_draw_commands(self) -> None:
         """Clear all immediate-mode drawing commands via command queue."""
         self._inner.clear_draw_commands()
@@ -859,6 +863,15 @@ class Engine:
     def remove_game_object(self, object_id: int) -> None:
         """Remove a runtime GameObject by id."""
         self._engine.remove_game_object(object_id)
+
+    def set_game_object_position(self, object_id: int, position: Any) -> bool:
+        """
+        Update a runtime GameObject position by id.
+
+        Returns:
+            True if the object exists and was updated, False otherwise.
+        """
+        return self._engine.set_game_object_position(object_id, position)
 
     def clear_draw_commands(self) -> None:
         """Clear all immediate-mode drawing commands."""

@@ -1075,20 +1075,12 @@ impl RenderManager {
         line_spacing: f32,
         layer: i32,
         z_index: f32,
-    ) -> Option<(DrawItem, PendingTextureUpload)> {
+    ) -> Option<(DrawItem, Option<PendingTextureUpload>)> {
         if text.is_empty() {
             return None;
         }
 
         let font_size = font_size.max(1.0);
-        let rasterized = self.rasterize_text(
-            text,
-            font_size,
-            color,
-            font_path,
-            letter_spacing,
-            line_spacing,
-        )?;
         let texture_key = Self::build_text_texture_key(
             text,
             font_path,
@@ -1098,6 +1090,28 @@ impl RenderManager {
             line_spacing,
         );
 
+        // Fast path: skip CPU rasterization when this text texture is already cached.
+        if let Some(Some(cached_texture)) = self.texture_cache.get(&texture_key) {
+            let item = self.build_image_rect_draw_item(
+                x,
+                y,
+                cached_texture.width as f32,
+                cached_texture.height as f32,
+                texture_key,
+                layer,
+                z_index,
+            );
+            return Some((item, None));
+        }
+
+        let rasterized = self.rasterize_text(
+            text,
+            font_size,
+            color,
+            font_path,
+            letter_spacing,
+            line_spacing,
+        )?;
         let item = self.build_image_rect_draw_item(
             x,
             y,
@@ -1107,7 +1121,6 @@ impl RenderManager {
             layer,
             z_index,
         );
-
         let upload = PendingTextureUpload {
             key: texture_key,
             rgba: Arc::from(rasterized.rgba),
@@ -1115,7 +1128,7 @@ impl RenderManager {
             height: rasterized.height,
         };
 
-        Some((item, upload))
+        Some((item, Some(upload)))
     }
 
     fn build_line_draw_item(
@@ -1480,7 +1493,9 @@ impl RenderManager {
                         *z_index,
                     ) {
                         items.push(item);
-                        texture_uploads.push(upload);
+                        if let Some(upload) = upload {
+                            texture_uploads.push(upload);
+                        }
                     }
                 }
             }
@@ -1530,6 +1545,9 @@ impl RenderManager {
             let scale_y = transform.scale().y();
             let pos_x = transform.position().x();
             let pos_y = transform.position().y();
+            let surface_width = self.surface_config.width.max(1) as f32;
+            let surface_height = self.surface_config.height.max(1) as f32;
+            let aspect_correction_x = surface_height / surface_width;
 
             let mut vertices = Vec::with_capacity(mesh.geometry().vertices().len());
             for vertex in mesh.geometry().vertices() {
@@ -1540,7 +1558,11 @@ impl RenderManager {
                 let rotated_y = local_x * sin_t + local_y * cos_t;
 
                 vertices.push(Vertex {
-                    position: [rotated_x + pos_x, rotated_y + pos_y, mesh.z_index()],
+                    position: [
+                        pos_x + rotated_x * aspect_correction_x,
+                        rotated_y + pos_y,
+                        mesh.z_index(),
+                    ],
                     color,
                     tex_coords: [vertex.uv().x(), vertex.uv().y()],
                 });

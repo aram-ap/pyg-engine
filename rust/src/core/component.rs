@@ -79,6 +79,34 @@ impl MeshGeometry {
         }
     }
 
+    /// Create a circle centered at origin using a triangle fan.
+    pub fn circle(radius: f32, segments: u32) -> Self {
+        let segment_count = segments.max(3);
+        let safe_radius = radius.abs().max(f32::EPSILON);
+        let mut vertices = Vec::with_capacity((segment_count + 1) as usize);
+        let mut indices = Vec::with_capacity((segment_count * 3) as usize);
+
+        // Center vertex for triangle fan.
+        vertices.push(MeshVertex::new(Vec2::new(0.0, 0.0), Vec2::new(0.5, 0.5)));
+
+        for i in 0..segment_count {
+            let angle = (i as f32 / segment_count as f32) * std::f32::consts::TAU;
+            let x = safe_radius * angle.cos();
+            let y = safe_radius * angle.sin();
+            let u = (x / safe_radius) * 0.5 + 0.5;
+            let v = 0.5 - (y / safe_radius) * 0.5;
+            vertices.push(MeshVertex::new(Vec2::new(x, y), Vec2::new(u, v)));
+        }
+
+        for i in 0..segment_count {
+            let current = i + 1;
+            let next = ((i + 1) % segment_count) + 1;
+            indices.extend([0, current, next]);
+        }
+
+        Self { vertices, indices }
+    }
+
     pub fn vertices(&self) -> &[MeshVertex] {
         &self.vertices
     }

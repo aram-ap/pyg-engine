@@ -1,6 +1,7 @@
 use crossbeam_channel::Sender;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
+use std::cell::RefCell;
 use std::sync::Arc;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
@@ -483,8 +484,13 @@ impl PyEngine {
     ///
     /// The object is copied into the runtime scene using current transform + mesh state.
     fn add_game_object(&mut self, game_object: &PyGameObject) -> Option<u32> {
-        self.inner
-            .add_game_object(game_object.to_runtime_game_object())
+        let object_id = self
+            .inner
+            .add_game_object(game_object.to_runtime_game_object());
+        if let Some(id) = object_id {
+            game_object.bind_runtime(self.inner.get_command_sender(), id);
+        }
+        object_id
     }
 
     /// Create and add a default GameObject (or named one) to the runtime scene.
@@ -500,6 +506,11 @@ impl PyEngine {
     /// Remove a runtime GameObject by id.
     fn remove_game_object(&mut self, object_id: u32) {
         self.inner.remove_game_object(object_id);
+    }
+
+    /// Update a runtime GameObject's position by id.
+    fn set_game_object_position(&mut self, object_id: u32, position: PyVec2) -> bool {
+        self.inner.set_game_object_position(object_id, position.inner)
     }
 
     /// Clear all immediate-mode draw commands.
@@ -926,6 +937,14 @@ impl PyEngineHandle {
         let _ = self.sender.send(EngineCommand::RemoveGameObject(object_id));
     }
 
+    /// Update a runtime GameObject position by id via command queue.
+    fn set_game_object_position(&self, object_id: u32, position: PyVec2) {
+        let _ = self.sender.send(EngineCommand::SetGameObjectPosition {
+            object_id,
+            position: position.inner,
+        });
+    }
+
     /// Clear all immediate-mode draw commands via command queue.
     fn clear_draw_commands(&self) {
         let _ = self.sender.send(EngineCommand::ClearDrawCommands);
@@ -1223,6 +1242,13 @@ impl PyTime {
 #[pyclass(name = "GameObject", unsendable)]
 pub struct PyGameObject {
     inner: RustGameObject,
+    runtime_binding: RefCell<Option<RuntimeBinding>>,
+}
+
+#[derive(Clone)]
+struct RuntimeBinding {
+    sender: Sender<EngineCommand>,
+    object_id: u32,
 }
 
 impl PyGameObject {
@@ -1253,6 +1279,11 @@ impl PyGameObject {
 
         runtime
     }
+
+    fn bind_runtime(&self, sender: Sender<EngineCommand>, object_id: u32) {
+        self.runtime_binding
+            .replace(Some(RuntimeBinding { sender, object_id }));
+    }
 }
 
 #[pymethods]
@@ -1265,7 +1296,10 @@ impl PyGameObject {
         } else {
             RustGameObject::new()
         };
-        Self { inner }
+        Self {
+            inner,
+            runtime_binding: RefCell::new(None),
+        }
     }
 
     #[getter]
@@ -1302,6 +1336,12 @@ impl PyGameObject {
     #[setter]
     fn set_position(&mut self, position: PyVec2) {
         self.inner.transform_mut().set_position(position.inner);
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::SetGameObjectPosition {
+                object_id: binding.object_id,
+                position: position.inner,
+            });
+        }
     }
 
     #[getter]
@@ -1365,6 +1405,12 @@ impl PyGameObject {
     fn set_mesh_geometry_rectangle(&mut self, width: f32, height: f32) {
         let mesh = self.ensure_mesh_component();
         mesh.set_geometry(MeshGeometry::rectangle(width, height));
+    }
+
+    #[pyo3(signature = (radius, segments=32))]
+    fn set_mesh_geometry_circle(&mut self, radius: f32, segments: u32) {
+        let mesh = self.ensure_mesh_component();
+        mesh.set_geometry(MeshGeometry::circle(radius, segments));
     }
 
     fn set_mesh_fill_color(&mut self, color: Option<PyColor>) {
@@ -1445,6 +1491,12 @@ impl PyMeshComponent {
     fn set_geometry_rectangle(&mut self, width: f32, height: f32) {
         self.inner
             .set_geometry(MeshGeometry::rectangle(width, height));
+    }
+
+    #[pyo3(signature = (radius, segments=32))]
+    fn set_geometry_circle(&mut self, radius: f32, segments: u32) {
+        self.inner
+            .set_geometry(MeshGeometry::circle(radius, segments));
     }
 
     fn set_fill_color(&mut self, color: Option<PyColor>) {
