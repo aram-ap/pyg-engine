@@ -4,6 +4,12 @@ from pyg_engine import Color, DrawCommand, Engine
 
 
 def main() -> None:
+    """
+    Bulk draw demo for pyg_engine.
+
+    Shows how to use the bulk draw API using DrawCommand objects to draw a scene.
+    """
+
     engine = Engine()
     engine.start_manual(
         title="Bulk Draw Demo",

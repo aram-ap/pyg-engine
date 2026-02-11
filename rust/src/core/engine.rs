@@ -9,6 +9,7 @@ use super::render_manager::RenderManager;
 use super::time::Time;
 use super::window_manager::{WindowConfig, WindowManager};
 use crate::types::Color;
+use crate::types::vector::Vec2;
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -266,6 +267,21 @@ impl Engine {
         if let Some(object_manager) = &mut self.object_manager {
             object_manager.remove_object(id);
         }
+    }
+
+    /// Update a runtime GameObject position by id.
+    pub fn set_game_object_position(&mut self, id: u32, position: Vec2) -> bool {
+        let Some(object_manager) = &mut self.object_manager else {
+            return false;
+        };
+
+        let Some(object) = object_manager.get_object_by_id_mut(id) else {
+            return false;
+        };
+
+        object.transform_mut().set_position(position);
+        self.request_render_redraw();
+        true
     }
 
     fn request_render_redraw(&mut self) {
@@ -568,6 +584,9 @@ impl Engine {
                 }
                 EngineCommand::RemoveGameObject(id) => {
                     self.remove_game_object(id);
+                }
+                EngineCommand::SetGameObjectPosition { object_id, position } => {
+                    let _ = self.set_game_object_position(object_id, position);
                 }
                 EngineCommand::ClearDrawCommands => {
                     self.clear_draw_commands();

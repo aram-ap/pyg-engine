@@ -1,6 +1,7 @@
 use super::draw_manager::DrawCommand;
 use super::game_object::GameObject;
 use crate::types::Color;
+use crate::types::vector::Vec2;
 use std::sync::Arc;
 
 /// Commands that can be sent to the engine from any thread
@@ -11,6 +12,12 @@ pub enum EngineCommand {
 
     /// Remove a game object by ID
     RemoveGameObject(u32),
+
+    /// Update a runtime GameObject position by id
+    SetGameObjectPosition {
+        object_id: u32,
+        position: Vec2,
+    },
 
     /// Clear all immediate-mode draw commands
     ClearDrawCommands,
