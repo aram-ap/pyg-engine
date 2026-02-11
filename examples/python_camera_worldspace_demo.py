@@ -202,7 +202,7 @@ def main() -> None:
                 "(F1 stretch, F2 match_horizontal, F3 match_vertical, F4 fit_both, F5 fill_both)"
             )
 
-        # Draw HUD text. 
+        # Draw HUD text.
         engine.clear_draw_commands()
         engine.draw_text(
             "Worldspace Camera Demo (WASD/Arrows pan, Q/E or wheel zoom, LMB drag pan, ESC quit)",

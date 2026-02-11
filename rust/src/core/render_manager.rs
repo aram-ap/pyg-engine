@@ -118,6 +118,7 @@ pub struct RenderManager {
     queue: Queue,
     surface: Surface<'static>,
     surface_config: SurfaceConfiguration,
+    surface_present_modes: Vec<PresentMode>,
     vsync_enabled: bool,
     background_color: Color,
     redraw_on_change_only: bool,
@@ -208,10 +209,23 @@ impl RenderManager {
             .unwrap_or(surface_caps.formats[0]);
 
         // Configure the surface.
+        // Choose present mode based on vsync setting and platform capabilities.
+        // Fifo (vsync) is always supported. For non-vsync, prefer Mailbox > Immediate.
         let present_mode = if vsync {
-            PresentMode::Fifo // VSync on
+            PresentMode::Fifo // VSync on (always supported)
         } else {
-            PresentMode::Immediate // VSync off
+            // Try to use Mailbox (low-latency without tearing) if available,
+            // otherwise fall back to Immediate (may tear but lowest latency).
+            // Mailbox is better supported on macOS/Metal than Immediate.
+            if surface_caps.present_modes.contains(&PresentMode::Mailbox) {
+                PresentMode::Mailbox
+            } else if surface_caps.present_modes.contains(&PresentMode::Immediate) {
+                PresentMode::Immediate
+            } else {
+                // If neither is available, fall back to Fifo
+                logging::log_warn("VSync off requested but Mailbox/Immediate modes not available; using Fifo");
+                PresentMode::Fifo
+            }
         };
 
         let surface_config = SurfaceConfiguration {
@@ -311,6 +325,7 @@ impl RenderManager {
             queue,
             surface,
             surface_config,
+            surface_present_modes: surface_caps.present_modes,
             vsync_enabled: vsync,
             background_color: background_color.unwrap_or(Color::BLACK),
             redraw_on_change_only,
@@ -2033,14 +2048,25 @@ impl RenderManager {
     /// Configure VSync (vertical synchronization).
     ///
     /// When enabled, uses Fifo present mode (VSync on).
-    /// When disabled, uses Immediate mode (VSync off, may tear).
+    /// When disabled, prefers Mailbox (low-latency, tear-free) or Immediate mode.
     pub fn configure_vsync(&mut self, vsync_enabled: bool) {
         self.vsync_enabled = vsync_enabled;
 
         self.surface_config.present_mode = if vsync_enabled {
-            PresentMode::Fifo // VSync on
+            PresentMode::Fifo // VSync on (always supported)
         } else {
-            PresentMode::Immediate // VSync off
+            // Try to use Mailbox (low-latency without tearing) if available,
+            // otherwise fall back to Immediate (may tear but lowest latency).
+            // Mailbox is better supported on macOS/Metal than Immediate.
+            if self.surface_present_modes.contains(&PresentMode::Mailbox) {
+                PresentMode::Mailbox
+            } else if self.surface_present_modes.contains(&PresentMode::Immediate) {
+                PresentMode::Immediate
+            } else {
+                // If neither is available, fall back to Fifo
+                logging::log_warn("VSync off requested but Mailbox/Immediate modes not available; using Fifo");
+                PresentMode::Fifo
+            }
         };
 
         self.surface.configure(&self.device, &self.surface_config);
