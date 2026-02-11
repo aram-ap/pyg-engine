@@ -60,7 +60,7 @@ def create_textured_quad(use_texture: bool = True) -> pyg.GameObject:
     if use_texture:
         # Loading and decoding image assets can add startup latency.
         mesh.set_fill_color(pyg.Color.WHITE)
-        mesh.set_image_path("images/1.png")
+        mesh.set_image_path("images/1_lower-res.png")
     else:
         mesh.set_fill_color(pyg.Color.CYAN)
     mesh.layer = 2
