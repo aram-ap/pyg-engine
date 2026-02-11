@@ -13,6 +13,7 @@ try:
         GameObject,
         MeshComponent,
         TransformComponent,
+        CameraAspectMode,
         MouseButton,
         Keys,
         version as _version_func,
@@ -28,6 +29,7 @@ except ImportError:
     GameObject = None  # type: ignore
     MeshComponent = None  # type: ignore
     TransformComponent = None  # type: ignore
+    CameraAspectMode = None  # type: ignore
     MouseButton = None  # type: ignore
     Keys = None  # type: ignore
     version = None  # type: ignore
@@ -49,6 +51,7 @@ __all__ = [
     "GameObject",
     "MeshComponent",
     "TransformComponent",
+    "CameraAspectMode",
     "MouseButton",
     "Keys",
     "version",

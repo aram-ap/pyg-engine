@@ -77,6 +77,34 @@ fn hash_color<H: Hasher>(hasher: &mut H, color: &Color) {
     hash_f32(hasher, color.a());
 }
 
+/// Camera aspect handling policy for world-space rendering.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum CameraAspectMode {
+    /// Scale x/y independently to always fill the window (may distort).
+    #[default]
+    Stretch,
+    /// Preserve aspect by keeping configured world width fixed.
+    MatchHorizontal,
+    /// Preserve aspect by keeping configured world height fixed.
+    MatchVertical,
+    /// Preserve aspect and show full viewport with letter/pillar boxing.
+    FitBoth,
+    /// Preserve aspect and fill window by cropping one axis.
+    FillBoth,
+}
+
+impl CameraAspectMode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Stretch => "stretch",
+            Self::MatchHorizontal => "match_horizontal",
+            Self::MatchVertical => "match_vertical",
+            Self::FitBoth => "fit_both",
+            Self::FillBoth => "fill_both",
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct SceneVersion {
     render_state_epoch: u64,
@@ -112,6 +140,7 @@ pub struct RenderManager {
     index_buffer_pool: Vec<PooledBuffer>,
     active_camera_object_id: Option<u32>,
     camera_viewport_size: Option<Vec2>,
+    camera_aspect_mode: CameraAspectMode,
 }
 
 impl RenderManager {
@@ -301,6 +330,7 @@ impl RenderManager {
             index_buffer_pool: Vec::new(),
             active_camera_object_id: None,
             camera_viewport_size: None,
+            camera_aspect_mode: CameraAspectMode::default(),
         })
     }
 
@@ -575,20 +605,68 @@ impl RenderManager {
         Vec2::new(2.0 * aspect, 2.0)
     }
 
+    fn display_aspect_ratio(&self) -> f32 {
+        let width = self.surface_config.width.max(1) as f32;
+        let height = self.surface_config.height.max(1) as f32;
+        width / height
+    }
+
     fn effective_camera_viewport_size(&self) -> Vec2 {
         self.camera_viewport_size
             .unwrap_or_else(|| self.default_camera_viewport_size())
     }
 
+    fn effective_world_viewport_size(&self, viewport: Vec2) -> Vec2 {
+        let safe_display_aspect = self.display_aspect_ratio().max(f32::EPSILON);
+        match self.camera_aspect_mode {
+            CameraAspectMode::MatchHorizontal => Vec2::new(
+                viewport.x().max(f32::EPSILON),
+                (viewport.x() / safe_display_aspect).max(f32::EPSILON),
+            ),
+            CameraAspectMode::MatchVertical => Vec2::new(
+                (viewport.y() * safe_display_aspect).max(f32::EPSILON),
+                viewport.y().max(f32::EPSILON),
+            ),
+            _ => viewport,
+        }
+    }
+
+    fn world_clip_scale(&self, viewport: Vec2) -> (f32, f32) {
+        let safe_display_aspect = self.display_aspect_ratio().max(f32::EPSILON);
+        let safe_viewport_aspect =
+            (viewport.x().max(f32::EPSILON) / viewport.y().max(f32::EPSILON)).max(f32::EPSILON);
+        match self.camera_aspect_mode {
+            CameraAspectMode::FitBoth => {
+                if safe_display_aspect >= safe_viewport_aspect {
+                    (safe_viewport_aspect / safe_display_aspect, 1.0)
+                } else {
+                    (1.0, safe_display_aspect / safe_viewport_aspect)
+                }
+            }
+            CameraAspectMode::FillBoth => {
+                if safe_display_aspect >= safe_viewport_aspect {
+                    (1.0, safe_display_aspect / safe_viewport_aspect)
+                } else {
+                    (safe_viewport_aspect / safe_display_aspect, 1.0)
+                }
+            }
+            _ => (1.0, 1.0),
+        }
+    }
+
     fn world_to_clip(&self, world_x: f32, world_y: f32, camera_position: Vec2) -> [f32; 2] {
         let viewport = self.effective_camera_viewport_size();
-        let half_width = (viewport.x() * 0.5).max(f32::EPSILON);
-        let half_height = (viewport.y() * 0.5).max(f32::EPSILON);
+        let effective_viewport = self.effective_world_viewport_size(viewport);
+        let half_width = (effective_viewport.x() * 0.5).max(f32::EPSILON);
+        let half_height = (effective_viewport.y() * 0.5).max(f32::EPSILON);
 
         let relative_x = world_x - camera_position.x();
         let relative_y = world_y - camera_position.y();
+        let normalized_x = relative_x / half_width;
+        let normalized_y = relative_y / half_height;
+        let (clip_scale_x, clip_scale_y) = self.world_clip_scale(viewport);
 
-        [relative_x / half_width, relative_y / half_height]
+        [normalized_x * clip_scale_x, normalized_y * clip_scale_y]
     }
 
     fn active_camera_position(&self, objects: &Option<ObjectManager>) -> Vec2 {
@@ -612,6 +690,21 @@ impl RenderManager {
         let safe_width = width.max(f32::EPSILON);
         let safe_height = height.max(f32::EPSILON);
         self.camera_viewport_size = Some(Vec2::new(safe_width, safe_height));
+        self.requires_redraw = true;
+        self.precomputed_scene_version = None;
+        self.bump_render_state_epoch();
+    }
+
+    pub fn camera_aspect_mode(&self) -> CameraAspectMode {
+        self.camera_aspect_mode
+    }
+
+    pub fn set_camera_aspect_mode(&mut self, mode: CameraAspectMode) {
+        if self.camera_aspect_mode == mode {
+            return;
+        }
+
+        self.camera_aspect_mode = mode;
         self.requires_redraw = true;
         self.precomputed_scene_version = None;
         self.bump_render_state_epoch();
@@ -644,8 +737,12 @@ impl RenderManager {
         let clip_y = 1.0 - (screen_y / height) * 2.0;
 
         let viewport = self.effective_camera_viewport_size();
-        let world_x = camera_position.x() + clip_x * (viewport.x() * 0.5);
-        let world_y = camera_position.y() + clip_y * (viewport.y() * 0.5);
+        let (clip_scale_x, clip_scale_y) = self.world_clip_scale(viewport);
+        let normalized_x = clip_x / clip_scale_x.max(f32::EPSILON);
+        let normalized_y = clip_y / clip_scale_y.max(f32::EPSILON);
+        let effective_viewport = self.effective_world_viewport_size(viewport);
+        let world_x = camera_position.x() + normalized_x * (effective_viewport.x() * 0.5);
+        let world_y = camera_position.y() + normalized_y * (effective_viewport.y() * 0.5);
         Vec2::new(world_x, world_y)
     }
 

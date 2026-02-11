@@ -16,7 +16,7 @@ try:
     from .pyg_engine_native import DrawCommand as _RustDrawCommand
     from .pyg_engine_native import Engine as _RustEngine
     from .pyg_engine_native import EngineHandle as _RustEngineHandle
-    from .pyg_engine_native import MouseButton, Keys
+    from .pyg_engine_native import CameraAspectMode, Keys, MouseButton
 except ImportError as e:
     raise ImportError(
         "Failed to import pyg_engine_native. "
@@ -59,6 +59,10 @@ class EngineHandle:
     def set_camera_viewport_size(self, width: float, height: float) -> None:
         """Update the active camera viewport size in world units via command queue."""
         self._inner.set_camera_viewport_size(width, height)
+
+    def set_camera_aspect_mode(self, mode: str) -> None:
+        """Update camera aspect handling mode via command queue."""
+        self._inner.set_camera_aspect_mode(mode)
 
     def set_camera_background_color(self, color: Any) -> None:
         """Update the active camera background clear color via command queue."""
@@ -1015,6 +1019,14 @@ class Engine:
     def set_camera_viewport_size(self, width: float, height: float) -> bool:
         """Set the active camera viewport size in world units."""
         return self._engine.set_camera_viewport_size(width, height)
+
+    def get_camera_aspect_mode(self) -> str:
+        """Get the camera aspect handling mode."""
+        return self._engine.get_camera_aspect_mode()
+
+    def set_camera_aspect_mode(self, mode: str) -> bool:
+        """Set the camera aspect handling mode."""
+        return self._engine.set_camera_aspect_mode(mode)
 
     def set_camera_background_color(self, color: Any) -> None:
         """Set the active camera background clear color."""

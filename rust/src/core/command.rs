@@ -1,5 +1,6 @@
 use super::draw_manager::DrawCommand;
 use super::game_object::GameObject;
+use super::render_manager::CameraAspectMode;
 use crate::types::Color;
 use crate::types::vector::Vec2;
 use std::sync::Arc;
@@ -21,6 +22,9 @@ pub enum EngineCommand {
 
     /// Set the active camera viewport size in world units
     SetCameraViewportSize { width: f32, height: f32 },
+
+    /// Set how the camera handles window/display aspect changes
+    SetCameraAspectMode { mode: CameraAspectMode },
 
     /// Set the active camera background clear color
     SetCameraBackgroundColor { color: Color },

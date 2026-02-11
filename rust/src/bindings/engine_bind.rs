@@ -13,6 +13,7 @@ use crate::core::draw_manager::DrawCommand;
 use crate::core::engine::Engine as RustEngine;
 use crate::core::game_object::GameObject as RustGameObject;
 use crate::core::input_manager::{MouseAxisBinding, MouseAxisType};
+use crate::core::render_manager::CameraAspectMode;
 use crate::core::time::Time as RustTime;
 use crate::core::window_manager::{FullscreenMode, WindowConfig, load_window_icon_from_path};
 
@@ -38,6 +39,41 @@ fn parse_mouse_axis_type(axis_name: &str) -> Option<MouseAxisType> {
         "wheely" | "scroll" | "scrolly" | "mousescrolly" => Some(MouseAxisType::WheelY),
         _ => None,
     }
+}
+
+fn parse_camera_aspect_mode(mode_name: &str) -> Option<CameraAspectMode> {
+    match mode_name
+        .trim()
+        .chars()
+        .flat_map(|ch| ch.to_lowercase())
+        .filter(|ch| !matches!(ch, ' ' | '_' | '-'))
+        .collect::<String>()
+        .as_str()
+    {
+        "stretch" | "scale" => Some(CameraAspectMode::Stretch),
+        "matchhorizontal" | "horizontal" => Some(CameraAspectMode::MatchHorizontal),
+        "matchvertical" | "vertical" => Some(CameraAspectMode::MatchVertical),
+        "fitboth" | "fit" | "contain" => Some(CameraAspectMode::FitBoth),
+        "fillboth" | "fill" | "cover" => Some(CameraAspectMode::FillBoth),
+        _ => None,
+    }
+}
+
+#[pyclass(name = "CameraAspectMode")]
+pub struct PyCameraAspectMode;
+
+#[pymethods]
+impl PyCameraAspectMode {
+    #[classattr]
+    const STRETCH: &'static str = "stretch";
+    #[classattr]
+    const MATCH_HORIZONTAL: &'static str = "match_horizontal";
+    #[classattr]
+    const MATCH_VERTICAL: &'static str = "match_vertical";
+    #[classattr]
+    const FIT_BOTH: &'static str = "fit_both";
+    #[classattr]
+    const FILL_BOTH: &'static str = "fill_both";
 }
 
 /// Python-side draw command builder used for bulk submission.
@@ -588,6 +624,19 @@ impl PyEngine {
     /// Set the active camera viewport size in world units.
     fn set_camera_viewport_size(&mut self, width: f32, height: f32) -> bool {
         self.inner.set_camera_viewport_size(width, height)
+    }
+
+    /// Get the camera aspect handling mode.
+    fn get_camera_aspect_mode(&self) -> String {
+        self.inner.camera_aspect_mode().as_str().to_string()
+    }
+
+    /// Set the camera aspect handling mode.
+    fn set_camera_aspect_mode(&mut self, mode: &str) -> bool {
+        let Some(parsed) = parse_camera_aspect_mode(mode) else {
+            return false;
+        };
+        self.inner.set_camera_aspect_mode(parsed)
     }
 
     /// Set the active camera background clear color.
@@ -1235,6 +1284,15 @@ impl PyEngineHandle {
         let _ = self
             .sender
             .send(EngineCommand::SetCameraViewportSize { width, height });
+    }
+
+    /// Update camera aspect handling mode via command queue.
+    fn set_camera_aspect_mode(&self, mode: &str) {
+        if let Some(parsed) = parse_camera_aspect_mode(mode) {
+            let _ = self
+                .sender
+                .send(EngineCommand::SetCameraAspectMode { mode: parsed });
+        }
     }
 
     /// Update the active camera background clear color via command queue.
@@ -1891,6 +1949,7 @@ fn pyg_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyGameObject>()?;
     m.add_class::<PyMeshComponent>()?;
     m.add_class::<PyTransformComponent>()?;
+    m.add_class::<PyCameraAspectMode>()?;
     m.add_class::<PyMouseButton>()?;
     m.add_class::<PyKeys>()?;
     Ok(())

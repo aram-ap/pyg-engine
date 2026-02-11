@@ -76,6 +76,8 @@ def test_engine_render_api_methods_exist() -> None:
     assert hasattr(engine, "add_game_object")
     assert hasattr(engine, "create_game_object")
     assert hasattr(engine, "remove_game_object")
+    assert hasattr(engine, "set_camera_aspect_mode")
+    assert hasattr(engine, "get_camera_aspect_mode")
     assert hasattr(engine, "clear_draw_commands")
     assert hasattr(engine, "draw_pixel")
     assert hasattr(engine, "draw_line")
@@ -83,6 +85,27 @@ def test_engine_render_api_methods_exist() -> None:
     assert hasattr(engine, "draw_circle")
     assert not hasattr(engine, "run_with_update")
     assert not hasattr(engine, "initialize")
+
+
+def test_camera_aspect_mode_constants_exposed() -> None:
+    """Test that camera aspect mode constants are exposed at the top level."""
+    assert hasattr(pyg, "CameraAspectMode")
+    assert pyg.CameraAspectMode.STRETCH == "stretch"
+    assert pyg.CameraAspectMode.MATCH_HORIZONTAL == "match_horizontal"
+    assert pyg.CameraAspectMode.MATCH_VERTICAL == "match_vertical"
+    assert pyg.CameraAspectMode.FIT_BOTH == "fit_both"
+    assert pyg.CameraAspectMode.FILL_BOTH == "fill_both"
+
+
+def test_camera_aspect_mode_set_get_round_trip() -> None:
+    """Test camera aspect mode can be changed and queried without a running window."""
+    engine = pyg.Engine()
+
+    assert engine.get_camera_aspect_mode() == "stretch"
+    assert engine.set_camera_aspect_mode(pyg.CameraAspectMode.FIT_BOTH) is True
+    assert engine.get_camera_aspect_mode() == "fit_both"
+    assert engine.set_camera_aspect_mode("invalid_mode") is False
+    assert engine.get_camera_aspect_mode() == "fit_both"
 
 
 def test_set_window_icon_invalid_path_raises() -> None:

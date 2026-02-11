@@ -44,6 +44,8 @@ def main() -> None:
     viewport_width = 24.0
     viewport_height = 13.5
     engine.set_camera_viewport_size(viewport_width, viewport_height)
+    camera_aspect_mode = pyg.CameraAspectMode.FIT_BOTH
+    engine.set_camera_aspect_mode(camera_aspect_mode)
     engine.set_camera_position(pyg.Vec2(0.0, 0.0))
     engine.set_camera_background_color(pyg.Color.rgb(16, 22, 30))
 
@@ -71,6 +73,11 @@ def main() -> None:
         sensitivity=1.0,
     )
     engine.input.set_action_keys("quit", [pyg.Keys.ESCAPE])
+    engine.input.set_action_keys("aspect_stretch", [pyg.Keys.F1])
+    engine.input.set_action_keys("aspect_match_horizontal", [pyg.Keys.F2])
+    engine.input.set_action_keys("aspect_match_vertical", [pyg.Keys.F3])
+    engine.input.set_action_keys("aspect_fit_both", [pyg.Keys.F4])
+    engine.input.set_action_keys("aspect_fill_both", [pyg.Keys.F5])
 
     engine.log_info(
         "Camera demo running. Uses input axes: Horizontal/Vertical + CameraZoom."
@@ -88,6 +95,7 @@ def main() -> None:
     axes_line = ""
     mouse_line = ""
     origin_line = ""
+    aspect_line = ""
 
     while engine.poll_events():
         if engine.input.action_pressed("quit"):
@@ -99,6 +107,22 @@ def main() -> None:
         move_y = engine.input.axis("Vertical")
         zoom_axis = engine.input.axis("CameraZoom")
         _, wheel_y = engine.input.mouse_wheel
+
+        if engine.input.action_pressed("aspect_stretch"):
+            camera_aspect_mode = pyg.CameraAspectMode.STRETCH
+            engine.set_camera_aspect_mode(camera_aspect_mode)
+        elif engine.input.action_pressed("aspect_match_horizontal"):
+            camera_aspect_mode = pyg.CameraAspectMode.MATCH_HORIZONTAL
+            engine.set_camera_aspect_mode(camera_aspect_mode)
+        elif engine.input.action_pressed("aspect_match_vertical"):
+            camera_aspect_mode = pyg.CameraAspectMode.MATCH_VERTICAL
+            engine.set_camera_aspect_mode(camera_aspect_mode)
+        elif engine.input.action_pressed("aspect_fit_both"):
+            camera_aspect_mode = pyg.CameraAspectMode.FIT_BOTH
+            engine.set_camera_aspect_mode(camera_aspect_mode)
+        elif engine.input.action_pressed("aspect_fill_both"):
+            camera_aspect_mode = pyg.CameraAspectMode.FILL_BOTH
+            engine.set_camera_aspect_mode(camera_aspect_mode)
 
         if move_x != 0.0 or move_y != 0.0:
             length = math.sqrt(move_x * move_x + move_y * move_y)
@@ -167,6 +191,11 @@ def main() -> None:
                 f"mouse_world=({mouse_world.x:.2f}, {mouse_world.y:.2f})"
             )
             origin_line = f"world_origin_on_screen=({origin_screen_x:.1f}, {origin_screen_y:.1f})"
+            aspect_line = (
+                "aspect_mode="
+                f"{camera_aspect_mode} "
+                "(F1 stretch, F2 match_horizontal, F3 match_vertical, F4 fit_both, F5 fill_both)"
+            )
 
         engine.clear_draw_commands()
         engine.draw_text(
@@ -215,6 +244,14 @@ def main() -> None:
             128.0,
             pyg.Color.YELLOW,
             font_size=15.0,
+            draw_order=20.0,
+        )
+        engine.draw_text(
+            aspect_line,
+            18.0,
+            148.0,
+            pyg.Color.rgb(255, 200, 130),
+            font_size=14.0,
             draw_order=20.0,
         )
 

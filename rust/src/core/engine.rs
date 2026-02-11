@@ -5,7 +5,7 @@ use super::input_manager::InputManager;
 /// Core engine functionality
 use super::logging;
 use super::object_manager::ObjectManager;
-use super::render_manager::RenderManager;
+use super::render_manager::{CameraAspectMode, RenderManager};
 use super::time::Time;
 use super::window_manager::{WindowConfig, WindowManager};
 use crate::types::Color;
@@ -43,6 +43,7 @@ pub struct Engine {
     auto_step_on_redraw: bool,
     active_camera_object_id: Option<u32>,
     pending_camera_viewport_size: Option<Vec2>,
+    pending_camera_aspect_mode: CameraAspectMode,
     pending_camera_background_color: Option<Color>,
 }
 
@@ -72,6 +73,7 @@ impl Engine {
             auto_step_on_redraw: true,
             active_camera_object_id: None,
             pending_camera_viewport_size: None,
+            pending_camera_aspect_mode: CameraAspectMode::default(),
             pending_camera_background_color: None,
         };
         engine.ensure_active_camera_object();
@@ -123,6 +125,7 @@ impl Engine {
             auto_step_on_redraw: true,
             active_camera_object_id: None,
             pending_camera_viewport_size: None,
+            pending_camera_aspect_mode: CameraAspectMode::default(),
             pending_camera_background_color: None,
         };
         engine.ensure_active_camera_object();
@@ -279,6 +282,51 @@ impl Engine {
         Vec2::new(2.0 * aspect, 2.0)
     }
 
+    fn fallback_display_aspect_ratio(&self) -> f32 {
+        let (width, height) = self.get_display_size();
+        let safe_width = width.max(1) as f32;
+        let safe_height = height.max(1) as f32;
+        safe_width / safe_height
+    }
+
+    fn effective_world_viewport_size_for_mode(&self, viewport: Vec2) -> Vec2 {
+        let safe_display_aspect = self.fallback_display_aspect_ratio().max(f32::EPSILON);
+        match self.pending_camera_aspect_mode {
+            CameraAspectMode::MatchHorizontal => Vec2::new(
+                viewport.x().max(f32::EPSILON),
+                (viewport.x() / safe_display_aspect).max(f32::EPSILON),
+            ),
+            CameraAspectMode::MatchVertical => Vec2::new(
+                (viewport.y() * safe_display_aspect).max(f32::EPSILON),
+                viewport.y().max(f32::EPSILON),
+            ),
+            _ => viewport,
+        }
+    }
+
+    fn world_clip_scale_for_mode(&self, viewport: Vec2) -> (f32, f32) {
+        let safe_display_aspect = self.fallback_display_aspect_ratio().max(f32::EPSILON);
+        let safe_viewport_aspect =
+            (viewport.x().max(f32::EPSILON) / viewport.y().max(f32::EPSILON)).max(f32::EPSILON);
+        match self.pending_camera_aspect_mode {
+            CameraAspectMode::FitBoth => {
+                if safe_display_aspect >= safe_viewport_aspect {
+                    (safe_viewport_aspect / safe_display_aspect, 1.0)
+                } else {
+                    (1.0, safe_display_aspect / safe_viewport_aspect)
+                }
+            }
+            CameraAspectMode::FillBoth => {
+                if safe_display_aspect >= safe_viewport_aspect {
+                    (1.0, safe_display_aspect / safe_viewport_aspect)
+                } else {
+                    (safe_viewport_aspect / safe_display_aspect, 1.0)
+                }
+            }
+            _ => (1.0, 1.0),
+        }
+    }
+
     /// Get the active camera object id.
     pub fn active_camera_object_id(&self) -> Option<u32> {
         self.active_camera_object_id
@@ -318,6 +366,24 @@ impl Engine {
         }
         self.request_render_redraw();
         true
+    }
+
+    /// Set how the active camera handles display aspect ratio changes.
+    pub fn set_camera_aspect_mode(&mut self, mode: CameraAspectMode) -> bool {
+        self.pending_camera_aspect_mode = mode;
+        if let Some(render_manager) = &mut self.render_manager {
+            render_manager.set_camera_aspect_mode(mode);
+        }
+        self.request_render_redraw();
+        true
+    }
+
+    /// Get the active camera aspect policy.
+    pub fn camera_aspect_mode(&self) -> CameraAspectMode {
+        if let Some(render_manager) = &self.render_manager {
+            return render_manager.camera_aspect_mode();
+        }
+        self.pending_camera_aspect_mode
     }
 
     /// Get the active camera viewport size in world units.
@@ -368,11 +434,14 @@ impl Engine {
         let (display_width, display_height) = self.get_display_size();
         let width = display_width.max(1) as f32;
         let height = display_height.max(1) as f32;
-
-        let half_w = viewport.x() * 0.5;
-        let half_h = viewport.y() * 0.5;
-        let clip_x = (world_position.x() - camera_position.x()) / half_w;
-        let clip_y = (world_position.y() - camera_position.y()) / half_h;
+        let effective_viewport = self.effective_world_viewport_size_for_mode(viewport);
+        let half_w = (effective_viewport.x() * 0.5).max(f32::EPSILON);
+        let half_h = (effective_viewport.y() * 0.5).max(f32::EPSILON);
+        let normalized_x = (world_position.x() - camera_position.x()) / half_w;
+        let normalized_y = (world_position.y() - camera_position.y()) / half_h;
+        let (clip_scale_x, clip_scale_y) = self.world_clip_scale_for_mode(viewport);
+        let clip_x = normalized_x * clip_scale_x;
+        let clip_y = normalized_y * clip_scale_y;
 
         let screen_x = (clip_x + 1.0) * 0.5 * width;
         let screen_y = (1.0 - clip_y) * 0.5 * height;
@@ -393,8 +462,12 @@ impl Engine {
 
         let clip_x = (screen_x / width) * 2.0 - 1.0;
         let clip_y = 1.0 - (screen_y / height) * 2.0;
-        let world_x = camera_position.x() + clip_x * (viewport.x() * 0.5);
-        let world_y = camera_position.y() + clip_y * (viewport.y() * 0.5);
+        let (clip_scale_x, clip_scale_y) = self.world_clip_scale_for_mode(viewport);
+        let normalized_x = clip_x / clip_scale_x.max(f32::EPSILON);
+        let normalized_y = clip_y / clip_scale_y.max(f32::EPSILON);
+        let effective_viewport = self.effective_world_viewport_size_for_mode(viewport);
+        let world_x = camera_position.x() + normalized_x * (effective_viewport.x() * 0.5);
+        let world_y = camera_position.y() + normalized_y * (effective_viewport.y() * 0.5);
         Vec2::new(world_x, world_y)
     }
 
@@ -758,6 +831,9 @@ impl Engine {
                 }
                 EngineCommand::SetCameraViewportSize { width, height } => {
                     let _ = self.set_camera_viewport_size(width, height);
+                }
+                EngineCommand::SetCameraAspectMode { mode } => {
+                    let _ = self.set_camera_aspect_mode(mode);
                 }
                 EngineCommand::SetCameraBackgroundColor { color } => {
                     self.set_camera_background_color(color);
@@ -1148,6 +1224,11 @@ impl ApplicationHandler for Engine {
                                         viewport_size.x(),
                                         viewport_size.y(),
                                     );
+                                }
+
+                                if let Some(render_manager) = &mut self.render_manager {
+                                    render_manager
+                                        .set_camera_aspect_mode(self.pending_camera_aspect_mode);
                                 }
 
                                 // Request initial redraw
