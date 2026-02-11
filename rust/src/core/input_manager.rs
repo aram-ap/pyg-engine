@@ -153,6 +153,7 @@ pub struct InputManager {
 
     // Joystick/Gamepad state
     /// Set of connected joystick IDs
+    #[allow(dead_code)]
     connected_joysticks: HashSet<u32>,
     /// Current frame joystick button states - (joystick_id, button_id) -> pressed
     joystick_buttons_current: HashMap<JoystickButton, bool>,
