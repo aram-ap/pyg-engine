@@ -18,6 +18,12 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 *   **Thread Safety**: Unique `EngineHandle` system allows you to safely issue rendering commands from background Python threads.
 *   **Robust Logging**: Integrated tracing-based logging system with file support and configurable levels.
 
+## 📚 Documentation
+
+- **[API Reference](https://aram-ap.github.io/pyg_engine/)** - Complete Python API documentation (auto-generated from docstrings)
+- **[Logging Guide](LOGGING_GUIDE.md)** - Comprehensive guide to the logging system
+- **[Examples](examples/README.md)** - Collection of example projects and demos
+
 ## 📦 Installation
 
 Requires **Python 3.7+**.

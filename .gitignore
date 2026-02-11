@@ -237,6 +237,7 @@ cython_debug/
 *.yaml
 *.yml
 !pyrightconfig_old.json
+!.github/workflows/*.yml
 
 # Log files
 *.log
