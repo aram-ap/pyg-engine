@@ -355,6 +355,8 @@ impl PyEngine {
         redraw_on_change_only: bool,
         show_fps_in_title: bool,
         icon_path: Option<String>,
+        min_width: Option<u32>,
+        min_height: Option<u32>,
     ) -> PyResult<WindowConfig> {
         let mut config = WindowConfig::new()
             .with_title(title)
@@ -373,6 +375,10 @@ impl PyEngine {
             let icon = load_window_icon_from_path(Path::new(&icon_path_value))
                 .map_err(PyRuntimeError::new_err)?;
             config = config.with_icon(icon);
+        }
+
+        if let (Some(min_w), Some(min_h)) = (min_width, min_height) {
+            config = config.with_min_size(min_w, min_h);
         }
 
         Ok(config)
@@ -418,7 +424,9 @@ impl PyEngine {
         vsync=true,
         redraw_on_change_only=true,
         show_fps_in_title=false,
-        icon_path=None
+        icon_path=None,
+        min_width=None,
+        min_height=None
     ))]
     fn initialize(
         &mut self,
@@ -431,6 +439,8 @@ impl PyEngine {
         redraw_on_change_only: bool,
         show_fps_in_title: bool,
         icon_path: Option<String>,
+        min_width: Option<u32>,
+        min_height: Option<u32>,
     ) -> PyResult<()> {
         let config = Self::build_window_config(
             title,
@@ -442,6 +452,8 @@ impl PyEngine {
             redraw_on_change_only,
             show_fps_in_title,
             icon_path,
+            min_width,
+            min_height,
         )?;
 
         self.inner.set_window_config(config);
@@ -533,7 +545,9 @@ impl PyEngine {
         vsync=true,
         redraw_on_change_only=true,
         show_fps_in_title=false,
-        icon_path=None
+        icon_path=None,
+        min_width=None,
+        min_height=None
     ))]
     fn run(
         &mut self,
@@ -546,6 +560,8 @@ impl PyEngine {
         redraw_on_change_only: bool,
         show_fps_in_title: bool,
         icon_path: Option<String>,
+        min_width: Option<u32>,
+        min_height: Option<u32>,
     ) -> PyResult<()> {
         let config = Self::build_window_config(
             title,
@@ -557,6 +573,8 @@ impl PyEngine {
             redraw_on_change_only,
             show_fps_in_title,
             icon_path,
+            min_width,
+            min_height,
         )?;
 
         self.inner.set_auto_step_on_redraw(true);

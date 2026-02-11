@@ -783,17 +783,19 @@ class Engine:
         redraw_on_change_only: bool = True,
         show_fps_in_title: bool = False,
         icon_path: Optional[str] = None,
+        min_width: Optional[int] = None,
+        min_height: Optional[int] = None,
     ) -> None:
         """
         Start the engine in manual-loop mode without entering a blocking loop.
-        
+
         This mode is for advanced use cases where Python controls the frame loop
         manually using:
         `poll_events()`, `update()`, and `render()`.
 
         Raises:
             RuntimeError: If the engine is already running in another loop mode.
-        
+
         Args:
             title: Window title.
             width: Initial window width.
@@ -806,6 +808,8 @@ class Engine:
             icon_path: Optional icon file path. If omitted, uses the most recent
                 `set_window_icon(...)` value when present, otherwise the built-in
                 default icon.
+            min_width: Minimum window width in pixels (default: 640).
+            min_height: Minimum window height in pixels (default: 480).
         """
         self._ensure_not_running("start_manual()")
         resolved_icon_path = (
@@ -821,6 +825,8 @@ class Engine:
             redraw_on_change_only=redraw_on_change_only,
             show_fps_in_title=show_fps_in_title,
             icon_path=resolved_icon_path,
+            min_width=min_width,
+            min_height=min_height,
         )
         self._runtime_state = _RUNTIME_STATE_MANUAL
 
@@ -858,6 +864,8 @@ class Engine:
         redraw_on_change_only: bool = True,
         show_fps_in_title: bool = False,
         icon_path: Optional[str] = None,
+        min_width: Optional[int] = None,
+        min_height: Optional[int] = None,
         *,
         update: Optional[Callable[..., object]] = None,
         max_delta_time: Optional[float] = 0.1,
@@ -891,6 +899,8 @@ class Engine:
             icon_path: Optional icon file path. If omitted, uses the most recent
                 `set_window_icon(...)` value when present, otherwise the built-in
                 default icon.
+            min_width: Minimum window width in pixels (default: 640).
+            min_height: Minimum window height in pixels (default: 480).
             update: Optional callback invoked once per frame. When omitted,
                 the native blocking run loop is used.
             max_delta_time: Clamp callback `dt` to this value in seconds.
@@ -916,6 +926,8 @@ class Engine:
                     redraw_on_change_only=redraw_on_change_only,
                     show_fps_in_title=show_fps_in_title,
                     icon_path=resolved_icon_path,
+                    min_width=min_width,
+                    min_height=min_height,
                 )
             finally:
                 self._runtime_state = _RUNTIME_STATE_IDLE
@@ -936,6 +948,8 @@ class Engine:
             redraw_on_change_only=redraw_on_change_only,
             show_fps_in_title=show_fps_in_title,
             icon_path=icon_path,
+            min_width=min_width,
+            min_height=min_height,
         )
         self._runtime_state = _RUNTIME_STATE_RUNNING_CALLBACK
 
