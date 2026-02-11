@@ -102,12 +102,14 @@ def main() -> None:
             break
 
         dt = max(engine.delta_time, 0.0)
+        # Get camera position and input axes.
         cam = engine.get_camera_position()
         move_x = engine.input.axis("Horizontal")
         move_y = engine.input.axis("Vertical")
         zoom_axis = engine.input.axis("CameraZoom")
         _, wheel_y = engine.input.mouse_wheel
 
+        # Aspect mode controls
         if engine.input.action_pressed("aspect_stretch"):
             camera_aspect_mode = pyg.CameraAspectMode.STRETCH
             engine.set_camera_aspect_mode(camera_aspect_mode)
@@ -173,8 +175,11 @@ def main() -> None:
             is_drag_panning = False
             last_drag_world = None
 
+        # Get mouse-world position on screen.
         origin_screen_x, origin_screen_y = engine.world_to_screen(pyg.Vec2(0.0, 0.0))
 
+        # Update HUD text. Throttling to avoid excessive updates as text drawing is expensive.
+        # Note: draw_text() only updates if the text has changed, hence this if statement.
         now = time.perf_counter()
         if now - last_hud_update_time >= hud_update_interval:
             last_hud_update_time = now
@@ -197,6 +202,7 @@ def main() -> None:
                 "(F1 stretch, F2 match_horizontal, F3 match_vertical, F4 fit_both, F5 fill_both)"
             )
 
+        # Draw HUD text. 
         engine.clear_draw_commands()
         engine.draw_text(
             "Worldspace Camera Demo (WASD/Arrows pan, Q/E or wheel zoom, LMB drag pan, ESC quit)",
