@@ -29,7 +29,7 @@ def create_marker(name: str, position: pyg.Vec2, color: pyg.Color, size: float) 
 
 
 def main() -> None:
-    engine = pyg.Engine(log_level="INFO")
+    engine = pyg.Engine()
     engine.start_manual(
         title="PyG Engine - Worldspace Camera Demo",
         width=1280,
@@ -79,7 +79,7 @@ def main() -> None:
     engine.input.set_action_keys("aspect_fit_both", [pyg.Keys.F4])
     engine.input.set_action_keys("aspect_fill_both", [pyg.Keys.F5])
 
-    engine.log_info(
+    engine.log(
         "Camera demo running. Uses input axes: Horizontal/Vertical + CameraZoom."
     )
 
@@ -202,7 +202,7 @@ def main() -> None:
                 "(F1 stretch, F2 match_horizontal, F3 match_vertical, F4 fit_both, F5 fill_both)"
             )
 
-        # Draw HUD text. 
+        # Draw HUD text.
         engine.clear_draw_commands()
         engine.draw_text(
             "Worldspace Camera Demo (WASD/Arrows pan, Q/E or wheel zoom, LMB drag pan, ESC quit)",
@@ -264,7 +264,7 @@ def main() -> None:
         engine.update()
         engine.render()
 
-    engine.log_info("Camera demo finished.")
+    engine.log("Camera demo finished.")
 
 
 if __name__ == "__main__":
