@@ -78,6 +78,14 @@ def main() -> None:
 
     camera_speed = 9.0
     zoom_speed = 1.8
+    hud_update_interval = 1.0 / 60.0
+    last_hud_update_time = 0.0
+    camera_line = ""
+    viewport_line = ""
+    axes_line = ""
+    mouse_line = ""
+    origin_line = ""
+
     while engine.poll_events():
         if engine.input.action_pressed("quit"):
             break
@@ -113,6 +121,22 @@ def main() -> None:
         mouse_world = engine.screen_to_world(float(mouse_x), float(mouse_y))
         origin_screen_x, origin_screen_y = engine.world_to_screen(pyg.Vec2(0.0, 0.0))
 
+        now = time.perf_counter()
+        if now - last_hud_update_time >= hud_update_interval:
+            last_hud_update_time = now
+            camera_line = (
+                f"camera_id={engine.camera_object_id}  camera_pos=({cam.x:.2f}, {cam.y:.2f})"
+            )
+            viewport_line = f"viewport_world=({viewport_width:.2f}, {viewport_height:.2f})"
+            axes_line = (
+                f"axes: Horizontal={move_x:.2f} Vertical={move_y:.2f} CameraZoom={zoom_axis:.2f}"
+            )
+            mouse_line = (
+                f"mouse_screen=({mouse_x:.1f}, {mouse_y:.1f}) -> "
+                f"mouse_world=({mouse_world.x:.2f}, {mouse_world.y:.2f})"
+            )
+            origin_line = f"world_origin_on_screen=({origin_screen_x:.1f}, {origin_screen_y:.1f})"
+
         engine.clear_draw_commands()
         engine.draw_text(
             "Worldspace Camera Demo (axes: Horizontal/Vertical + CameraZoom, action: quit)",
@@ -123,7 +147,7 @@ def main() -> None:
             draw_order=20.0,
         )
         engine.draw_text(
-            f"camera_id={engine.camera_object_id}  camera_pos=({cam.x:.2f}, {cam.y:.2f})",
+            camera_line,
             18.0,
             44.0,
             pyg.Color.CYAN,
@@ -131,7 +155,7 @@ def main() -> None:
             draw_order=20.0,
         )
         engine.draw_text(
-            f"viewport_world=({viewport_width:.2f}, {viewport_height:.2f})",
+            viewport_line,
             18.0,
             66.0,
             pyg.Color.rgb(180, 220, 255),
@@ -139,7 +163,7 @@ def main() -> None:
             draw_order=20.0,
         )
         engine.draw_text(
-            f"axes: Horizontal={move_x:.2f} Vertical={move_y:.2f} CameraZoom={zoom_axis:.2f}",
+            axes_line,
             18.0,
             88.0,
             pyg.Color.rgb(180, 210, 180),
@@ -147,7 +171,7 @@ def main() -> None:
             draw_order=20.0,
         )
         engine.draw_text(
-            f"mouse_screen=({mouse_x:.1f}, {mouse_y:.1f}) -> mouse_world=({mouse_world.x:.2f}, {mouse_world.y:.2f})",
+            mouse_line,
             18.0,
             108.0,
             pyg.Color.rgb(220, 220, 220),
@@ -155,7 +179,7 @@ def main() -> None:
             draw_order=20.0,
         )
         engine.draw_text(
-            f"world_origin_on_screen=({origin_screen_x:.1f}, {origin_screen_y:.1f})",
+            origin_line,
             18.0,
             128.0,
             pyg.Color.YELLOW,
