@@ -12,6 +12,7 @@ use crate::core::component::{ComponentTrait, MeshComponent, MeshGeometry, Transf
 use crate::core::draw_manager::DrawCommand;
 use crate::core::engine::Engine as RustEngine;
 use crate::core::game_object::GameObject as RustGameObject;
+use crate::core::input_manager::{MouseAxisBinding, MouseAxisType};
 use crate::core::time::Time as RustTime;
 use crate::core::window_manager::{FullscreenMode, WindowConfig, load_window_icon_from_path};
 
@@ -21,6 +22,23 @@ use super::input_bind::{PyKeys, PyMouseButton, parse_key, parse_mouse_button};
 use super::vector_bind::{PyVec2, PyVec3};
 
 // ========== Engine Bindings ==========
+
+fn parse_mouse_axis_type(axis_name: &str) -> Option<MouseAxisType> {
+    match axis_name
+        .trim()
+        .chars()
+        .flat_map(|ch| ch.to_lowercase())
+        .filter(|ch| !matches!(ch, ' ' | '_' | '-'))
+        .collect::<String>()
+        .as_str()
+    {
+        "x" | "mousex" => Some(MouseAxisType::X),
+        "y" | "mousey" => Some(MouseAxisType::Y),
+        "wheelx" | "scrollx" | "mousescrollx" => Some(MouseAxisType::WheelX),
+        "wheely" | "scroll" | "scrolly" | "mousescrolly" => Some(MouseAxisType::WheelY),
+        _ => None,
+    }
+}
 
 /// Python-side draw command builder used for bulk submission.
 #[pyclass(name = "DrawCommand")]
@@ -541,7 +559,59 @@ impl PyEngine {
 
     /// Update a runtime GameObject's position by id.
     fn set_game_object_position(&mut self, object_id: u32, position: PyVec2) -> bool {
-        self.inner.set_game_object_position(object_id, position.inner)
+        self.inner
+            .set_game_object_position(object_id, position.inner)
+    }
+
+    /// Get the active camera object id.
+    fn camera_object_id(&self) -> Option<u32> {
+        self.inner.active_camera_object_id()
+    }
+
+    /// Get the active camera world position.
+    fn get_camera_position(&self) -> PyVec2 {
+        PyVec2 {
+            inner: self.inner.get_camera_position(),
+        }
+    }
+
+    /// Set the active camera world position.
+    fn set_camera_position(&mut self, position: PyVec2) -> bool {
+        self.inner.set_camera_position(position.inner)
+    }
+
+    /// Get the active camera viewport size in world units.
+    fn get_camera_viewport_size(&self) -> (f32, f32) {
+        self.inner.camera_viewport_size()
+    }
+
+    /// Set the active camera viewport size in world units.
+    fn set_camera_viewport_size(&mut self, width: f32, height: f32) -> bool {
+        self.inner.set_camera_viewport_size(width, height)
+    }
+
+    /// Set the active camera background clear color.
+    fn set_camera_background_color(&mut self, color: &PyColor) {
+        self.inner.set_camera_background_color(color.inner);
+    }
+
+    /// Get the active camera background clear color.
+    fn get_camera_background_color(&self) -> PyColor {
+        PyColor {
+            inner: self.inner.camera_background_color(),
+        }
+    }
+
+    /// Convert world-space coordinates to screen-space pixel coordinates.
+    fn world_to_screen(&self, world_position: PyVec2) -> (f32, f32) {
+        self.inner.world_to_screen(world_position.inner)
+    }
+
+    /// Convert screen-space pixel coordinates to world-space coordinates.
+    fn screen_to_world(&self, screen_x: f32, screen_y: f32) -> PyVec2 {
+        PyVec2 {
+            inner: self.inner.screen_to_world(screen_x, screen_y),
+        }
     }
 
     /// Clear all immediate-mode draw commands.
@@ -924,6 +994,200 @@ impl PyEngine {
             0.0
         }
     }
+
+    /// List all configured logical axis names.
+    fn axis_names(&self) -> Vec<String> {
+        if let Some(input) = &self.inner.input_manager {
+            input.axis_names()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Check whether an action is currently active (held).
+    fn action_down(&self, action_name: &str) -> bool {
+        if let Some(input) = &self.inner.input_manager {
+            input.action_down(action_name)
+        } else {
+            false
+        }
+    }
+
+    /// Check whether an action was pressed this frame.
+    fn action_pressed(&self, action_name: &str) -> bool {
+        if let Some(input) = &self.inner.input_manager {
+            input.action_pressed(action_name)
+        } else {
+            false
+        }
+    }
+
+    /// Check whether an action was released this frame.
+    fn action_released(&self, action_name: &str) -> bool {
+        if let Some(input) = &self.inner.input_manager {
+            input.action_released(action_name)
+        } else {
+            false
+        }
+    }
+
+    /// List all configured action names.
+    fn action_names(&self) -> Vec<String> {
+        if let Some(input) = &self.inner.input_manager {
+            input.action_names()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Restore default axis/action bindings.
+    fn reset_input_bindings_to_defaults(&mut self) {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.reset_input_bindings_to_defaults();
+        }
+    }
+
+    /// Configure keyboard keys for a logical axis (re-addressable/custom axis).
+    #[pyo3(signature = (name, positive_keys, negative_keys, sensitivity=1.0))]
+    fn set_axis_keys(
+        &mut self,
+        name: &str,
+        positive_keys: Vec<String>,
+        negative_keys: Vec<String>,
+        sensitivity: f32,
+    ) {
+        if let Some(input) = &mut self.inner.input_manager {
+            let positive = positive_keys.iter().map(|k| parse_key(k)).collect();
+            let negative = negative_keys.iter().map(|k| parse_key(k)).collect();
+            input.set_axis_keyboard_keys(name, positive, negative, sensitivity);
+        }
+    }
+
+    /// Add one positive key to an axis binding.
+    fn add_axis_positive_key(&mut self, axis_name: &str, key_name: &str) {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.add_axis_positive_key(axis_name, parse_key(key_name));
+        }
+    }
+
+    /// Add one negative key to an axis binding.
+    fn add_axis_negative_key(&mut self, axis_name: &str, key_name: &str) {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.add_axis_negative_key(axis_name, parse_key(key_name));
+        }
+    }
+
+    /// Remove one positive key from an axis binding.
+    fn remove_axis_positive_key(&mut self, axis_name: &str, key_name: &str) -> bool {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.remove_axis_positive_key(axis_name, &parse_key(key_name))
+        } else {
+            false
+        }
+    }
+
+    /// Remove one negative key from an axis binding.
+    fn remove_axis_negative_key(&mut self, axis_name: &str, key_name: &str) -> bool {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.remove_axis_negative_key(axis_name, &parse_key(key_name))
+        } else {
+            false
+        }
+    }
+
+    /// Remove an entire logical axis binding.
+    fn remove_axis(&mut self, axis_name: &str) -> bool {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.remove_axis(axis_name)
+        } else {
+            false
+        }
+    }
+
+    /// Configure a mouse-driven logical axis.
+    #[pyo3(signature = (name, mouse_axis, sensitivity=1.0, invert=false))]
+    fn set_axis_mouse(
+        &mut self,
+        name: &str,
+        mouse_axis: &str,
+        sensitivity: f32,
+        invert: bool,
+    ) -> bool {
+        let Some(axis_type) = parse_mouse_axis_type(mouse_axis) else {
+            return false;
+        };
+        if let Some(input) = &mut self.inner.input_manager {
+            input.set_axis_mouse_binding(
+                name,
+                MouseAxisBinding {
+                    axis: axis_type,
+                    sensitivity,
+                    invert,
+                },
+            );
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Replace keyboard key list for an action.
+    fn set_action_keys(&mut self, action_name: &str, key_names: Vec<String>) {
+        if let Some(input) = &mut self.inner.input_manager {
+            let keys = key_names.iter().map(|k| parse_key(k)).collect();
+            input.set_action_keys(action_name, keys);
+        }
+    }
+
+    /// Add one keyboard key to an action.
+    fn add_action_key(&mut self, action_name: &str, key_name: &str) {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.add_action_key(action_name, parse_key(key_name));
+        }
+    }
+
+    /// Remove one keyboard key from an action.
+    fn remove_action_key(&mut self, action_name: &str, key_name: &str) -> bool {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.remove_action_key(action_name, &parse_key(key_name))
+        } else {
+            false
+        }
+    }
+
+    /// Replace mouse button list for an action.
+    fn set_action_mouse_buttons(&mut self, action_name: &str, buttons: Vec<String>) {
+        if let Some(input) = &mut self.inner.input_manager {
+            let mapped = buttons
+                .iter()
+                .map(|button| parse_mouse_button(button))
+                .collect();
+            input.set_action_mouse_buttons(action_name, mapped);
+        }
+    }
+
+    /// Add one mouse button to an action.
+    fn add_action_mouse_button(&mut self, action_name: &str, button: &str) {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.add_action_mouse_button(action_name, parse_mouse_button(button));
+        }
+    }
+
+    /// Remove one mouse button from an action.
+    fn remove_action_mouse_button(&mut self, action_name: &str, button: &str) -> bool {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.remove_action_mouse_button(action_name, parse_mouse_button(button))
+        } else {
+            false
+        }
+    }
+
+    /// Clear all bindings for an action.
+    fn clear_action_bindings(&mut self, action_name: &str) {
+        if let Some(input) = &mut self.inner.input_manager {
+            input.clear_action_bindings(action_name);
+        }
+    }
 }
 
 /// A thread-safe handle to the engine that can be passed to background threads.
@@ -957,6 +1221,27 @@ impl PyEngineHandle {
             object_id,
             position: position.inner,
         });
+    }
+
+    /// Update the active camera world position via command queue.
+    fn set_camera_position(&self, position: PyVec2) {
+        let _ = self.sender.send(EngineCommand::SetCameraPosition {
+            position: position.inner,
+        });
+    }
+
+    /// Update the active camera viewport size in world units via command queue.
+    fn set_camera_viewport_size(&self, width: f32, height: f32) {
+        let _ = self
+            .sender
+            .send(EngineCommand::SetCameraViewportSize { width, height });
+    }
+
+    /// Update the active camera background clear color via command queue.
+    fn set_camera_background_color(&self, color: &PyColor) {
+        let _ = self
+            .sender
+            .send(EngineCommand::SetCameraBackgroundColor { color: color.inner });
     }
 
     /// Clear all immediate-mode draw commands via command queue.

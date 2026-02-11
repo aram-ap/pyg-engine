@@ -1,6 +1,6 @@
 use super::command::EngineCommand;
 use super::draw_manager::{DrawCommand, DrawManager};
-use super::game_object::GameObject;
+use super::game_object::{GameObject, ObjectType};
 use super::input_manager::InputManager;
 /// Core engine functionality
 use super::logging;
@@ -41,6 +41,9 @@ pub struct Engine {
     fps_frame_counter: u32,
     fps_last_update: Instant,
     auto_step_on_redraw: bool,
+    active_camera_object_id: Option<u32>,
+    pending_camera_viewport_size: Option<Vec2>,
+    pending_camera_background_color: Option<Color>,
 }
 
 pub const VERSION: &str = "1.2.0";
@@ -51,7 +54,7 @@ impl Engine {
         logging::init_default();
         let (sender, receiver) = unbounded();
 
-        Self {
+        let mut engine = Self {
             version: VERSION.to_string(),
             window_manager: None,
             render_manager: None,
@@ -67,7 +70,12 @@ impl Engine {
             fps_frame_counter: 0,
             fps_last_update: Instant::now(),
             auto_step_on_redraw: true,
-        }
+            active_camera_object_id: None,
+            pending_camera_viewport_size: None,
+            pending_camera_background_color: None,
+        };
+        engine.ensure_active_camera_object();
+        engine
     }
 
     /// Initialize the engine with custom logging configuration
@@ -97,8 +105,7 @@ impl Engine {
         logging::init_logging(config);
 
         let (sender, receiver) = unbounded();
-
-        Self {
+        let mut engine = Self {
             version: VERSION.to_string(),
             window_manager: None,
             render_manager: None,
@@ -114,7 +121,12 @@ impl Engine {
             fps_frame_counter: 0,
             fps_last_update: Instant::now(),
             auto_step_on_redraw: true,
-        }
+            active_camera_object_id: None,
+            pending_camera_viewport_size: None,
+            pending_camera_background_color: None,
+        };
+        engine.ensure_active_camera_object();
+        engine
     }
 
     /// Get a sender for engine commands
@@ -123,7 +135,10 @@ impl Engine {
     }
 
     /// Set the window configuration for the engine
-    pub fn set_window_config(&mut self, config: WindowConfig) {
+    pub fn set_window_config(&mut self, mut config: WindowConfig) {
+        if let Some(pending_color) = self.pending_camera_background_color {
+            config.background_color = Some(pending_color);
+        }
         self.window_config = Some(config);
     }
 
@@ -223,13 +238,181 @@ impl Engine {
         logging::log_info("Closing window");
     }
 
+    fn create_default_camera_object(&mut self) -> Option<u32> {
+        let mut camera = GameObject::new_named("MainCamera".to_string());
+        camera.set_object_type(ObjectType::Camera);
+        camera.transform_mut().set_position(Vec2::new(0.0, 0.0));
+        self.add_game_object(camera)
+    }
+
+    fn ensure_active_camera_object(&mut self) -> Option<u32> {
+        let camera_is_valid = self
+            .active_camera_object_id
+            .and_then(|id| {
+                self.object_manager
+                    .as_ref()
+                    .and_then(|object_manager| object_manager.get_object_by_id(id))
+                    .map(|_| id)
+            })
+            .is_some();
+
+        if !camera_is_valid {
+            self.active_camera_object_id = self.create_default_camera_object();
+        }
+
+        if let Some(render_manager) = &mut self.render_manager {
+            render_manager.set_active_camera_object_id(self.active_camera_object_id);
+        }
+
+        self.active_camera_object_id
+    }
+
+    fn fallback_camera_viewport_size_for_display(&self) -> Vec2 {
+        if let Some(viewport_size) = self.pending_camera_viewport_size {
+            return viewport_size;
+        }
+
+        let (width, height) = self.get_display_size();
+        let safe_width = width.max(1) as f32;
+        let safe_height = height.max(1) as f32;
+        let aspect = safe_width / safe_height;
+        Vec2::new(2.0 * aspect, 2.0)
+    }
+
+    /// Get the active camera object id.
+    pub fn active_camera_object_id(&self) -> Option<u32> {
+        self.active_camera_object_id
+    }
+
+    /// Get the active camera world position.
+    pub fn get_camera_position(&self) -> Vec2 {
+        let Some(camera_id) = self.active_camera_object_id else {
+            return Vec2::new(0.0, 0.0);
+        };
+
+        self.object_manager
+            .as_ref()
+            .and_then(|object_manager| object_manager.get_object_by_id(camera_id))
+            .map(|camera| *camera.transform().position())
+            .unwrap_or_else(|| Vec2::new(0.0, 0.0))
+    }
+
+    /// Set the active camera world position.
+    pub fn set_camera_position(&mut self, position: Vec2) -> bool {
+        let Some(camera_id) = self.ensure_active_camera_object() else {
+            return false;
+        };
+
+        self.set_game_object_position(camera_id, position)
+    }
+
+    /// Set the active camera viewport size in world units.
+    pub fn set_camera_viewport_size(&mut self, width: f32, height: f32) -> bool {
+        if !width.is_finite() || !height.is_finite() || width <= 0.0 || height <= 0.0 {
+            return false;
+        }
+
+        self.pending_camera_viewport_size = Some(Vec2::new(width, height));
+        if let Some(render_manager) = &mut self.render_manager {
+            render_manager.set_camera_viewport_size(width, height);
+        }
+        self.request_render_redraw();
+        true
+    }
+
+    /// Get the active camera viewport size in world units.
+    pub fn camera_viewport_size(&self) -> (f32, f32) {
+        if let Some(render_manager) = &self.render_manager {
+            return render_manager.camera_viewport_size();
+        }
+
+        let viewport = self.fallback_camera_viewport_size_for_display();
+        (viewport.x(), viewport.y())
+    }
+
+    /// Set the camera clear/background color.
+    pub fn set_camera_background_color(&mut self, color: Color) {
+        self.pending_camera_background_color = Some(color);
+        if let Some(window_config) = &mut self.window_config {
+            window_config.background_color = Some(color);
+        }
+        if let Some(render_manager) = &mut self.render_manager {
+            render_manager.set_background_color(color);
+        }
+    }
+
+    /// Get the camera clear/background color.
+    pub fn camera_background_color(&self) -> Color {
+        if let Some(render_manager) = &self.render_manager {
+            return render_manager.background_color();
+        }
+        if let Some(color) = self.pending_camera_background_color {
+            return color;
+        }
+        if let Some(window_config) = &self.window_config
+            && let Some(color) = window_config.background_color
+        {
+            return color;
+        }
+        Color::BLACK
+    }
+
+    /// Convert world-space coordinates to screen-space pixel coordinates.
+    pub fn world_to_screen(&self, world_position: Vec2) -> (f32, f32) {
+        let camera_position = self.get_camera_position();
+        if let Some(render_manager) = &self.render_manager {
+            return render_manager.world_to_screen(world_position, camera_position);
+        }
+
+        let viewport = self.fallback_camera_viewport_size_for_display();
+        let (display_width, display_height) = self.get_display_size();
+        let width = display_width.max(1) as f32;
+        let height = display_height.max(1) as f32;
+
+        let half_w = viewport.x() * 0.5;
+        let half_h = viewport.y() * 0.5;
+        let clip_x = (world_position.x() - camera_position.x()) / half_w;
+        let clip_y = (world_position.y() - camera_position.y()) / half_h;
+
+        let screen_x = (clip_x + 1.0) * 0.5 * width;
+        let screen_y = (1.0 - clip_y) * 0.5 * height;
+        (screen_x, screen_y)
+    }
+
+    /// Convert screen-space pixel coordinates to world-space coordinates.
+    pub fn screen_to_world(&self, screen_x: f32, screen_y: f32) -> Vec2 {
+        let camera_position = self.get_camera_position();
+        if let Some(render_manager) = &self.render_manager {
+            return render_manager.screen_to_world(screen_x, screen_y, camera_position);
+        }
+
+        let viewport = self.fallback_camera_viewport_size_for_display();
+        let (display_width, display_height) = self.get_display_size();
+        let width = display_width.max(1) as f32;
+        let height = display_height.max(1) as f32;
+
+        let clip_x = (screen_x / width) * 2.0 - 1.0;
+        let clip_y = 1.0 - (screen_y / height) * 2.0;
+        let world_x = camera_position.x() + clip_x * (viewport.x() * 0.5);
+        let world_y = camera_position.y() + clip_y * (viewport.y() * 0.5);
+        Vec2::new(world_x, world_y)
+    }
+
     /// Add a game object to the engine
     ///
     /// Takes ownership of the GameObject and adds it to the engine's object manager.
     /// Returns the ID of the added object, or None if the object manager is not initialized.
     pub fn add_game_object(&mut self, object: GameObject) -> Option<u32> {
+        let object_type = object.get_object_type();
         if let Some(object_manager) = &mut self.object_manager {
-            object_manager.add_object(object)
+            let object_id = object_manager.add_object(object);
+            if object_type == ObjectType::Camera && self.active_camera_object_id.is_none() {
+                self.active_camera_object_id = object_id;
+            }
+            if let Some(render_manager) = &mut self.render_manager {
+                render_manager.set_active_camera_object_id(self.active_camera_object_id);
+            }
+            object_id
         } else {
             logging::log_warn("Cannot add game object: object manager is not initialized");
             None
@@ -267,6 +450,13 @@ impl Engine {
         if let Some(object_manager) = &mut self.object_manager {
             object_manager.remove_object(id);
         }
+        if self.active_camera_object_id == Some(id) {
+            self.active_camera_object_id = None;
+            self.ensure_active_camera_object();
+        }
+        if let Some(render_manager) = &mut self.render_manager {
+            render_manager.set_active_camera_object_id(self.active_camera_object_id);
+        }
     }
 
     /// Update a runtime GameObject position by id.
@@ -303,13 +493,7 @@ impl Engine {
     }
 
     /// Draw a single pixel with explicit draw ordering.
-    pub fn draw_pixel_with_order(
-        &mut self,
-        x: u32,
-        y: u32,
-        color: Color,
-        draw_order: f32,
-    ) {
+    pub fn draw_pixel_with_order(&mut self, x: u32, y: u32, color: Color, draw_order: f32) {
         self.draw_manager
             .draw_pixel_with_order(x, y, color, draw_order);
         self.request_render_redraw();
@@ -333,9 +517,8 @@ impl Engine {
         color: Color,
         draw_order: f32,
     ) {
-        self.draw_manager.draw_line_with_options(
-            start_x, start_y, end_x, end_y, thickness, color, draw_order,
-        );
+        self.draw_manager
+            .draw_line_with_options(start_x, start_y, end_x, end_y, thickness, color, draw_order);
         self.request_render_redraw();
     }
 
@@ -372,9 +555,8 @@ impl Engine {
         thickness: f32,
         draw_order: f32,
     ) {
-        self.draw_manager.draw_rectangle_with_options(
-            x, y, width, height, color, filled, thickness, draw_order,
-        );
+        self.draw_manager
+            .draw_rectangle_with_options(x, y, width, height, color, filled, thickness, draw_order);
         self.request_render_redraw();
     }
 
@@ -454,14 +636,8 @@ impl Engine {
         texture_path: String,
         draw_order: f32,
     ) {
-        self.draw_manager.draw_image_with_options(
-            x,
-            y,
-            width,
-            height,
-            texture_path,
-            draw_order,
-        );
+        self.draw_manager
+            .draw_image_with_options(x, y, width, height, texture_path, draw_order);
         self.request_render_redraw();
     }
 
@@ -571,8 +747,20 @@ impl Engine {
                 EngineCommand::RemoveGameObject(id) => {
                     self.remove_game_object(id);
                 }
-                EngineCommand::SetGameObjectPosition { object_id, position } => {
+                EngineCommand::SetGameObjectPosition {
+                    object_id,
+                    position,
+                } => {
                     let _ = self.set_game_object_position(object_id, position);
+                }
+                EngineCommand::SetCameraPosition { position } => {
+                    let _ = self.set_camera_position(position);
+                }
+                EngineCommand::SetCameraViewportSize { width, height } => {
+                    let _ = self.set_camera_viewport_size(width, height);
+                }
+                EngineCommand::SetCameraBackgroundColor { color } => {
+                    self.set_camera_background_color(color);
                 }
                 EngineCommand::ClearDrawCommands => {
                     self.clear_draw_commands();
@@ -729,6 +917,7 @@ impl Engine {
         // Process Commands First
         // ------------------------------------------------------------
         self.process_commands();
+        self.ensure_active_camera_object();
 
         // ------------------------------------------------------------
         // IF NOT HEADLESS, DO THE FOLLOWING:
@@ -808,6 +997,7 @@ impl Engine {
 
     /// Render a frame
     pub fn render(&mut self) {
+        self.ensure_active_camera_object();
         if let Some(render_manager) = &mut self.render_manager {
             match render_manager.render(&self.object_manager, Some(&self.draw_manager)) {
                 Ok(_) => {
@@ -923,7 +1113,10 @@ impl ApplicationHandler for Engine {
         if self.window_manager.is_none() {
             if let Some(config) = self.window_config.take() {
                 // Extract background color and vsync before config is moved
-                let bg_color = config.background_color;
+                let mut bg_color = config.background_color;
+                if let Some(pending_color) = self.pending_camera_background_color {
+                    bg_color = Some(pending_color);
+                }
                 let vsync = config.vsync;
                 let redraw_on_change_only = config.redraw_on_change_only;
                 self.base_window_title = config.title.clone();
@@ -946,6 +1139,16 @@ impl ApplicationHandler for Engine {
                                 logging::log_info("Render manager initialized successfully");
                                 self.render_manager = Some(render_manager);
                                 self.window_manager = Some(window_manager);
+                                self.ensure_active_camera_object();
+
+                                if let Some(viewport_size) = self.pending_camera_viewport_size
+                                    && let Some(render_manager) = &mut self.render_manager
+                                {
+                                    render_manager.set_camera_viewport_size(
+                                        viewport_size.x(),
+                                        viewport_size.y(),
+                                    );
+                                }
 
                                 // Request initial redraw
                                 if let Some(wm) = &self.window_manager {

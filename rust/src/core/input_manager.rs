@@ -183,11 +183,28 @@ pub struct InputManager {
 }
 
 impl InputManager {
+    fn normalize_action_name(name: &str) -> String {
+        name.trim().to_ascii_lowercase()
+    }
+
+    fn find_axis_name_case_insensitive(&self, name: &str) -> Option<String> {
+        if self.axis_bindings.contains_key(name) {
+            return Some(name.to_string());
+        }
+
+        self.axis_bindings
+            .keys()
+            .find(|axis_name| axis_name.eq_ignore_ascii_case(name))
+            .cloned()
+    }
+
     /// Create a new InputManager with default state and default axis bindings.
     ///
     /// The default bindings are:
     /// - "Horizontal": A/D, Left/Right arrows, primary gamepad left-stick X
     /// - "Vertical": W/S, Up/Down arrows, primary gamepad left-stick Y
+    /// - "Jump", "Fire1", "Fire2", "Fire3", "Submit", "Cancel",
+    ///   "Mouse X", "Mouse Y", "Mouse ScrollWheel", "Escape"
     pub fn new() -> Self {
         let mut manager = Self {
             keys_current: HashMap::new(),
@@ -212,6 +229,10 @@ impl InputManager {
 
         // Install default axis bindings
         manager.axis_bindings = Self::default_axis_bindings();
+        // Install default action mappings (Unity-style names).
+        manager.key_action_mappings = Self::default_key_action_mappings();
+        manager.mouse_action_mappings = Self::default_mouse_action_mappings();
+        manager.joystick_action_mappings = Self::default_joystick_action_mappings();
 
         manager
     }
@@ -338,7 +359,206 @@ impl InputManager {
             },
         );
 
+        // Unity-style button-like axes.
+        bindings.insert(
+            "Jump".to_string(),
+            AxisBinding {
+                keyboard: Some(KeyboardAxisBinding {
+                    positive_keys: vec![Key::Named(NamedKey::Space)],
+                    negative_keys: Vec::new(),
+                    sensitivity: 1.0,
+                }),
+                mouse: None,
+                joystick: None,
+            },
+        );
+        bindings.insert(
+            "Fire1".to_string(),
+            AxisBinding {
+                keyboard: Some(KeyboardAxisBinding {
+                    positive_keys: vec![Key::Named(NamedKey::Control)],
+                    negative_keys: Vec::new(),
+                    sensitivity: 1.0,
+                }),
+                mouse: None,
+                joystick: None,
+            },
+        );
+        bindings.insert(
+            "Fire2".to_string(),
+            AxisBinding {
+                keyboard: Some(KeyboardAxisBinding {
+                    positive_keys: vec![Key::Named(NamedKey::Alt)],
+                    negative_keys: Vec::new(),
+                    sensitivity: 1.0,
+                }),
+                mouse: None,
+                joystick: None,
+            },
+        );
+        bindings.insert(
+            "Fire3".to_string(),
+            AxisBinding {
+                keyboard: Some(KeyboardAxisBinding {
+                    positive_keys: vec![Key::Named(NamedKey::Super), Key::Character("j".into())],
+                    negative_keys: Vec::new(),
+                    sensitivity: 1.0,
+                }),
+                mouse: None,
+                joystick: None,
+            },
+        );
+        bindings.insert(
+            "Escape".to_string(),
+            AxisBinding {
+                keyboard: Some(KeyboardAxisBinding {
+                    positive_keys: vec![Key::Named(NamedKey::Escape)],
+                    negative_keys: Vec::new(),
+                    sensitivity: 1.0,
+                }),
+                mouse: None,
+                joystick: None,
+            },
+        );
+        bindings.insert(
+            "Submit".to_string(),
+            AxisBinding {
+                keyboard: Some(KeyboardAxisBinding {
+                    positive_keys: vec![Key::Named(NamedKey::Enter), Key::Named(NamedKey::Space)],
+                    negative_keys: Vec::new(),
+                    sensitivity: 1.0,
+                }),
+                mouse: None,
+                joystick: None,
+            },
+        );
+        bindings.insert(
+            "Cancel".to_string(),
+            AxisBinding {
+                keyboard: Some(KeyboardAxisBinding {
+                    positive_keys: vec![Key::Named(NamedKey::Escape)],
+                    negative_keys: Vec::new(),
+                    sensitivity: 1.0,
+                }),
+                mouse: None,
+                joystick: None,
+            },
+        );
+        bindings.insert(
+            "Mouse X".to_string(),
+            AxisBinding {
+                keyboard: None,
+                mouse: Some(MouseAxisBinding {
+                    axis: MouseAxisType::X,
+                    sensitivity: 1.0,
+                    invert: false,
+                }),
+                joystick: None,
+            },
+        );
+        bindings.insert(
+            "Mouse Y".to_string(),
+            AxisBinding {
+                keyboard: None,
+                mouse: Some(MouseAxisBinding {
+                    axis: MouseAxisType::Y,
+                    sensitivity: 1.0,
+                    invert: false,
+                }),
+                joystick: None,
+            },
+        );
+        bindings.insert(
+            "Mouse ScrollWheel".to_string(),
+            AxisBinding {
+                keyboard: None,
+                mouse: Some(MouseAxisBinding {
+                    axis: MouseAxisType::WheelY,
+                    sensitivity: 1.0,
+                    invert: false,
+                }),
+                joystick: None,
+            },
+        );
+
         bindings
+    }
+
+    fn default_key_action_mappings() -> HashMap<String, Vec<Key>> {
+        let mut mappings = HashMap::new();
+        mappings.insert("jump".to_string(), vec![Key::Named(NamedKey::Space)]);
+        mappings.insert(
+            "fire1".to_string(),
+            vec![Key::Named(NamedKey::Control), Key::Character("z".into())],
+        );
+        mappings.insert("fire2".to_string(), vec![Key::Named(NamedKey::Alt)]);
+        mappings.insert(
+            "fire3".to_string(),
+            vec![Key::Named(NamedKey::Super), Key::Character("j".into())],
+        );
+        mappings.insert(
+            "submit".to_string(),
+            vec![Key::Named(NamedKey::Enter), Key::Named(NamedKey::Space)],
+        );
+        mappings.insert("cancel".to_string(), vec![Key::Named(NamedKey::Escape)]);
+        mappings.insert("escape".to_string(), vec![Key::Named(NamedKey::Escape)]);
+        mappings.insert("sprint".to_string(), vec![Key::Named(NamedKey::Shift)]);
+        mappings
+    }
+
+    fn default_mouse_action_mappings() -> HashMap<String, Vec<MouseButtonType>> {
+        let mut mappings = HashMap::new();
+        mappings.insert("fire1".to_string(), vec![MouseButtonType::Left]);
+        mappings.insert("fire2".to_string(), vec![MouseButtonType::Right]);
+        mappings.insert("fire3".to_string(), vec![MouseButtonType::Middle]);
+        mappings
+    }
+
+    fn default_joystick_action_mappings() -> HashMap<String, Vec<JoystickButton>> {
+        let mut mappings = HashMap::new();
+        mappings.insert(
+            "jump".to_string(),
+            vec![JoystickButton {
+                joystick_id: 0,
+                button_id: 0,
+            }],
+        );
+        mappings.insert(
+            "submit".to_string(),
+            vec![JoystickButton {
+                joystick_id: 0,
+                button_id: 0,
+            }],
+        );
+        mappings.insert(
+            "cancel".to_string(),
+            vec![JoystickButton {
+                joystick_id: 0,
+                button_id: 1,
+            }],
+        );
+        mappings.insert(
+            "fire1".to_string(),
+            vec![JoystickButton {
+                joystick_id: 0,
+                button_id: 0,
+            }],
+        );
+        mappings.insert(
+            "fire2".to_string(),
+            vec![JoystickButton {
+                joystick_id: 0,
+                button_id: 1,
+            }],
+        );
+        mappings.insert(
+            "fire3".to_string(),
+            vec![JoystickButton {
+                joystick_id: 0,
+                button_id: 2,
+            }],
+        );
+        mappings
     }
 
     /// Replace the full binding for a logical axis.
@@ -346,7 +566,11 @@ impl InputManager {
     /// If the axis does not exist yet it will be created; otherwise, its
     /// binding will be overwritten.
     pub fn set_axis_binding<S: Into<String>>(&mut self, name: S, binding: AxisBinding) {
-        self.axis_bindings.insert(name.into(), binding);
+        let requested_name = name.into();
+        let resolved_name = self
+            .find_axis_name_case_insensitive(&requested_name)
+            .unwrap_or(requested_name);
+        self.axis_bindings.insert(resolved_name, binding);
     }
 
     /// Update or create the keyboard binding for a logical axis.
@@ -355,7 +579,10 @@ impl InputManager {
         name: S,
         keyboard: KeyboardAxisBinding,
     ) {
-        let name = name.into();
+        let requested_name = name.into();
+        let name = self
+            .find_axis_name_case_insensitive(&requested_name)
+            .unwrap_or(requested_name);
         self.axis_bindings
             .entry(name)
             .and_modify(|axis| axis.keyboard = Some(keyboard.clone()))
@@ -368,7 +595,10 @@ impl InputManager {
 
     /// Update or create the mouse binding for a logical axis.
     pub fn set_axis_mouse_binding<S: Into<String>>(&mut self, name: S, mouse: MouseAxisBinding) {
-        let name = name.into();
+        let requested_name = name.into();
+        let name = self
+            .find_axis_name_case_insensitive(&requested_name)
+            .unwrap_or(requested_name);
         self.axis_bindings
             .entry(name)
             .and_modify(|axis| axis.mouse = Some(mouse.clone()))
@@ -385,7 +615,10 @@ impl InputManager {
         name: S,
         joystick: JoystickAxisBinding,
     ) {
-        let name = name.into();
+        let requested_name = name.into();
+        let name = self
+            .find_axis_name_case_insensitive(&requested_name)
+            .unwrap_or(requested_name);
         self.axis_bindings
             .entry(name)
             .and_modify(|axis| axis.joystick = Some(joystick.clone()))
@@ -396,13 +629,141 @@ impl InputManager {
             });
     }
 
+    /// Configure keyboard keys for a logical axis (replaces existing keys).
+    pub fn set_axis_keyboard_keys<S: Into<String>>(
+        &mut self,
+        name: S,
+        positive_keys: Vec<Key>,
+        negative_keys: Vec<Key>,
+        sensitivity: f32,
+    ) {
+        self.set_axis_keyboard_binding(
+            name,
+            KeyboardAxisBinding {
+                positive_keys,
+                negative_keys,
+                sensitivity,
+            },
+        );
+    }
+
+    /// Add a positive keyboard key to a logical axis.
+    pub fn add_axis_positive_key<S: Into<String>>(&mut self, name: S, key: Key) {
+        let requested_name = name.into();
+        let name = self
+            .find_axis_name_case_insensitive(&requested_name)
+            .unwrap_or(requested_name);
+        let axis = self
+            .axis_bindings
+            .entry(name)
+            .or_insert_with(|| AxisBinding {
+                keyboard: None,
+                mouse: None,
+                joystick: None,
+            });
+        let keyboard = axis.keyboard.get_or_insert_with(|| KeyboardAxisBinding {
+            positive_keys: Vec::new(),
+            negative_keys: Vec::new(),
+            sensitivity: 1.0,
+        });
+        if !keyboard.positive_keys.contains(&key) {
+            keyboard.positive_keys.push(key);
+        }
+    }
+
+    /// Add a negative keyboard key to a logical axis.
+    pub fn add_axis_negative_key<S: Into<String>>(&mut self, name: S, key: Key) {
+        let requested_name = name.into();
+        let name = self
+            .find_axis_name_case_insensitive(&requested_name)
+            .unwrap_or(requested_name);
+        let axis = self
+            .axis_bindings
+            .entry(name)
+            .or_insert_with(|| AxisBinding {
+                keyboard: None,
+                mouse: None,
+                joystick: None,
+            });
+        let keyboard = axis.keyboard.get_or_insert_with(|| KeyboardAxisBinding {
+            positive_keys: Vec::new(),
+            negative_keys: Vec::new(),
+            sensitivity: 1.0,
+        });
+        if !keyboard.negative_keys.contains(&key) {
+            keyboard.negative_keys.push(key);
+        }
+    }
+
+    /// Remove a positive keyboard key from a logical axis.
+    pub fn remove_axis_positive_key(&mut self, axis_name: &str, key: &Key) -> bool {
+        let Some(name) = self.find_axis_name_case_insensitive(axis_name) else {
+            return false;
+        };
+        let Some(axis) = self.axis_bindings.get_mut(&name) else {
+            return false;
+        };
+        let Some(keyboard) = axis.keyboard.as_mut() else {
+            return false;
+        };
+        if let Some(index) = keyboard
+            .positive_keys
+            .iter()
+            .position(|existing| existing == key)
+        {
+            keyboard.positive_keys.swap_remove(index);
+            return true;
+        }
+        false
+    }
+
+    /// Remove a negative keyboard key from a logical axis.
+    pub fn remove_axis_negative_key(&mut self, axis_name: &str, key: &Key) -> bool {
+        let Some(name) = self.find_axis_name_case_insensitive(axis_name) else {
+            return false;
+        };
+        let Some(axis) = self.axis_bindings.get_mut(&name) else {
+            return false;
+        };
+        let Some(keyboard) = axis.keyboard.as_mut() else {
+            return false;
+        };
+        if let Some(index) = keyboard
+            .negative_keys
+            .iter()
+            .position(|existing| existing == key)
+        {
+            keyboard.negative_keys.swap_remove(index);
+            return true;
+        }
+        false
+    }
+
+    /// Remove an axis binding by name.
+    pub fn remove_axis(&mut self, axis_name: &str) -> bool {
+        let Some(name) = self.find_axis_name_case_insensitive(axis_name) else {
+            return false;
+        };
+        self.axis_bindings.remove(&name).is_some()
+    }
+
+    /// Return all logical axis names in sorted order.
+    pub fn axis_names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self.axis_bindings.keys().cloned().collect();
+        names.sort();
+        names
+    }
+
     /// Update input state and recompute all logical axis values for this frame.
     ///
     /// This should be called once per frame, after any raw input events have
     /// been applied to the underlying keyboard/mouse/joystick state.
     pub fn update(&mut self) {
         // Reuse axis buffers by swapping snapshots before recomputation.
-        std::mem::swap(&mut self.axis_values_previous, &mut self.axis_values_current);
+        std::mem::swap(
+            &mut self.axis_values_previous,
+            &mut self.axis_values_current,
+        );
 
         // Recompute axis values from current device state. The previous-axis
         // snapshot was swapped above so edge detection remains valid.
@@ -447,14 +808,217 @@ impl InputManager {
     ///
     /// Returns 0.0 if the axis is not defined.
     pub fn axis(&self, name: &str) -> f32 {
-        *self.axis_values_current.get(name).unwrap_or(&0.0)
+        if let Some(value) = self.axis_values_current.get(name) {
+            return *value;
+        }
+
+        self.axis_values_current
+            .iter()
+            .find_map(|(axis_name, value)| {
+                if axis_name.eq_ignore_ascii_case(name) {
+                    Some(*value)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(0.0)
     }
 
     /// Get the previous frame's value of a logical axis.
     ///
     /// Returns 0.0 if the axis is not defined.
     pub fn axis_previous(&self, name: &str) -> f32 {
-        *self.axis_values_previous.get(name).unwrap_or(&0.0)
+        if let Some(value) = self.axis_values_previous.get(name) {
+            return *value;
+        }
+
+        self.axis_values_previous
+            .iter()
+            .find_map(|(axis_name, value)| {
+                if axis_name.eq_ignore_ascii_case(name) {
+                    Some(*value)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(0.0)
+    }
+
+    /// Check if an action is currently active (held).
+    pub fn action_down(&self, action_name: &str) -> bool {
+        let action = Self::normalize_action_name(action_name);
+        if let Some(keys) = self.key_action_mappings.get(&action)
+            && keys.iter().any(|key| self.key_down(key))
+        {
+            return true;
+        }
+
+        if let Some(buttons) = self.mouse_action_mappings.get(&action)
+            && buttons.iter().any(|button| self.mouse_button_down(*button))
+        {
+            return true;
+        }
+
+        if let Some(buttons) = self.joystick_action_mappings.get(&action)
+            && buttons
+                .iter()
+                .any(|button| self.joystick_button_down(button.joystick_id, button.button_id))
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if an action was pressed this frame.
+    pub fn action_pressed(&self, action_name: &str) -> bool {
+        let action = Self::normalize_action_name(action_name);
+        if let Some(keys) = self.key_action_mappings.get(&action)
+            && keys.iter().any(|key| self.key_pressed(key))
+        {
+            return true;
+        }
+
+        if let Some(buttons) = self.mouse_action_mappings.get(&action)
+            && buttons
+                .iter()
+                .any(|button| self.mouse_button_pressed(*button))
+        {
+            return true;
+        }
+
+        if let Some(buttons) = self.joystick_action_mappings.get(&action)
+            && buttons
+                .iter()
+                .any(|button| self.joystick_button_pressed(button.joystick_id, button.button_id))
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if an action was released this frame.
+    pub fn action_released(&self, action_name: &str) -> bool {
+        let action = Self::normalize_action_name(action_name);
+        if let Some(keys) = self.key_action_mappings.get(&action)
+            && keys.iter().any(|key| self.key_released(key))
+        {
+            return true;
+        }
+
+        if let Some(buttons) = self.mouse_action_mappings.get(&action)
+            && buttons
+                .iter()
+                .any(|button| self.mouse_button_released(*button))
+        {
+            return true;
+        }
+
+        if let Some(buttons) = self.joystick_action_mappings.get(&action)
+            && buttons
+                .iter()
+                .any(|button| self.joystick_button_released(button.joystick_id, button.button_id))
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Return all action names in sorted order.
+    pub fn action_names(&self) -> Vec<String> {
+        let mut names = HashSet::new();
+        names.extend(self.key_action_mappings.keys().cloned());
+        names.extend(self.mouse_action_mappings.keys().cloned());
+        names.extend(self.joystick_action_mappings.keys().cloned());
+        let mut ordered: Vec<String> = names.into_iter().collect();
+        ordered.sort();
+        ordered
+    }
+
+    /// Replace keyboard bindings for an action.
+    pub fn set_action_keys<S: Into<String>>(&mut self, action_name: S, keys: Vec<Key>) {
+        self.key_action_mappings
+            .insert(Self::normalize_action_name(&action_name.into()), keys);
+    }
+
+    /// Add one keyboard key to an action binding.
+    pub fn add_action_key<S: Into<String>>(&mut self, action_name: S, key: Key) {
+        let action = Self::normalize_action_name(&action_name.into());
+        let keys = self.key_action_mappings.entry(action).or_default();
+        if !keys.contains(&key) {
+            keys.push(key);
+        }
+    }
+
+    /// Remove one keyboard key from an action binding.
+    pub fn remove_action_key(&mut self, action_name: &str, key: &Key) -> bool {
+        let action = Self::normalize_action_name(action_name);
+        let Some(keys) = self.key_action_mappings.get_mut(&action) else {
+            return false;
+        };
+        if let Some(index) = keys.iter().position(|existing| existing == key) {
+            keys.swap_remove(index);
+            return true;
+        }
+        false
+    }
+
+    /// Replace mouse button bindings for an action.
+    pub fn set_action_mouse_buttons<S: Into<String>>(
+        &mut self,
+        action_name: S,
+        buttons: Vec<MouseButtonType>,
+    ) {
+        self.mouse_action_mappings
+            .insert(Self::normalize_action_name(&action_name.into()), buttons);
+    }
+
+    /// Add one mouse button to an action binding.
+    pub fn add_action_mouse_button<S: Into<String>>(
+        &mut self,
+        action_name: S,
+        button: MouseButtonType,
+    ) {
+        let action = Self::normalize_action_name(&action_name.into());
+        let buttons = self.mouse_action_mappings.entry(action).or_default();
+        if !buttons.contains(&button) {
+            buttons.push(button);
+        }
+    }
+
+    /// Remove one mouse button from an action binding.
+    pub fn remove_action_mouse_button(
+        &mut self,
+        action_name: &str,
+        button: MouseButtonType,
+    ) -> bool {
+        let action = Self::normalize_action_name(action_name);
+        let Some(buttons) = self.mouse_action_mappings.get_mut(&action) else {
+            return false;
+        };
+        if let Some(index) = buttons.iter().position(|existing| *existing == button) {
+            buttons.swap_remove(index);
+            return true;
+        }
+        false
+    }
+
+    /// Remove all bindings for an action.
+    pub fn clear_action_bindings(&mut self, action_name: &str) {
+        let action = Self::normalize_action_name(action_name);
+        self.key_action_mappings.remove(&action);
+        self.mouse_action_mappings.remove(&action);
+        self.joystick_action_mappings.remove(&action);
+    }
+
+    /// Restore default axis and action bindings.
+    pub fn reset_input_bindings_to_defaults(&mut self) {
+        self.axis_bindings = Self::default_axis_bindings();
+        self.key_action_mappings = Self::default_key_action_mappings();
+        self.mouse_action_mappings = Self::default_mouse_action_mappings();
+        self.joystick_action_mappings = Self::default_joystick_action_mappings();
     }
 
     /// Check if a keyboard key is currently held down.

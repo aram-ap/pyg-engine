@@ -1,6 +1,6 @@
 import random
 
-from pyg_engine import Engine, Keys, MouseButton, Color
+from pyg_engine import Color, Engine, MouseButton
 
 def main():
     engine = Engine()
@@ -26,24 +26,20 @@ def main():
         if dt > 0.1:
             dt = 0.1  # Cap delta time
         
-        # Keyboard Input (using strings for characters, Keys for special keys)
-        if engine.input.key_down("w") or engine.input.key_down(Keys.ARROW_UP):
-            circle_y -= speed * dt
-        if engine.input.key_down("s") or engine.input.key_down(Keys.ARROW_DOWN):
-            circle_y += speed * dt
-        if engine.input.key_down("a") or engine.input.key_down(Keys.ARROW_LEFT):
-            circle_x -= speed * dt
-        if engine.input.key_down("d") or engine.input.key_down(Keys.ARROW_RIGHT):
-            circle_x += speed * dt
+        # Axis Input (default Unity-style mappings are configured in the engine)
+        horizontal = engine.input.axis("Horizontal")
+        vertical = engine.input.axis("Vertical")
+        circle_x += horizontal * speed * dt
+        circle_y -= vertical * speed * dt
             
-        if engine.input.key_pressed(Keys.SPACE):
+        if engine.input.action_pressed("jump"):
             # Toggle color
             if circle_color.r > 0.5:
                 circle_color = Color(0.0, 0.0, 1.0, 1.0)
             else:
                 circle_color = Color(1.0, 0.0, 0.0, 1.0)
                 
-        if engine.input.key_pressed(Keys.ESCAPE):
+        if engine.input.action_pressed("escape"):
             break
             
         # Mouse Input

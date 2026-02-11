@@ -171,6 +171,19 @@ Demonstrates Python-side scene setup with GameObject + MeshComponent:
 python examples/python_mesh_demo.py
 ```
 
+### python_camera_worldspace_demo.py
+
+Demonstrates world-space camera controls from Python:
+- Move camera in world-space (WASD / Arrow keys)
+- Resize camera viewport in world units (Q / E)
+- Convert between screen-space and world-space coordinates
+- Mix world-space meshes with screen-space direct draw HUD text
+
+**Run:**
+```bash
+python examples/python_camera_worldspace_demo.py
+```
+
 ### python_snake_demo.py
 
 Playable Snake game built with the Python API:
@@ -206,6 +219,18 @@ Demonstrates explicit manual loop control:
 **Run:**
 ```bash
 python examples/python_manual_loop.py
+```
+
+### python_input_demo.py
+
+Demonstrates the logical input system:
+- Unity-style axes (`Horizontal`, `Vertical`, etc.)
+- Action queries (`jump`, `fire1`, `escape`, etc.)
+- Mouse button and cursor input
+
+**Run:**
+```bash
+python examples/python_input_demo.py
 ```
 
 See `examples/PYTHON_RENDERING_GUIDE.md` for API details.

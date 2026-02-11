@@ -17,6 +17,7 @@ use super::logging;
 use crate::core::draw_manager::{DrawCommand, DrawManager};
 use crate::core::object_manager::ObjectManager;
 use crate::types::Color;
+use crate::types::vector::Vec2;
 
 struct CachedTexture {
     texture: wgpu::Texture,
@@ -109,6 +110,8 @@ pub struct RenderManager {
     font_cache: HashMap<String, Option<Font>>,
     vertex_buffer_pool: Vec<PooledBuffer>,
     index_buffer_pool: Vec<PooledBuffer>,
+    active_camera_object_id: Option<u32>,
+    camera_viewport_size: Option<Vec2>,
 }
 
 impl RenderManager {
@@ -296,6 +299,8 @@ impl RenderManager {
             font_cache: HashMap::new(),
             vertex_buffer_pool: Vec::new(),
             index_buffer_pool: Vec::new(),
+            active_camera_object_id: None,
+            camera_viewport_size: None,
         })
     }
 
@@ -563,6 +568,87 @@ impl RenderManager {
         [color.r(), color.g(), color.b(), color.a()]
     }
 
+    fn default_camera_viewport_size(&self) -> Vec2 {
+        let width = self.surface_config.width.max(1) as f32;
+        let height = self.surface_config.height.max(1) as f32;
+        let aspect = width / height;
+        Vec2::new(2.0 * aspect, 2.0)
+    }
+
+    fn effective_camera_viewport_size(&self) -> Vec2 {
+        self.camera_viewport_size
+            .unwrap_or_else(|| self.default_camera_viewport_size())
+    }
+
+    fn world_to_clip(&self, world_x: f32, world_y: f32, camera_position: Vec2) -> [f32; 2] {
+        let viewport = self.effective_camera_viewport_size();
+        let half_width = (viewport.x() * 0.5).max(f32::EPSILON);
+        let half_height = (viewport.y() * 0.5).max(f32::EPSILON);
+
+        let relative_x = world_x - camera_position.x();
+        let relative_y = world_y - camera_position.y();
+
+        [relative_x / half_width, relative_y / half_height]
+    }
+
+    fn active_camera_position(&self, objects: &Option<ObjectManager>) -> Vec2 {
+        let Some(camera_id) = self.active_camera_object_id else {
+            return Vec2::new(0.0, 0.0);
+        };
+
+        objects
+            .as_ref()
+            .and_then(|object_manager| object_manager.get_object_by_id(camera_id))
+            .map(|camera| *camera.transform().position())
+            .unwrap_or_else(|| Vec2::new(0.0, 0.0))
+    }
+
+    pub fn camera_viewport_size(&self) -> (f32, f32) {
+        let viewport = self.effective_camera_viewport_size();
+        (viewport.x(), viewport.y())
+    }
+
+    pub fn set_camera_viewport_size(&mut self, width: f32, height: f32) {
+        let safe_width = width.max(f32::EPSILON);
+        let safe_height = height.max(f32::EPSILON);
+        self.camera_viewport_size = Some(Vec2::new(safe_width, safe_height));
+        self.requires_redraw = true;
+        self.precomputed_scene_version = None;
+        self.bump_render_state_epoch();
+    }
+
+    pub fn set_active_camera_object_id(&mut self, camera_object_id: Option<u32>) {
+        if self.active_camera_object_id == camera_object_id {
+            return;
+        }
+
+        self.active_camera_object_id = camera_object_id;
+        self.requires_redraw = true;
+        self.precomputed_scene_version = None;
+        self.bump_render_state_epoch();
+    }
+
+    pub fn world_to_screen(&self, world_position: Vec2, camera_position: Vec2) -> (f32, f32) {
+        let clip = self.world_to_clip(world_position.x(), world_position.y(), camera_position);
+        let width = self.surface_config.width.max(1) as f32;
+        let height = self.surface_config.height.max(1) as f32;
+        let screen_x = (clip[0] + 1.0) * 0.5 * width;
+        let screen_y = (1.0 - clip[1]) * 0.5 * height;
+        (screen_x, screen_y)
+    }
+
+    pub fn screen_to_world(&self, screen_x: f32, screen_y: f32, camera_position: Vec2) -> Vec2 {
+        let width = self.surface_config.width.max(1) as f32;
+        let height = self.surface_config.height.max(1) as f32;
+        let clip_x = (screen_x / width) * 2.0 - 1.0;
+        let clip_y = 1.0 - (screen_y / height) * 2.0;
+
+        let viewport = self.effective_camera_viewport_size();
+        let world_x = camera_position.x() + clip_x * (viewport.x() * 0.5);
+        let world_y = camera_position.y() + clip_y * (viewport.y() * 0.5);
+        Vec2::new(world_x, world_y)
+    }
+
     fn pixel_to_clip(&self, x: f32, y: f32) -> [f32; 2] {
         let width = self.surface_config.width.max(1) as f32;
         let height = self.surface_config.height.max(1) as f32;
@@ -651,14 +737,7 @@ impl RenderManager {
         let p2 = self.pixel_to_clip(x1, y1);
         let p3 = self.pixel_to_clip(x1, y0);
 
-        self.build_quad_draw_item(
-            p0,
-            p1,
-            p2,
-            p3,
-            Self::color_to_array(color),
-            draw_order,
-        )
+        self.build_quad_draw_item(p0, p1, p2, p3, Self::color_to_array(color), draw_order)
     }
 
     fn build_gradient_rect_draw_item(
@@ -1501,7 +1580,11 @@ impl RenderManager {
         (items, texture_uploads)
     }
 
-    fn collect_mesh_draw_items(&self, objects: &Option<ObjectManager>) -> Vec<DrawItem> {
+    fn collect_mesh_draw_items(
+        &self,
+        objects: &Option<ObjectManager>,
+        camera_position: Vec2,
+    ) -> Vec<DrawItem> {
         let mut items = Vec::new();
 
         let Some(object_manager) = objects else {
@@ -1511,6 +1594,10 @@ impl RenderManager {
         let keys = object_manager.get_sorted_keys();
 
         for &id in keys {
+            if self.active_camera_object_id == Some(id) {
+                continue;
+            }
+
             let Some(object) = object_manager.get_object_by_id(id) else {
                 continue;
             };
@@ -1542,9 +1629,6 @@ impl RenderManager {
             let scale_y = transform.scale().y();
             let pos_x = transform.position().x();
             let pos_y = transform.position().y();
-            let surface_width = self.surface_config.width.max(1) as f32;
-            let surface_height = self.surface_config.height.max(1) as f32;
-            let aspect_correction_x = surface_height / surface_width;
 
             let mut vertices = Vec::with_capacity(mesh.geometry().vertices().len());
             for vertex in mesh.geometry().vertices() {
@@ -1553,13 +1637,12 @@ impl RenderManager {
 
                 let rotated_x = local_x * cos_t - local_y * sin_t;
                 let rotated_y = local_x * sin_t + local_y * cos_t;
+                let world_x = pos_x + rotated_x;
+                let world_y = pos_y + rotated_y;
+                let clip = self.world_to_clip(world_x, world_y, camera_position);
 
                 vertices.push(Vertex {
-                    position: [
-                        pos_x + rotated_x * aspect_correction_x,
-                        rotated_y + pos_y,
-                        0.0,
-                    ],
+                    position: [clip[0], clip[1], 0.0],
                     color,
                     tex_coords: [vertex.uv().x(), vertex.uv().y()],
                 });
@@ -1581,7 +1664,8 @@ impl RenderManager {
         objects: &Option<ObjectManager>,
         draw_manager: Option<&DrawManager>,
     ) -> (Vec<DrawItem>, Vec<PendingTextureUpload>) {
-        let mut items = self.collect_mesh_draw_items(objects);
+        let camera_position = self.active_camera_position(objects);
+        let mut items = self.collect_mesh_draw_items(objects, camera_position);
         let (direct_draw_items, texture_uploads) = self.collect_direct_draw_items(draw_manager);
         items.extend(direct_draw_items);
 
@@ -1677,14 +1761,12 @@ impl RenderManager {
 
         let (draw_items, pending_texture_uploads) = self.collect_draw_items(objects, draw_manager);
         for upload in pending_texture_uploads {
-            if let Err(err) =
-                self.cache_texture_from_rgba(
-                    &upload.key,
-                    upload.rgba.as_ref(),
-                    upload.width,
-                    upload.height,
-                )
-            {
+            if let Err(err) = self.cache_texture_from_rgba(
+                &upload.key,
+                upload.rgba.as_ref(),
+                upload.width,
+                upload.height,
+            ) {
                 logging::log_warn(&err);
             }
         }
@@ -1896,6 +1978,11 @@ impl RenderManager {
         self.requires_redraw = true;
         self.precomputed_scene_version = None;
         self.bump_render_state_epoch();
+    }
+
+    /// Get the background clear color.
+    pub fn background_color(&self) -> Color {
+        self.background_color
     }
 
     /// Get the current surface configuration.

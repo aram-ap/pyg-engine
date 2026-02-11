@@ -76,7 +76,7 @@ def main() -> None:
             draw_order=11.0,
         )
         engine.draw_text(
-            "Mesh transforms currently use clip-space style coordinates (~[-1, 1]).",
+            "Mesh objects now use world-space coordinates (camera-relative view).",
             24.0,
             84.0,
             pyg.Color.rgb(180, 180, 190),

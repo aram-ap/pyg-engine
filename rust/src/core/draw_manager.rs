@@ -138,13 +138,7 @@ impl DrawManager {
         self.draw_pixel_with_order(x, y, color, 0.0);
     }
 
-    pub fn draw_pixel_with_order(
-        &mut self,
-        x: u32,
-        y: u32,
-        color: Color,
-        draw_order: f32,
-    ) {
+    pub fn draw_pixel_with_order(&mut self, x: u32, y: u32, color: Color, draw_order: f32) {
         self.push_command(DrawCommand::Pixel {
             x: x as f32,
             y: y as f32,
@@ -229,9 +223,7 @@ impl DrawManager {
         thickness: f32,
         color: Color,
     ) {
-        self.draw_circle_with_options(
-            center_x, center_y, radius, color, false, thickness, 32, 0.0,
-        );
+        self.draw_circle_with_options(center_x, center_y, radius, color, false, thickness, 32, 0.0);
     }
 
     pub fn draw_circle_with_options(

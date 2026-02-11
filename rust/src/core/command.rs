@@ -14,10 +14,16 @@ pub enum EngineCommand {
     RemoveGameObject(u32),
 
     /// Update a runtime GameObject position by id
-    SetGameObjectPosition {
-        object_id: u32,
-        position: Vec2,
-    },
+    SetGameObjectPosition { object_id: u32, position: Vec2 },
+
+    /// Update the active camera world position
+    SetCameraPosition { position: Vec2 },
+
+    /// Set the active camera viewport size in world units
+    SetCameraViewportSize { width: f32, height: f32 },
+
+    /// Set the active camera background clear color
+    SetCameraBackgroundColor { color: Color },
 
     /// Clear all immediate-mode draw commands
     ClearDrawCommands,

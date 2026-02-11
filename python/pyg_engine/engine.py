@@ -52,6 +52,18 @@ class EngineHandle:
         """Update a runtime GameObject position by id via command queue."""
         self._inner.set_game_object_position(object_id, position)
 
+    def set_camera_position(self, position: Any) -> None:
+        """Update the active camera world position via command queue."""
+        self._inner.set_camera_position(position)
+
+    def set_camera_viewport_size(self, width: float, height: float) -> None:
+        """Update the active camera viewport size in world units via command queue."""
+        self._inner.set_camera_viewport_size(width, height)
+
+    def set_camera_background_color(self, color: Any) -> None:
+        """Update the active camera background clear color via command queue."""
+        self._inner.set_camera_background_color(color)
+
     def clear_draw_commands(self) -> None:
         """Clear all immediate-mode drawing commands via command queue."""
         self._inner.clear_draw_commands()
@@ -293,6 +305,103 @@ class Input:
     def axis_previous(self, name: str) -> float:
         """Get the previous frame's value of a logical axis."""
         return self._engine.axis_previous(name)
+
+    def axis_names(self) -> list[str]:
+        """List all configured logical axis names."""
+        return self._engine.axis_names()
+
+    def action_down(self, action_name: str) -> bool:
+        """Check whether an action is currently active (held)."""
+        return self._engine.action_down(action_name)
+
+    def action_pressed(self, action_name: str) -> bool:
+        """Check whether an action was pressed this frame."""
+        return self._engine.action_pressed(action_name)
+
+    def action_released(self, action_name: str) -> bool:
+        """Check whether an action was released this frame."""
+        return self._engine.action_released(action_name)
+
+    def action_names(self) -> list[str]:
+        """List all configured action names."""
+        return self._engine.action_names()
+
+    def reset_bindings_to_defaults(self) -> None:
+        """Restore default axis and action bindings."""
+        self._engine.reset_input_bindings_to_defaults()
+
+    def set_axis_keys(
+        self,
+        name: str,
+        positive_keys: list[str],
+        negative_keys: list[str],
+        sensitivity: float = 1.0,
+    ) -> None:
+        """Set keyboard keys for an axis (replaces existing keyboard keys)."""
+        self._engine.set_axis_keys(name, positive_keys, negative_keys, sensitivity=sensitivity)
+
+    def add_axis_positive_key(self, axis_name: str, key: str) -> None:
+        """Add one positive key to an axis binding."""
+        self._engine.add_axis_positive_key(axis_name, key)
+
+    def add_axis_negative_key(self, axis_name: str, key: str) -> None:
+        """Add one negative key to an axis binding."""
+        self._engine.add_axis_negative_key(axis_name, key)
+
+    def remove_axis_positive_key(self, axis_name: str, key: str) -> bool:
+        """Remove one positive key from an axis binding."""
+        return self._engine.remove_axis_positive_key(axis_name, key)
+
+    def remove_axis_negative_key(self, axis_name: str, key: str) -> bool:
+        """Remove one negative key from an axis binding."""
+        return self._engine.remove_axis_negative_key(axis_name, key)
+
+    def remove_axis(self, axis_name: str) -> bool:
+        """Remove a logical axis binding."""
+        return self._engine.remove_axis(axis_name)
+
+    def set_axis_mouse(
+        self,
+        name: str,
+        mouse_axis: str,
+        sensitivity: float = 1.0,
+        invert: bool = False,
+    ) -> bool:
+        """Bind an axis to mouse input (x/y/wheel)."""
+        return self._engine.set_axis_mouse(
+            name,
+            mouse_axis,
+            sensitivity=sensitivity,
+            invert=invert,
+        )
+
+    def set_action_keys(self, action_name: str, keys: list[str]) -> None:
+        """Set keyboard bindings for an action (replaces existing keyboard keys)."""
+        self._engine.set_action_keys(action_name, keys)
+
+    def add_action_key(self, action_name: str, key: str) -> None:
+        """Add one keyboard key to an action binding."""
+        self._engine.add_action_key(action_name, key)
+
+    def remove_action_key(self, action_name: str, key: str) -> bool:
+        """Remove one keyboard key from an action binding."""
+        return self._engine.remove_action_key(action_name, key)
+
+    def set_action_mouse_buttons(self, action_name: str, buttons: list[str]) -> None:
+        """Set mouse-button bindings for an action (replaces existing mouse buttons)."""
+        self._engine.set_action_mouse_buttons(action_name, buttons)
+
+    def add_action_mouse_button(self, action_name: str, button: MouseButton) -> None:
+        """Add one mouse button to an action binding."""
+        self._engine.add_action_mouse_button(action_name, button)
+
+    def remove_action_mouse_button(self, action_name: str, button: MouseButton) -> bool:
+        """Remove one mouse button from an action binding."""
+        return self._engine.remove_action_mouse_button(action_name, button)
+
+    def clear_action_bindings(self, action_name: str) -> None:
+        """Clear all bindings (keyboard/mouse/joystick) for an action."""
+        self._engine.clear_action_bindings(action_name)
 
 
 class UpdateContext:
@@ -885,6 +994,43 @@ class Engine:
             True if the object exists and was updated, False otherwise.
         """
         return self._engine.set_game_object_position(object_id, position)
+
+    @property
+    def camera_object_id(self) -> Optional[int]:
+        """Get the runtime id of the active camera GameObject."""
+        return self._engine.camera_object_id()
+
+    def get_camera_position(self) -> Any:
+        """Get the active camera world position."""
+        return self._engine.get_camera_position()
+
+    def set_camera_position(self, position: Any) -> bool:
+        """Set the active camera world position."""
+        return self._engine.set_camera_position(position)
+
+    def get_camera_viewport_size(self) -> tuple[float, float]:
+        """Get the active camera viewport size in world units."""
+        return self._engine.get_camera_viewport_size()
+
+    def set_camera_viewport_size(self, width: float, height: float) -> bool:
+        """Set the active camera viewport size in world units."""
+        return self._engine.set_camera_viewport_size(width, height)
+
+    def set_camera_background_color(self, color: Any) -> None:
+        """Set the active camera background clear color."""
+        self._engine.set_camera_background_color(color)
+
+    def get_camera_background_color(self) -> Any:
+        """Get the active camera background clear color."""
+        return self._engine.get_camera_background_color()
+
+    def world_to_screen(self, world_position: Any) -> tuple[float, float]:
+        """Convert world-space coordinates to screen-space pixel coordinates."""
+        return self._engine.world_to_screen(world_position)
+
+    def screen_to_world(self, screen_x: float, screen_y: float) -> Any:
+        """Convert screen-space pixel coordinates to world-space coordinates."""
+        return self._engine.screen_to_world(screen_x, screen_y)
 
     def clear_draw_commands(self) -> None:
         """Clear all immediate-mode drawing commands."""

@@ -16,8 +16,8 @@ use winit::window::{Fullscreen, Icon, Window};
 const DEFAULT_WINDOW_ICON_BYTES: &[u8] = include_bytes!("../../../images/pyg_logo.png");
 
 fn decode_icon_from_bytes(bytes: &[u8], source: &str) -> Result<Icon, String> {
-    let decoded_image =
-        load_from_memory(bytes).map_err(|err| format!("failed to decode icon '{source}': {err}"))?;
+    let decoded_image = load_from_memory(bytes)
+        .map_err(|err| format!("failed to decode icon '{source}': {err}"))?;
     let rgba_image = decoded_image.into_rgba8();
     let (width, height) = rgba_image.dimensions();
     Icon::from_rgba(rgba_image.into_raw(), width, height)
@@ -26,8 +26,8 @@ fn decode_icon_from_bytes(bytes: &[u8], source: &str) -> Result<Icon, String> {
 
 /// Load a window icon from an image path.
 pub fn load_window_icon_from_path(path: &Path) -> Result<Icon, String> {
-    let bytes =
-        std::fs::read(path).map_err(|err| format!("failed to read icon '{}': {err}", path.display()))?;
+    let bytes = std::fs::read(path)
+        .map_err(|err| format!("failed to read icon '{}': {err}", path.display()))?;
     decode_icon_from_bytes(&bytes, &path.display().to_string())
 }
 
@@ -206,11 +206,8 @@ impl WindowManager {
             window_attrs =
                 WindowAttributesExtX11::with_name(window_attrs, "pyg-engine", "pyg-engine");
             // Wayland icons are app-id/desktop-entry driven. Set a stable app id.
-            window_attrs = WindowAttributesExtWayland::with_name(
-                window_attrs,
-                "pyg-engine",
-                "pyg-engine",
-            );
+            window_attrs =
+                WindowAttributesExtWayland::with_name(window_attrs, "pyg-engine", "pyg-engine");
         }
 
         let icon_for_runtime = config.icon.clone();
