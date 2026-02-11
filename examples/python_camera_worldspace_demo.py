@@ -78,8 +78,11 @@ def main() -> None:
 
     camera_speed = 9.0
     zoom_speed = 1.8
+    wheel_zoom_sensitivity = 0.10
     hud_update_interval = 1.0 / 60.0
     last_hud_update_time = 0.0
+    is_drag_panning = False
+    last_drag_world: pyg.Vec2 | None = None
     camera_line = ""
     viewport_line = ""
     axes_line = ""
@@ -95,6 +98,7 @@ def main() -> None:
         move_x = engine.input.axis("Horizontal")
         move_y = engine.input.axis("Vertical")
         zoom_axis = engine.input.axis("CameraZoom")
+        _, wheel_y = engine.input.mouse_wheel
 
         if move_x != 0.0 or move_y != 0.0:
             length = math.sqrt(move_x * move_x + move_y * move_y)
@@ -114,11 +118,37 @@ def main() -> None:
                 viewport_height = min(54.0, max(3.5, viewport_height * zoom_scale))
                 engine.set_camera_viewport_size(viewport_width, viewport_height)
 
+        # Mouse wheel zoom: scroll up zooms in, scroll down zooms out.
+        if wheel_y != 0.0:
+            wheel_scale = 1.0 - wheel_y * wheel_zoom_sensitivity
+            if wheel_scale > 0.0:
+                viewport_width = min(96.0, max(6.0, viewport_width * wheel_scale))
+                viewport_height = min(54.0, max(3.5, viewport_height * wheel_scale))
+                engine.set_camera_viewport_size(viewport_width, viewport_height)
+
         t = time.time()
         orbiter.position = pyg.Vec2(math.cos(t * 0.9) * 7.0, math.sin(t * 1.2) * 3.8)
 
         mouse_x, mouse_y = engine.input.mouse_position
         mouse_world = engine.screen_to_world(float(mouse_x), float(mouse_y))
+
+        # Click-and-drag panning in world-space.
+        if engine.input.mouse_button_down(pyg.MouseButton.LEFT):
+            if not is_drag_panning:
+                is_drag_panning = True
+                last_drag_world = mouse_world
+            elif last_drag_world is not None:
+                drag_dx = last_drag_world.x - mouse_world.x
+                drag_dy = last_drag_world.y - mouse_world.y
+                if drag_dx != 0.0 or drag_dy != 0.0:
+                    cam = pyg.Vec2(cam.x + drag_dx, cam.y + drag_dy)
+                    engine.set_camera_position(cam)
+                    mouse_world = engine.screen_to_world(float(mouse_x), float(mouse_y))
+                last_drag_world = mouse_world
+        else:
+            is_drag_panning = False
+            last_drag_world = None
+
         origin_screen_x, origin_screen_y = engine.world_to_screen(pyg.Vec2(0.0, 0.0))
 
         now = time.perf_counter()
@@ -129,7 +159,8 @@ def main() -> None:
             )
             viewport_line = f"viewport_world=({viewport_width:.2f}, {viewport_height:.2f})"
             axes_line = (
-                f"axes: Horizontal={move_x:.2f} Vertical={move_y:.2f} CameraZoom={zoom_axis:.2f}"
+                f"axes: Horizontal={move_x:.2f} Vertical={move_y:.2f} "
+                f"CameraZoom={zoom_axis:.2f} WheelY={wheel_y:.2f} DragPan={is_drag_panning}"
             )
             mouse_line = (
                 f"mouse_screen=({mouse_x:.1f}, {mouse_y:.1f}) -> "
@@ -139,7 +170,7 @@ def main() -> None:
 
         engine.clear_draw_commands()
         engine.draw_text(
-            "Worldspace Camera Demo (axes: Horizontal/Vertical + CameraZoom, action: quit)",
+            "Worldspace Camera Demo (WASD/Arrows pan, Q/E or wheel zoom, LMB drag pan, ESC quit)",
             18.0,
             18.0,
             pyg.Color.WHITE,
