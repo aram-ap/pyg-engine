@@ -1,5 +1,7 @@
 """
-pyg_engine - A Python game engine with Rust-powered native performance.
+<img src="https://github.com/aram-ap/pyg-engine/blob/main/images/1_zoomed.png?raw=true" width="500">
+
+[pyg_engine](https://www.github.com/aram-ap/pyg-engine) - A Python game engine with Rust-powered native performance.
 """
 
 from pyg_engine.engine import DrawCommand, Engine, EngineHandle, Input, UpdateContext, UIManager
