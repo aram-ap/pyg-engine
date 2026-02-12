@@ -4960,7 +4960,7 @@ impl PyGameObject {
     ///
     /// # Create object with mesh in one go
     /// obj = pyg.GameObject("Player")
-    /// obj.set_position(pyg.Vec2(100.0, 100.0))
+    /// obj.position = pyg.Vec2(0.5, 0.5)
     ///
     /// mesh = pyg.MeshComponent()
     /// mesh.set_geometry_circle(32.0)
@@ -5137,7 +5137,7 @@ impl PyGameObject {
     /// import pyg_engine as pyg
     ///
     /// obj = pyg.GameObject("Box")
-    /// obj.set_position(pyg.Vec2(200.0, 150.0))
+    /// obj.position = pyg.Vec2(0.2, 0.15)
     ///
     /// # Create 100x50 rectangle
     /// obj.set_mesh_geometry_rectangle(100.0, 50.0)
@@ -5180,7 +5180,7 @@ impl PyGameObject {
     /// import pyg_engine as pyg
     ///
     /// obj = pyg.GameObject("Ball")
-    /// obj.set_position(pyg.Vec2(200.0, 150.0))
+    /// obj.position = pyg.Vec2(200.0, 150.0)
     ///
     /// # Create smooth circle with radius 40
     /// obj.set_mesh_geometry_circle(40.0, segments=64)
