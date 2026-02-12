@@ -4098,7 +4098,68 @@ impl PyTime {
 
 // ========== GameObject Bindings ==========
 
-/// Python wrapper for GameObject.
+/// Container for game entities with transform, rendering, and behavior.
+///
+/// `GameObject` is the fundamental building block of your game. Each GameObject has:
+/// - **Transform**: Position, rotation, scale
+/// - **Components**: Rendering (mesh), UI elements (button, panel, label)
+/// - **State**: Active/inactive, name, unique ID
+///
+/// # Creation and Setup
+///
+/// ```python
+/// from pyg_engine import GameObject, MeshComponent, Vec2, Color
+///
+/// # Create a named GameObject
+/// player = GameObject("Player")
+/// player.set_position(Vec2(100.0, 100.0))
+/// player.set_rotation(math.radians(45))  # Rotation in radians
+/// player.set_scale(Vec2(2.0, 2.0))
+///
+/// # Add mesh rendering
+/// mesh = MeshComponent()
+/// mesh.set_geometry_rectangle(64.0, 64.0)
+/// mesh.set_fill_color(Color.BLUE)
+/// player.add_component(mesh)
+///
+/// # Add to engine
+/// engine.add_game_object(player)
+/// ```
+///
+/// # Transform Properties
+///
+/// GameObjects use a 2D transform with position, rotation, and scale:
+/// - **position**: `Vec2` in world coordinates
+/// - **rotation**: Angle in **radians** (counter-clockwise)
+/// - **scale**: `Vec2` multiplier (1.0 = original size)
+///
+/// # Components
+///
+/// Attach components to add functionality:
+/// - `MeshComponent` - 2D rendering (rectangles, circles, images)
+/// - `ButtonComponent` - Clickable UI button
+/// - `PanelComponent` - UI container panel
+/// - `LabelComponent` - UI text label
+///
+/// # Active State
+///
+/// GameObjects can be enabled/disabled:
+/// ```python
+/// player.active = False  # Disable (not rendered, not updated)
+/// player.active = True   # Enable
+/// ```
+///
+/// # Object Types
+///
+/// GameObjects can be marked as `"UIObject"` for UI rendering:
+/// ```python
+/// obj.set_object_type("UIObject")  # Render as UI (screen space)
+/// ```
+///
+/// # See Also
+/// - `examples/python_game_object_transform_demo.py` - Transform operations
+/// - `examples/python_mesh_demo.py` - Mesh rendering
+/// - `examples/ui_demo.py` - UI components
 #[pyclass(name = "GameObject", unsendable)]
 pub struct PyGameObject {
     inner: RustGameObject,
@@ -4516,6 +4577,66 @@ impl PyGameObject {
 // ========== MeshComponent Bindings ==========
 
 /// Python wrapper for MeshComponent.
+/// 2D mesh rendering component for GameObjects.
+///
+/// `MeshComponent` handles rendering of 2D shapes and images. Attach it to a GameObject
+/// to make it visible. Supports:
+/// - **Geometry**: Rectangles, circles (custom geometry coming soon)
+/// - **Rendering**: Solid colors, images/textures
+/// - **Control**: Visibility, draw order (z-index)
+///
+/// # Basic Usage
+///
+/// ## Rectangle with Color
+/// ```python
+/// from pyg_engine import GameObject, MeshComponent, Color, Vec2
+///
+/// obj = GameObject("ColoredRect")
+/// obj.set_position(Vec2(100.0, 100.0))
+///
+/// mesh = MeshComponent()
+/// mesh.set_geometry_rectangle(64.0, 64.0)  # 64x64 square
+/// mesh.set_fill_color(Color.BLUE)
+/// obj.add_component(mesh)
+///
+/// engine.add_game_object(obj)
+/// ```
+///
+/// ## Circle with Image
+/// ```python
+/// from pyg_engine import GameObject, MeshComponent, Vec2
+///
+/// obj = GameObject("Sprite")
+/// obj.set_position(Vec2(200.0, 150.0))
+///
+/// mesh = MeshComponent()
+/// mesh.set_geometry_circle(32.0, segments=64)  # Radius 32, smooth circle
+/// mesh.set_image_path("assets/player.png")
+/// obj.add_component(mesh)
+///
+/// engine.add_game_object(obj)
+/// ```
+///
+/// # Draw Order
+///
+/// Control rendering order with `draw_order` (higher values draw on top):
+/// ```python
+/// background.draw_order = -5.0  # Draw behind
+/// player.draw_order = 0.0       # Default layer
+/// ui_element.draw_order = 10.0  # Draw in front
+/// ```
+///
+/// # Visibility
+///
+/// Toggle visibility without removing the object:
+/// ```python
+/// mesh.visible = False  # Hide
+/// mesh.visible = True   # Show
+/// ```
+///
+/// # See Also
+/// - `examples/python_mesh_demo.py` - Complete mesh examples
+/// - `examples/python_game_object_transform_demo.py` - Transform + rendering
 #[pyclass(name = "MeshComponent")]
 #[derive(Clone)]
 pub struct PyMeshComponent {
@@ -4590,7 +4711,80 @@ impl PyMeshComponent {
 
 // ========== Component Bindings ==========
 
-/// Python wrapper for TransformComponent.
+/// 2D transform component for position, rotation, and scale.
+///
+/// `TransformComponent` defines the spatial properties of a GameObject in 2D space.
+/// Every GameObject has a transform that controls where it appears and how it's oriented.
+///
+/// # Properties
+///
+/// - **position**: `Vec2` - Location in world coordinates
+/// - **rotation**: `float` - Angle in **radians** (counter-clockwise)
+/// - **scale**: `Vec2` - Size multiplier (1.0 = original size)
+///
+/// # Coordinate System
+///
+/// - **World space**: Absolute positions in the game world
+/// - **Origin**: Typically center of the screen, but configurable via camera
+/// - **Y-axis**: Typically up is positive, down is negative
+///
+/// # Rotation
+///
+/// Rotation is measured in **radians** (not degrees):
+/// - **0 radians**: Facing right (0°)
+/// - **π/2 radians**: Facing up (90°)
+/// - **π radians**: Facing left (180°)
+/// - **3π/2 radians**: Facing down (270°)
+///
+/// Use `math.radians()` to convert from degrees:
+/// ```python
+/// import math
+/// transform.rotation = math.radians(45)  # 45 degrees
+/// ```
+///
+/// # Examples
+///
+/// ## Basic Transform
+/// ```python
+/// from pyg_engine import TransformComponent, Vec2
+/// import math
+///
+/// transform = TransformComponent("Transform")
+/// transform.position = Vec2(100.0, 200.0)
+/// transform.rotation = math.radians(30)  # 30 degrees
+/// transform.scale = Vec2(2.0, 2.0)       # Double size
+/// ```
+///
+/// ## Movement Over Time
+/// ```python
+/// import math
+///
+/// def update(dt, engine, data):
+///     # Move right at 100 pixels/second
+///     data['obj'].position = data['obj'].position + Vec2(100.0 * dt, 0.0)
+///
+///     # Rotate at 90 degrees/second
+///     data['obj'].rotation += math.radians(90) * dt
+/// ```
+///
+/// ## Direction-Based Movement
+/// ```python
+/// import math
+/// from pyg_engine import Vec2
+///
+/// def update(dt, engine, data):
+///     obj = data['obj']
+///     speed = 150.0
+///
+///     # Move in the direction the object is facing
+///     angle = obj.rotation
+///     direction = Vec2(math.cos(angle), math.sin(angle))
+///     obj.position = obj.position + direction * speed * dt
+/// ```
+///
+/// # See Also
+/// - `examples/python_game_object_transform_demo.py` - Transform examples
+/// - `GameObject` - The container that owns this transform
 #[pyclass(name = "TransformComponent")]
 pub struct PyTransformComponent {
     inner: TransformComponent,
