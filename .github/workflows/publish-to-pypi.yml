@@ -19,14 +19,32 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache key includes OS to avoid cross-platform cache issues
+          key: ${{ matrix.os }}
+          # Share cache between different Python versions
+          shared-key: "cibuildwheel"
+
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
+
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.16.5
+        uses: pypa/cibuildwheel@v2.22
         env:
+          # Enable sccache for faster Rust compilation
+          RUSTC_WRAPPER: sccache
+          SCCACHE_GHA_ENABLED: "true"
           # Install Rust in Linux containers (macOS/Windows use host Rust from previous step)
           CIBW_BEFORE_ALL_LINUX: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
           CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
+          # Enable sccache in containers
+          CIBW_ENVIRONMENT_PASS_LINUX: "SCCACHE_GHA_ENABLED ACTIONS_CACHE_URL ACTIONS_RUNTIME_TOKEN"
           # Skip PyPy (pp*) AND all 32-bit Linux builds (*i686*)
           CIBW_SKIP: "pp* *i686*"
+          # Limit to fewer Python versions if you don't need all of them
+          # CIBW_BUILD: "cp310-* cp311-* cp312-*"  # Uncomment to build only 3.10, 3.11, 3.12
 
       - uses: actions/upload-artifact@v4
         with:
