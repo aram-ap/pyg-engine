@@ -276,6 +276,60 @@ class EngineHandle:
         """
         self._inner.update_ui_button_text(object_id, text)
 
+    def log(self, message: str) -> None:
+        """
+        Log a message at INFO level (default log method).
+
+        Args:
+            message: The message to log.
+        """
+        self._inner.log(message)
+
+    def log_trace(self, message: str) -> None:
+        """
+        Log a message at TRACE level (most verbose).
+
+        Args:
+            message: The message to log.
+        """
+        self._inner.log_trace(message)
+
+    def log_debug(self, message: str) -> None:
+        """
+        Log a message at DEBUG level.
+
+        Args:
+            message: The message to log.
+        """
+        self._inner.log_debug(message)
+
+    def log_info(self, message: str) -> None:
+        """
+        Log a message at INFO level.
+
+        Args:
+            message: The message to log.
+        """
+        self._inner.log_info(message)
+
+    def log_warn(self, message: str) -> None:
+        """
+        Log a message at WARN level.
+
+        Args:
+            message: The message to log.
+        """
+        self._inner.log_warn(message)
+
+    def log_error(self, message: str) -> None:
+        """
+        Log a message at ERROR level.
+
+        Args:
+            message: The message to log.
+        """
+        self._inner.log_error(message)
+
 
 class Input:
     """

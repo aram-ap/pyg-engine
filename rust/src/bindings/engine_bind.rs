@@ -1603,6 +1603,36 @@ impl PyEngineHandle {
             .sender
             .send(EngineCommand::UpdateUIButtonText { object_id, text });
     }
+
+    /// Log a message at INFO level (default log method).
+    fn log(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogInfo(message.to_string()));
+    }
+
+    /// Log a message at TRACE level (most verbose).
+    fn log_trace(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogTrace(message.to_string()));
+    }
+
+    /// Log a message at DEBUG level.
+    fn log_debug(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogDebug(message.to_string()));
+    }
+
+    /// Log a message at INFO level.
+    fn log_info(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogInfo(message.to_string()));
+    }
+
+    /// Log a message at WARN level.
+    fn log_warn(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogWarn(message.to_string()));
+    }
+
+    /// Log a message at ERROR level.
+    fn log_error(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogError(message.to_string()));
+    }
 }
 
 /// Python wrapper for Time.

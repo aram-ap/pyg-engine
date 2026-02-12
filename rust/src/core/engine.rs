@@ -1005,6 +1005,21 @@ impl Engine {
                         }
                     }
                 }
+                EngineCommand::LogTrace(message) => {
+                    logging::log_trace(&message);
+                }
+                EngineCommand::LogDebug(message) => {
+                    logging::log_debug(&message);
+                }
+                EngineCommand::LogInfo(message) => {
+                    logging::log_info(&message);
+                }
+                EngineCommand::LogWarn(message) => {
+                    logging::log_warn(&message);
+                }
+                EngineCommand::LogError(message) => {
+                    logging::log_error(&message);
+                }
             }
         }
     }

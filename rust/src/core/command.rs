@@ -135,4 +135,19 @@ pub enum EngineCommand {
         line_spacing: f32,
         draw_order: f32,
     },
+
+    /// Log a message at TRACE level
+    LogTrace(String),
+
+    /// Log a message at DEBUG level
+    LogDebug(String),
+
+    /// Log a message at INFO level
+    LogInfo(String),
+
+    /// Log a message at WARN level
+    LogWarn(String),
+
+    /// Log a message at ERROR level
+    LogError(String),
 }

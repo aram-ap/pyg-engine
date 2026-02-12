@@ -29,7 +29,7 @@ class Button:
         y: float = 0,
         width: float = 100,
         height: float = 30,
-        on_click: Optional[Callable[[], None]] = None,
+        on_click: Optional[Callable[..., None]] = None,
         enabled: bool = True,
         depth: float = 0,
     ):
@@ -42,15 +42,15 @@ class Button:
             y: Y position in screen coordinates
             width: Button width in pixels
             height: Button height in pixels
-            on_click: Callback function called when button is clicked
+            on_click: Callback function called when button is clicked.
+                Can be `def callback():` or `def callback(engine_handle):` to receive engine access.
             enabled: Whether the button is enabled
             depth: Rendering depth (higher = in front)
         """
         self._component = ButtonComponent(text, x, y, width, height)
         self._game_object = None
-
-        if on_click:
-            self._component.set_on_click(on_click)
+        self._engine_handle = None
+        self._user_callback = on_click
 
         self._component.set_enabled(enabled)
         self._component.set_depth(depth)
@@ -65,10 +65,39 @@ class Button:
         Returns:
             The GameObject ID
         """
+        # Store engine handle for callbacks
+        self._engine_handle = engine.get_handle()
+
+        # Set up callback wrapper if user provided a callback
+        if self._user_callback:
+            self._setup_callback()
+
         self._game_object = GameObject()
         self._game_object.set_object_type("UIObject")
         self._game_object.add_component(self._component)
         return engine.add_game_object(self._game_object)
+
+    def _setup_callback(self):
+        """Internal: Set up the callback wrapper to pass engine handle if needed."""
+        import inspect
+
+        # Check if callback accepts parameters
+        sig = inspect.signature(self._user_callback)
+        num_params = len(sig.parameters)
+
+        if num_params == 0:
+            # No parameters - call as-is
+            self._component.set_on_click(self._user_callback)
+        elif num_params == 1:
+            # One parameter - pass engine handle
+            def wrapper():
+                self._user_callback(self._engine_handle)
+            self._component.set_on_click(wrapper)
+        else:
+            raise ValueError(
+                f"Button callback must accept 0 or 1 parameters, got {num_params}. "
+                f"Use `def callback():` or `def callback(engine):`"
+            )
 
     @property
     def text(self) -> str:
@@ -99,9 +128,24 @@ class Button:
         """Set the button size."""
         self._component.set_size(width, height)
 
-    def set_on_click(self, callback: Callable[[], None]):
-        """Set the click callback."""
-        self._component.set_on_click(callback)
+    def set_on_click(self, callback: Optional[Callable[..., None]]):
+        """
+        Set the click callback.
+
+        Args:
+            callback: Function called when clicked. Can be:
+                - `def callback():` (no parameters)
+                - `def callback(engine):` (receives EngineHandle)
+        """
+        self._user_callback = callback
+        if callback and self._engine_handle:
+            self._setup_callback()
+        elif callback:
+            # Not yet added to engine, will be set up in add_to_engine
+            pass
+        else:
+            # Clear callback
+            self._component.set_on_click(lambda: None)
 
 
 class Panel:

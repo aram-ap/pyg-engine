@@ -16,23 +16,23 @@ def main() -> None:
     label_obj = [None]  # Store label reference
 
 
-    def on_increment_click():
+    def on_increment_click(engine: Engine):
         """Handle increment button click."""
-        print(f"Incremented! Count: {click_count[0]}")
+        engine.log_info(f"Incremented! Count: {click_count[0]}")
         click_count[0] += 1
         if label_obj[0]:
             label_obj[0].text = f"Clicks: {click_count[0]}"
 
-    def on_decrement_click():
+    def on_decrement_click(engine: Engine):
         """Handle decrement button click."""
-        print(f"Decremented! Count: {click_count[0]}")
+        engine.log(f"Decremented! Count: {click_count[0]}")
         click_count[0] -= 1
         if label_obj[0]:
             label_obj[0].text = f"Clicks: {click_count[0]}"
 
-    def on_reset_click():
+    def on_reset_click(engine: Engine):
         """Handle reset button click."""
-        print("Reset counter!")
+        engine.log("Reset counter!")
         click_count[0] = 0
         if label_obj[0]:
             label_obj[0].text = f"Clicks: {click_count[0]}"
