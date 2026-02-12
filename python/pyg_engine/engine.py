@@ -337,6 +337,22 @@ class UIManager:
 
     This class provides methods to add UI components to the engine.
     It is accessed via the `engine.ui` property.
+
+    Example:
+        >>> engine = Engine()
+        >>>
+        >>> # Create and add a button
+        >>> button = Button("Click Me", x=100, y=50, width=120, height=40)
+        >>> engine.ui.add(button)
+        >>>
+        >>> # Create and add a panel
+        >>> panel = Panel(x=50, y=50, width=300, height=200)
+        >>> panel.set_background_color(0.9, 0.9, 0.9, 1.0)
+        >>> engine.ui.add(panel)
+        >>>
+        >>> # Create and add a label
+        >>> label = Label("Score: 0", x=100, y=100, font_size=16)
+        >>> engine.ui.add(label)
     """
     def __init__(self, engine: "Engine") -> None:
         self._engine = engine
@@ -744,13 +760,15 @@ def _compile_update_callback(update_callback: Callable[..., object]) -> _Callbac
 class Engine:
     """
     Main game engine class providing core functionality with structured logging.
-    
+
     This class wraps the Rust implementation and provides a Python-friendly API
     with full access to the tracing-based logging system.
-    
+
     Attributes:
         version (str): The engine version number.
-    
+        input (Input): Input manager for keyboard, mouse, and joystick input.
+        ui (UIManager): UI manager for adding buttons, panels, and labels.
+
     Example:
         Basic usage with console logging:
         >>> engine = Engine()
