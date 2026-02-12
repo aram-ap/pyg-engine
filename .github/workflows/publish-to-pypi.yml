@@ -19,12 +19,10 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.5
         env:
-          # Linux: Install Rust inside the docker container
           CIBW_BEFORE_ALL_LINUX: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
-          # Linux: Add cargo to PATH so pyproject.toml can find it
           CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
-          # Skip 32-bit musllinux (rustup issues)
-          CIBW_SKIP: "*musllinux_i686*"
+          # Skip 32-bit musllinux AND all PyPy versions (pp*)
+          CIBW_SKIP: "*musllinux_i686* pp*"
 
       - uses: actions/upload-artifact@v4
         with:
