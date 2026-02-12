@@ -4236,30 +4236,238 @@ impl PyGameObject {
         }
     }
 
+    /// Get the unique ID of this GameObject.
+    ///
+    /// Each GameObject is assigned a unique ID when created. This ID is used internally
+    /// by the engine for tracking objects and can be useful for debugging or looking up
+    /// objects.
+    ///
+    /// # Returns
+    /// A unique unsigned 32-bit integer ID.
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj1 = pyg.GameObject("Player")
+    /// obj2 = pyg.GameObject("Enemy")
+    ///
+    /// print(f"Player ID: {obj1.id}")  # e.g., "Player ID: 1"
+    /// print(f"Enemy ID: {obj2.id}")   # e.g., "Enemy ID: 2"
+    ///
+    /// # IDs are unique
+    /// assert obj1.id != obj2.id
+    /// ```
+    ///
+    /// # Note
+    /// IDs are assigned sequentially and persist for the lifetime of the object.
+    /// Once an object is destroyed, its ID may be reused for new objects.
     #[getter]
     fn id(&self) -> u32 {
         self.inner.get_id()
     }
 
+    /// Get the name of this GameObject.
+    ///
+    /// Returns the human-readable name assigned to this object, or `None` if no name was set.
+    /// Names are useful for debugging, logging, and identifying objects in your game.
+    ///
+    /// # Returns
+    /// - `Some(String)` - The object's name if one was set
+    /// - `None` - If no name was assigned
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// # Create named object
+    /// player = pyg.GameObject("Player")
+    /// print(player.name)  # "Player"
+    ///
+    /// # Create unnamed object
+    /// obj = pyg.GameObject()
+    /// print(obj.name)  # None
+    ///
+    /// # Change name later
+    /// obj.set_name("Bullet")
+    /// print(obj.name)  # "Bullet"
+    /// ```
+    ///
+    /// # See Also
+    /// - `set_name()` - Change the object's name
     #[getter]
     fn name(&self) -> Option<String> {
         self.inner.name().map(|name| name.to_string())
     }
 
+    /// Set or change the name of this GameObject.
+    ///
+    /// Assigns a human-readable name to the object. Names are useful for debugging,
+    /// logging, and organizing objects in your game.
+    ///
+    /// # Arguments
+    /// * `name` - New name for the object (any string)
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject()
+    /// obj.set_name("Player")
+    /// print(obj.name)  # "Player"
+    ///
+    /// # Rename object
+    /// obj.set_name("MainCharacter")
+    /// print(obj.name)  # "MainCharacter"
+    /// ```
+    ///
+    /// # See Also
+    /// - `name` (property) - Get the current name
     fn set_name(&mut self, name: String) {
         self.inner.set_name(name);
     }
 
+    /// Check if this GameObject is active.
+    ///
+    /// Active objects are updated and rendered each frame. Inactive objects are ignored
+    /// by the engine until they are activated again.
+    ///
+    /// # Returns
+    /// - `True` - Object is active (updated and rendered)
+    /// - `False` - Object is inactive (dormant)
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// player = pyg.GameObject("Player")
+    /// print(player.active)  # True (active by default)
+    ///
+    /// # Deactivate object
+    /// player.active = False
+    /// print(player.active)  # False
+    ///
+    /// # Reactivate object
+    /// player.active = True
+    /// print(player.active)  # True
+    /// ```
+    ///
+    /// # Use Cases
+    /// - **Object pooling**: Deactivate/reactivate objects instead of creating/destroying
+    /// - **Pause mechanics**: Deactivate enemies when game is paused
+    /// - **Conditional rendering**: Hide objects without removing them from the scene
+    ///
+    /// # See Also
+    /// - `active` (setter) - Set active state
     #[getter]
     fn active(&self) -> bool {
         self.inner.is_active()
     }
 
+    /// Set whether this GameObject is active.
+    ///
+    /// Controls whether the object is updated and rendered. Inactive objects remain in
+    /// the scene but are skipped during update and render passes.
+    ///
+    /// # Arguments
+    /// * `active` - `True` to activate, `False` to deactivate
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// enemy = pyg.GameObject("Enemy")
+    /// engine.add_game_object(enemy)
+    ///
+    /// # Temporarily disable enemy
+    /// enemy.active = False  # Enemy no longer updates or renders
+    ///
+    /// # Re-enable later
+    /// enemy.active = True  # Enemy resumes normal behavior
+    /// ```
+    ///
+    /// # Object Pooling Pattern
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// class BulletPool:
+    ///     def __init__(self, engine, size=10):
+    ///         self.bullets = []
+    ///         for i in range(size):
+    ///             bullet = pyg.GameObject(f"Bullet_{i}")
+    ///             bullet.active = False  # Start deactivated
+    ///             engine.add_game_object(bullet)
+    ///             self.bullets.append(bullet)
+    ///
+    ///     def spawn(self, position):
+    ///         # Find inactive bullet
+    ///         for bullet in self.bullets:
+    ///             if not bullet.active:
+    ///                 bullet.position = position
+    ///                 bullet.active = True  # Activate
+    ///                 return bullet
+    ///         return None  # Pool exhausted
+    ///
+    ///     def despawn(self, bullet):
+    ///         bullet.active = False  # Return to pool
+    /// ```
+    ///
+    /// # See Also
+    /// - `active` (getter) - Check active state
     #[setter]
     fn set_active(&mut self, active: bool) {
         self.inner.set_active(active);
     }
 
+    /// Get the position of this GameObject.
+    ///
+    /// Returns the object's position in **world-space coordinates** as a `Vec2`.
+    /// The position represents the center point of the object.
+    ///
+    /// # Returns
+    /// `Vec2` containing the object's position:
+    /// - `x` - Horizontal position (right is positive)
+    /// - `y` - Vertical position (up is typically positive)
+    ///
+    /// # Coordinate System
+    /// - **World space**: Absolute positions in the game world
+    /// - **Origin (0, 0)**: Typically center of screen (configurable via camera)
+    /// - **Units**: Pixels by default
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// player = pyg.GameObject("Player")
+    /// player.position = pyg.Vec2(100.0, 200.0)
+    ///
+    /// # Get current position
+    /// pos = player.position
+    /// print(f"Player at ({pos.x}, {pos.y})")  # "Player at (100.0, 200.0)"
+    ///
+    /// # Check if player is at origin
+    /// if player.position == pyg.Vec2.ZERO:
+    ///     print("Player at origin")
+    /// ```
+    ///
+    /// # Movement Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// def update(dt, engine, data):
+    ///     player = data['player']
+    ///
+    ///     # Move right at 100 pixels/second
+    ///     new_pos = player.position + pyg.Vec2(100.0 * dt, 0.0)
+    ///     player.position = new_pos
+    ///
+    ///     return True
+    /// ```
+    ///
+    /// # See Also
+    /// - `position` (setter) - Set object position
+    /// - `Vec2` - 2D vector class
+    /// - `examples/python_game_object_transform_demo.py` - Transform examples
     #[getter]
     fn position(&self) -> PyVec2 {
         PyVec2 {
@@ -4267,6 +4475,70 @@ impl PyGameObject {
         }
     }
 
+    /// Set the position of this GameObject.
+    ///
+    /// Moves the object to the specified **world-space coordinates**. The position
+    /// represents the center point of the object.
+    ///
+    /// # Arguments
+    /// * `position` - Target position as `Vec2` (world-space coordinates)
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// player = pyg.GameObject("Player")
+    ///
+    /// # Set position directly
+    /// player.position = pyg.Vec2(100.0, 200.0)
+    ///
+    /// # Move to origin
+    /// player.position = pyg.Vec2.ZERO
+    ///
+    /// # Move relative to current position
+    /// player.position = player.position + pyg.Vec2(50.0, 0.0)  # Move right 50px
+    /// ```
+    ///
+    /// # Smooth Movement
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// def update(dt, engine, data):
+    ///     player = data['player']
+    ///     speed = 150.0  # pixels per second
+    ///
+    ///     # Get input
+    ///     move_x = engine.input.axis("Horizontal")
+    ///     move_y = engine.input.axis("Vertical")
+    ///
+    ///     # Calculate movement
+    ///     velocity = pyg.Vec2(move_x, move_y).normalize() * speed * dt
+    ///
+    ///     # Apply movement
+    ///     player.position = player.position + velocity
+    ///
+    ///     return True
+    /// ```
+    ///
+    /// # Lerp to Target
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// def update(dt, engine, data):
+    ///     player = data['player']
+    ///     target = data['target_pos']
+    ///
+    ///     # Smoothly interpolate to target (10% per frame)
+    ///     player.position = player.position.lerp(target, 0.1)
+    ///
+    ///     return True
+    /// ```
+    ///
+    /// # See Also
+    /// - `position` (getter) - Get current position
+    /// - `Vec2` - 2D vector operations
+    /// - `Vec2.lerp()` - Linear interpolation for smooth movement
+    /// - `examples/python_game_object_transform_demo.py` - Transform examples
     #[setter]
     fn set_position(&mut self, position: PyVec2) {
         self.inner.transform_mut().set_position(position.inner);
@@ -4440,6 +4712,53 @@ impl PyGameObject {
         self.inner.transform_mut().set_rotation(rotation);
     }
 
+    /// Get the scale of this GameObject.
+    ///
+    /// Returns the object's scale as a `Vec2`. Scale controls the size of the object
+    /// relative to its original dimensions. Scale values are multiplicative:
+    /// - `1.0` = Original size (100%)
+    /// - `2.0` = Double size (200%)
+    /// - `0.5` = Half size (50%)
+    ///
+    /// # Returns
+    /// `Vec2` containing the scale factors:
+    /// - `x` - Horizontal scale factor
+    /// - `y` - Vertical scale factor
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    /// obj.scale = pyg.Vec2(2.0, 2.0)  # Double size
+    ///
+    /// # Get current scale
+    /// scale = obj.scale
+    /// print(f"Scale: {scale.x}x, {scale.y}x")  # "Scale: 2.0x, 2.0x"
+    ///
+    /// # Check if object is at original size
+    /// if obj.scale == pyg.Vec2(1.0, 1.0):
+    ///     print("Original size")
+    /// ```
+    ///
+    /// # Non-Uniform Scaling
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("StretchedSprite")
+    ///
+    /// # Different scale on each axis
+    /// obj.scale = pyg.Vec2(2.0, 0.5)  # Wide and short
+    /// obj.scale = pyg.Vec2(0.5, 2.0)  # Narrow and tall
+    ///
+    /// # Flip horizontally (negative scale)
+    /// obj.scale = pyg.Vec2(-1.0, 1.0)  # Mirror on X-axis
+    /// ```
+    ///
+    /// # See Also
+    /// - `scale` (setter) - Set object scale
+    /// - `Vec2` - 2D vector class
+    /// - `examples/python_game_object_transform_demo.py` - Transform examples
     #[getter]
     fn scale(&self) -> PyVec2 {
         PyVec2 {
@@ -4447,12 +4766,124 @@ impl PyGameObject {
         }
     }
 
+    /// Set the scale of this GameObject.
+    ///
+    /// Controls the size of the object relative to its original dimensions.
+    /// Scale is applied to both the mesh geometry and any child components.
+    ///
+    /// # Arguments
+    /// * `scale` - Scale factors as `Vec2`:
+    ///   - `x` - Horizontal scale (1.0 = original width)
+    ///   - `y` - Vertical scale (1.0 = original height)
+    ///
+    /// # Scale Values
+    /// - **1.0** = Original size (100%)
+    /// - **> 1.0** = Larger (e.g., 2.0 = double size)
+    /// - **< 1.0** = Smaller (e.g., 0.5 = half size)
+    /// - **0.0** = Invisible (zero size)
+    /// - **Negative** = Flipped (mirrored)
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    ///
+    /// # Uniform scaling (same on both axes)
+    /// obj.scale = pyg.Vec2(2.0, 2.0)   # Double size
+    /// obj.scale = pyg.Vec2(0.5, 0.5)   # Half size
+    ///
+    /// # Non-uniform scaling
+    /// obj.scale = pyg.Vec2(3.0, 1.0)   # Stretched horizontally
+    /// obj.scale = pyg.Vec2(1.0, 0.5)   # Compressed vertically
+    ///
+    /// # Flipping
+    /// obj.scale = pyg.Vec2(-1.0, 1.0)  # Flip horizontally
+    /// obj.scale = pyg.Vec2(1.0, -1.0)  # Flip vertically
+    /// obj.scale = pyg.Vec2(-1.0, -1.0) # Flip both axes
+    /// ```
+    ///
+    /// # Pulsing Effect
+    /// ```python
+    /// import pyg_engine as pyg
+    /// import math
+    ///
+    /// def update(dt, engine, data):
+    ///     elapsed = data['elapsed']
+    ///     data['elapsed'] += dt
+    ///
+    ///     # Pulse between 0.5x and 1.5x size
+    ///     pulse = 1.0 + 0.5 * math.sin(elapsed * 2.0)
+    ///     data['obj'].scale = pyg.Vec2(pulse, pulse)
+    ///
+    ///     return True
+    ///
+    /// engine.run(update=update, user_data={'elapsed': 0.0, 'obj': obj})
+    /// ```
+    ///
+    /// # Grow Over Time
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// def update(dt, engine, data):
+    ///     obj = data['obj']
+    ///     grow_rate = 0.5  # 50% per second
+    ///
+    ///     # Grow uniformly
+    ///     current_scale = obj.scale.x  # Assuming uniform scale
+    ///     new_scale = current_scale + (grow_rate * dt)
+    ///     obj.scale = pyg.Vec2(new_scale, new_scale)
+    ///
+    ///     # Cap maximum size
+    ///     if obj.scale.x > 5.0:
+    ///         obj.scale = pyg.Vec2(5.0, 5.0)
+    ///
+    ///     return True
+    /// ```
+    ///
+    /// # See Also
+    /// - `scale` (getter) - Get current scale
+    /// - `Vec2` - 2D vector operations
+    /// - `examples/python_game_object_transform_demo.py` - Transform examples
     #[setter]
     fn set_scale(&mut self, scale: PyVec2) {
         self.inner.transform_mut().set_scale(scale.inner);
     }
 
-    /// Update this object manually with an optional Time value.
+    /// Manually update this GameObject.
+    ///
+    /// Triggers the object's update lifecycle, including all attached components.
+    /// This is typically called automatically by the engine, but can be invoked
+    /// manually for custom update logic or testing.
+    ///
+    /// # Arguments
+    /// * `time` - Optional `Time` object for delta time. If `None`, uses current time.
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Player")
+    ///
+    /// # Manual update (uses current time)
+    /// obj.update()
+    ///
+    /// # Manual update with specific time
+    /// time = pyg.Time()
+    /// obj.update(time)
+    /// ```
+    ///
+    /// # Use Cases
+    /// - **Testing**: Manually tick objects in unit tests
+    /// - **Custom loops**: Control update timing outside the engine loop
+    /// - **Selective updates**: Update specific objects independently
+    ///
+    /// # Note
+    /// In normal usage, the engine calls `update()` automatically for all active
+    /// GameObjects each frame. Manual calling is rarely needed.
+    ///
+    /// # See Also
+    /// - `GameObject.active` - Control whether object updates automatically
     #[pyo3(signature = (time=None))]
     fn update(&self, time: Option<&PyTime>) {
         if let Some(time) = time {
@@ -4463,24 +4894,228 @@ impl PyGameObject {
         }
     }
 
+    /// Check if this GameObject has a mesh component attached.
+    ///
+    /// Returns `True` if the object has a `MeshComponent` for rendering,
+    /// `False` otherwise.
+    ///
+    /// # Returns
+    /// - `True` - Object has a mesh component (is visible)
+    /// - `False` - Object has no mesh component (not rendered)
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    ///
+    /// # Check if mesh exists
+    /// if obj.has_mesh_component():
+    ///     print("Object has rendering")
+    /// else:
+    ///     print("Object is invisible")
+    ///
+    /// # Add mesh component
+    /// mesh = pyg.MeshComponent()
+    /// obj.add_mesh_component(mesh)
+    ///
+    /// # Now has mesh
+    /// assert obj.has_mesh_component() == True
+    /// ```
+    ///
+    /// # See Also
+    /// - `add_mesh_component()` - Add a mesh component
+    /// - `mesh_component()` - Get the mesh component
+    /// - `remove_mesh_component()` - Remove the mesh component
     fn has_mesh_component(&self) -> bool {
         self.inner.has_mesh_component()
     }
 
+    /// Add a mesh component to this GameObject.
+    ///
+    /// Attaches a `MeshComponent` to make the object visible. If a mesh component
+    /// already exists, it will be replaced.
+    ///
+    /// # Arguments
+    /// * `mesh_component` - The `MeshComponent` to attach
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    ///
+    /// # Create and configure mesh
+    /// mesh = pyg.MeshComponent()
+    /// mesh.set_geometry_rectangle(64.0, 64.0)
+    /// mesh.set_fill_color(pyg.Color.RED)
+    ///
+    /// # Attach to object
+    /// obj.add_mesh_component(mesh)
+    /// ```
+    ///
+    /// # Quick Setup
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// # Create object with mesh in one go
+    /// obj = pyg.GameObject("Player")
+    /// obj.set_position(pyg.Vec2(100.0, 100.0))
+    ///
+    /// mesh = pyg.MeshComponent()
+    /// mesh.set_geometry_circle(32.0)
+    /// mesh.set_image_path("assets/player.png")
+    ///
+    /// obj.add_mesh_component(mesh)
+    /// engine.add_game_object(obj)
+    /// ```
+    ///
+    /// # See Also
+    /// - `has_mesh_component()` - Check if mesh exists
+    /// - `mesh_component()` - Get the mesh component
+    /// - `set_mesh_component()` - Alternative to add (same behavior)
+    /// - `MeshComponent` - Mesh component class
     fn add_mesh_component(&mut self, mesh_component: &PyMeshComponent) {
         self.inner.add_mesh_component(mesh_component.inner.clone());
     }
 
+    /// Set the mesh component for this GameObject.
+    ///
+    /// Attaches or replaces the `MeshComponent` for rendering. This is functionally
+    /// identical to `add_mesh_component()`.
+    ///
+    /// # Arguments
+    /// * `mesh_component` - The `MeshComponent` to attach
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    ///
+    /// mesh = pyg.MeshComponent()
+    /// mesh.set_geometry_rectangle(64.0, 64.0)
+    /// mesh.set_fill_color(pyg.Color.BLUE)
+    ///
+    /// obj.set_mesh_component(mesh)  # Same as add_mesh_component()
+    /// ```
+    ///
+    /// # See Also
+    /// - `add_mesh_component()` - Preferred method (same behavior)
     fn set_mesh_component(&mut self, mesh_component: &PyMeshComponent) {
         self.inner.add_mesh_component(mesh_component.inner.clone());
     }
 
+    /// Remove the mesh component from this GameObject.
+    ///
+    /// Detaches and returns the object's `MeshComponent`, making it invisible.
+    /// If no mesh component exists, returns `None`.
+    ///
+    /// # Returns
+    /// - `Some(MeshComponent)` - The removed mesh component
+    /// - `None` - No mesh component was attached
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    /// mesh = pyg.MeshComponent()
+    /// obj.add_mesh_component(mesh)
+    ///
+    /// # Remove mesh (object becomes invisible)
+    /// removed_mesh = obj.remove_mesh_component()
+    ///
+    /// if removed_mesh:
+    ///     print("Mesh removed")
+    /// else:
+    ///     print("No mesh to remove")
+    /// ```
+    ///
+    /// # Temporary Invisibility
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    /// mesh = pyg.MeshComponent()
+    /// obj.add_mesh_component(mesh)
+    ///
+    /// # Hide by removing mesh
+    /// saved_mesh = obj.remove_mesh_component()
+    ///
+    /// # Later, restore mesh
+    /// if saved_mesh:
+    ///     obj.add_mesh_component(saved_mesh)
+    /// ```
+    ///
+    /// # Note
+    /// For temporary hiding, consider using `mesh.visible = False` instead,
+    /// which is simpler and doesn't require removing/re-adding the component.
+    ///
+    /// # See Also
+    /// - `has_mesh_component()` - Check if mesh exists
+    /// - `mesh_component()` - Get mesh without removing
+    /// - `MeshComponent.visible` - Toggle visibility without removing
     fn remove_mesh_component(&mut self) -> Option<PyMeshComponent> {
         self.inner
             .remove_mesh_component()
             .map(|inner| PyMeshComponent { inner })
     }
 
+    /// Get a copy of this GameObject's mesh component.
+    ///
+    /// Returns a copy of the attached `MeshComponent` if one exists.
+    /// Changes to the returned mesh will **not** affect the original
+    /// (use direct mesh methods on the GameObject for in-place modification).
+    ///
+    /// # Returns
+    /// - `Some(MeshComponent)` - Copy of the mesh component
+    /// - `None` - No mesh component attached
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    /// mesh = pyg.MeshComponent()
+    /// obj.add_mesh_component(mesh)
+    ///
+    /// # Get mesh copy
+    /// mesh_copy = obj.mesh_component()
+    ///
+    /// if mesh_copy:
+    ///     print(f"Mesh visible: {mesh_copy.visible}")
+    /// ```
+    ///
+    /// # Note on Copying
+    /// ```python
+    /// # This returns a COPY, not a reference:
+    /// mesh_copy = obj.mesh_component()
+    /// mesh_copy.visible = False  # Does NOT affect obj's mesh!
+    ///
+    /// # To modify the object's mesh directly, use GameObject methods:
+    /// obj.set_mesh_visible(False)  # Modifies obj's mesh directly
+    /// ```
+    ///
+    /// # Cloning Objects
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// original = pyg.GameObject("Original")
+    /// mesh = pyg.MeshComponent()
+    /// mesh.set_geometry_circle(32.0)
+    /// original.add_mesh_component(mesh)
+    ///
+    /// # Clone object with mesh
+    /// clone = pyg.GameObject("Clone")
+    /// if original.mesh_component():
+    ///     clone.add_mesh_component(original.mesh_component())
+    /// ```
+    ///
+    /// # See Also
+    /// - `has_mesh_component()` - Check if mesh exists
+    /// - `remove_mesh_component()` - Remove and get mesh
+    /// - GameObject mesh methods: `set_mesh_visible()`, `set_mesh_fill_color()`, etc.
     fn mesh_component(&self) -> Option<PyMeshComponent> {
         self.inner
             .mesh_component()
@@ -4488,22 +5123,173 @@ impl PyGameObject {
             .map(|inner| PyMeshComponent { inner })
     }
 
+    /// Set the mesh geometry to a rectangle.
+    ///
+    /// Configures the object's mesh as a rectangle with the specified dimensions.
+    /// If no mesh component exists, one is created automatically.
+    ///
+    /// # Arguments
+    /// * `width` - Rectangle width in pixels
+    /// * `height` - Rectangle height in pixels
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Box")
+    /// obj.set_position(pyg.Vec2(200.0, 150.0))
+    ///
+    /// # Create 100x50 rectangle
+    /// obj.set_mesh_geometry_rectangle(100.0, 50.0)
+    /// obj.set_mesh_fill_color(pyg.Color.GREEN)
+    ///
+    /// engine.add_game_object(obj)
+    /// ```
+    ///
+    /// # Quick Sprite Setup
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// sprite = pyg.GameObject("Sprite")
+    /// sprite.position = pyg.Vec2(400.0, 300.0)
+    /// sprite.set_mesh_geometry_rectangle(64.0, 64.0)  # 64x64 square
+    /// sprite.set_mesh_image_path("assets/player.png")
+    /// ```
+    ///
+    /// # See Also
+    /// - `set_mesh_geometry_circle()` - Set mesh to circle
+    /// - `MeshComponent.set_geometry_rectangle()` - Direct mesh method
     fn set_mesh_geometry_rectangle(&mut self, width: f32, height: f32) {
         let mesh = self.ensure_mesh_component();
         mesh.set_geometry(MeshGeometry::rectangle(width, height));
     }
 
+    /// Set the mesh geometry to a circle.
+    ///
+    /// Configures the object's mesh as a circle with the specified radius and quality.
+    /// If no mesh component exists, one is created automatically.
+    ///
+    /// # Arguments
+    /// * `radius` - Circle radius in pixels
+    /// * `segments` - Number of segments for circle quality (default: 32)
+    ///   - Higher values = smoother circle, more vertices
+    ///   - Typical range: 16-64 segments
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Ball")
+    /// obj.set_position(pyg.Vec2(200.0, 150.0))
+    ///
+    /// # Create smooth circle with radius 40
+    /// obj.set_mesh_geometry_circle(40.0, segments=64)
+    /// obj.set_mesh_fill_color(pyg.Color.RED)
+    ///
+    /// engine.add_game_object(obj)
+    /// ```
+    ///
+    /// # Segment Quality Comparison
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// # Low quality (fast, jagged)
+    /// low_poly = pyg.GameObject("LowPoly")
+    /// low_poly.set_mesh_geometry_circle(30.0, segments=8)
+    ///
+    /// # Medium quality (default)
+    /// medium = pyg.GameObject("Medium")
+    /// medium.set_mesh_geometry_circle(30.0, segments=32)
+    ///
+    /// # High quality (smooth, more expensive)
+    /// high_poly = pyg.GameObject("HighPoly")
+    /// high_poly.set_mesh_geometry_circle(30.0, segments=128)
+    /// ```
+    ///
+    /// # See Also
+    /// - `set_mesh_geometry_rectangle()` - Set mesh to rectangle
+    /// - `MeshComponent.set_geometry_circle()` - Direct mesh method
     #[pyo3(signature = (radius, segments=32))]
     fn set_mesh_geometry_circle(&mut self, radius: f32, segments: u32) {
         let mesh = self.ensure_mesh_component();
         mesh.set_geometry(MeshGeometry::circle(radius, segments));
     }
 
+    /// Set the fill color of the mesh.
+    ///
+    /// Sets a solid color for the mesh. If no mesh component exists, one is
+    /// created automatically. Pass `None` to remove the color (use image only).
+    ///
+    /// # Arguments
+    /// * `color` - `Color` instance, or `None` to remove fill color
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("ColoredRect")
+    /// obj.set_mesh_geometry_rectangle(100.0, 100.0)
+    ///
+    /// # Set solid color
+    /// obj.set_mesh_fill_color(pyg.Color.BLUE)
+    ///
+    /// # Change color later
+    /// obj.set_mesh_fill_color(pyg.Color.RED)
+    ///
+    /// # Remove color (transparent/image only)
+    /// obj.set_mesh_fill_color(None)
+    /// ```
+    ///
+    /// # Color Animation
+    /// ```python
+    /// import pyg_engine as pyg
+    /// import math
+    ///
+    /// def update(dt, engine, data):
+    ///     elapsed = data['elapsed']
+    ///     data['elapsed'] += dt
+    ///
+    ///     # Pulse red channel
+    ///     red_value = (math.sin(elapsed * 2.0) + 1.0) / 2.0  # 0.0 to 1.0
+    ///     color = pyg.Color.new(red_value, 0.0, 0.0, 1.0)
+    ///     data['obj'].set_mesh_fill_color(color)
+    ///
+    ///     return True
+    /// ```
+    ///
+    /// # See Also
+    /// - `mesh_fill_color()` - Get current fill color
+    /// - `set_mesh_image_path()` - Set texture image
+    /// - `Color` - Color class with creation methods
     fn set_mesh_fill_color(&mut self, color: Option<PyColor>) {
         let mesh = self.ensure_mesh_component();
         mesh.set_fill_color(color.map(|c| c.inner));
     }
 
+    /// Get the fill color of the mesh.
+    ///
+    /// Returns the mesh's solid fill color, or `None` if no color is set or
+    /// no mesh exists.
+    ///
+    /// # Returns
+    /// - `Some(Color)` - The mesh fill color
+    /// - `None` - No color set or no mesh component
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    /// obj.set_mesh_fill_color(pyg.Color.BLUE)
+    ///
+    /// # Get current color
+    /// color = obj.mesh_fill_color()
+    /// if color:
+    ///     print(f"Fill color: {color}")
+    /// ```
+    ///
+    /// # See Also
+    /// - `set_mesh_fill_color()` - Set the fill color
     fn mesh_fill_color(&self) -> Option<PyColor> {
         self.inner
             .mesh_component()
@@ -4511,36 +5297,328 @@ impl PyGameObject {
             .map(|inner| PyColor { inner })
     }
 
+    /// Set the image/texture path for the mesh.
+    ///
+    /// Loads and applies an image texture to the mesh. If no mesh component exists,
+    /// one is created automatically. Pass `None` to remove the texture (use color only).
+    ///
+    /// # Arguments
+    /// * `image_path` - Path to image file (PNG, JPG, etc.), or `None` to remove
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// sprite = pyg.GameObject("Sprite")
+    /// sprite.set_mesh_geometry_rectangle(64.0, 64.0)
+    ///
+    /// # Load texture
+    /// sprite.set_mesh_image_path("assets/player.png")
+    ///
+    /// # Change texture
+    /// sprite.set_mesh_image_path("assets/enemy.png")
+    ///
+    /// # Remove texture (use color instead)
+    /// sprite.set_mesh_image_path(None)
+    /// sprite.set_mesh_fill_color(pyg.Color.BLUE)
+    /// ```
+    ///
+    /// # Sprite Animation
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// class AnimatedSprite:
+    ///     def __init__(self, obj, frames):
+    ///         self.obj = obj
+    ///         self.frames = frames  # ["frame0.png", "frame1.png", ...]
+    ///         self.current_frame = 0
+    ///         self.frame_time = 0.0
+    ///         self.frame_duration = 0.1  # seconds per frame
+    ///
+    ///     def update(self, dt):
+    ///         self.frame_time += dt
+    ///         if self.frame_time >= self.frame_duration:
+    ///             self.frame_time = 0.0
+    ///             self.current_frame = (self.current_frame + 1) % len(self.frames)
+    ///             self.obj.set_mesh_image_path(self.frames[self.current_frame])
+    /// ```
+    ///
+    /// # See Also
+    /// - `mesh_image_path()` - Get current image path
+    /// - `set_mesh_fill_color()` - Set solid color
     fn set_mesh_image_path(&mut self, image_path: Option<String>) {
         let mesh = self.ensure_mesh_component();
         mesh.set_image_path(image_path);
     }
 
+    /// Get the image/texture path of the mesh.
+    ///
+    /// Returns the path to the mesh's texture image, or `None` if no image is set
+    /// or no mesh exists.
+    ///
+    /// # Returns
+    /// - `Some(String)` - Path to the image file
+    /// - `None` - No image set or no mesh component
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// sprite = pyg.GameObject("Sprite")
+    /// sprite.set_mesh_image_path("assets/player.png")
+    ///
+    /// # Get current texture path
+    /// path = sprite.mesh_image_path()
+    /// if path:
+    ///     print(f"Current texture: {path}")
+    /// ```
+    ///
+    /// # See Also
+    /// - `set_mesh_image_path()` - Set the image path
     fn mesh_image_path(&self) -> Option<String> {
         self.inner
             .mesh_component()
             .and_then(|mesh| mesh.image_path().map(|path| path.to_string()))
     }
 
+    /// Set the visibility of the mesh.
+    ///
+    /// Controls whether the mesh is rendered. If no mesh component exists, one is
+    /// created automatically.
+    ///
+    /// # Arguments
+    /// * `visible` - `True` to show, `False` to hide
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    /// obj.set_mesh_geometry_rectangle(64.0, 64.0)
+    /// obj.set_mesh_fill_color(pyg.Color.RED)
+    ///
+    /// # Hide mesh
+    /// obj.set_mesh_visible(False)
+    ///
+    /// # Show mesh
+    /// obj.set_mesh_visible(True)
+    /// ```
+    ///
+    /// # Blinking Effect
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// def update(dt, engine, data):
+    ///     data['blink_timer'] += dt
+    ///
+    ///     # Blink every 0.5 seconds
+    ///     if data['blink_timer'] >= 0.5:
+    ///         data['blink_timer'] = 0.0
+    ///         current = data['obj'].mesh_visible()
+    ///         data['obj'].set_mesh_visible(not current)
+    ///
+    ///     return True
+    ///
+    /// engine.run(update=update, user_data={'blink_timer': 0.0, 'obj': obj})
+    /// ```
+    ///
+    /// # See Also
+    /// - `mesh_visible()` - Get visibility state
+    /// - `GameObject.active` - Control entire object update/render
     fn set_mesh_visible(&mut self, visible: bool) {
         let mesh = self.ensure_mesh_component();
         mesh.set_visible(visible);
     }
 
+    /// Get the visibility state of the mesh.
+    ///
+    /// Returns whether the mesh is currently visible, or `None` if no mesh exists.
+    ///
+    /// # Returns
+    /// - `Some(True)` - Mesh is visible
+    /// - `Some(False)` - Mesh is hidden
+    /// - `None` - No mesh component exists
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    /// obj.set_mesh_visible(False)
+    ///
+    /// # Check visibility
+    /// visible = obj.mesh_visible()
+    /// if visible == False:
+    ///     print("Mesh is hidden")
+    /// ```
+    ///
+    /// # See Also
+    /// - `set_mesh_visible()` - Set visibility
     fn mesh_visible(&self) -> Option<bool> {
         self.inner.mesh_component().map(|mesh| mesh.visible())
     }
 
+    /// Set the draw order (z-index) of the mesh.
+    ///
+    /// Controls rendering order. Higher values render on top of lower values.
+    /// If no mesh component exists, one is created automatically.
+    ///
+    /// # Arguments
+    /// * `draw_order` - Rendering layer (higher = on top)
+    ///   - Typical range: -10.0 to 10.0
+    ///   - Default: 0.0
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// # Background layer
+    /// background = pyg.GameObject("Background")
+    /// background.set_mesh_draw_order(-5.0)
+    ///
+    /// # Game objects (default layer)
+    /// player = pyg.GameObject("Player")
+    /// player.set_mesh_draw_order(0.0)
+    ///
+    /// # UI elements (foreground)
+    /// ui_panel = pyg.GameObject("UI")
+    /// ui_panel.set_mesh_draw_order(10.0)
+    /// ```
+    ///
+    /// # Layering Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// # Create layers from back to front
+    /// layers = [
+    ///     ("Sky", -10.0),
+    ///     ("Background", -5.0),
+    ///     ("Terrain", -2.0),
+    ///     ("Player", 0.0),
+    ///     ("Effects", 2.0),
+    ///     ("UI", 10.0),
+    /// ]
+    ///
+    /// for name, depth in layers:
+    ///     obj = pyg.GameObject(name)
+    ///     obj.set_mesh_geometry_rectangle(800.0, 600.0)
+    ///     obj.set_mesh_draw_order(depth)
+    ///     engine.add_game_object(obj)
+    /// ```
+    ///
+    /// # See Also
+    /// - `mesh_draw_order()` - Get current draw order
+    /// - `DrawCommand` - Similar draw order for immediate drawing
     fn set_mesh_draw_order(&mut self, draw_order: f32) {
         let mesh = self.ensure_mesh_component();
         mesh.set_draw_order(draw_order);
     }
 
+    /// Get the draw order (z-index) of the mesh.
+    ///
+    /// Returns the rendering layer of the mesh, or `None` if no mesh exists.
+    ///
+    /// # Returns
+    /// - `Some(f32)` - The draw order value
+    /// - `None` - No mesh component exists
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// obj = pyg.GameObject("Sprite")
+    /// obj.set_mesh_draw_order(5.0)
+    ///
+    /// # Get draw order
+    /// order = obj.mesh_draw_order()
+    /// if order:
+    ///     print(f"Draw order: {order}")
+    /// ```
+    ///
+    /// # See Also
+    /// - `set_mesh_draw_order()` - Set the draw order
     fn mesh_draw_order(&self) -> Option<f32> {
         self.inner.mesh_component().map(|mesh| mesh.draw_order())
     }
 
-    /// Set the object type (e.g., "UIObject", "GameObject", etc.)
+    /// Set the object type for specialized rendering or behavior.
+    ///
+    /// Marks the object as a specific type, which affects how the engine handles it.
+    /// Most commonly used to mark objects as UI elements for screen-space rendering.
+    ///
+    /// # Arguments
+    /// * `object_type` - Type string (case-sensitive):
+    ///   - `"UIObject"` - **UI element** (rendered in screen space, ignores camera)
+    ///   - `"GameObject"` - **Standard object** (world space, default)
+    ///   - `"ParticleSystem"` - Particle system (reserved for future use)
+    ///   - `"Sound"` - Audio source (reserved for future use)
+    ///   - `"Light"` - Light source (reserved for future use)
+    ///   - `"Camera"` - Camera object (reserved for future use)
+    ///
+    /// # UI Objects
+    ///
+    /// **UIObject** is the most commonly used type. UI objects:
+    /// - Render in **screen-space** coordinates (pixels from top-left)
+    /// - **Ignore camera** position and viewport
+    /// - Always rendered **on top** of world objects
+    /// - Used for: buttons, panels, labels, menus, HUD elements
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// # Standard world-space object
+    /// player = pyg.GameObject("Player")
+    /// player.set_object_type("GameObject")  # Default, usually not needed
+    ///
+    /// # UI button (screen space)
+    /// button = pyg.GameObject("PlayButton")
+    /// button.set_object_type("UIObject")  # Renders in screen space
+    /// ```
+    ///
+    /// # UI Button Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// engine = pyg.Engine()
+    ///
+    /// # Create UI button
+    /// button_obj = pyg.GameObject("Button")
+    /// button_obj.set_object_type("UIObject")  # Mark as UI
+    ///
+    /// # Add button component
+    /// button = pyg.ButtonComponent("PlayButton", 100, 100, 200, 50)
+    /// button.set_text("Play Game")
+    /// button.set_on_click(lambda: print("Clicked!"))
+    /// button_obj.add_component(button)
+    ///
+    /// engine.add_game_object(button_obj)
+    /// engine.run(title="UI Demo")
+    /// ```
+    ///
+    /// # Screen-Space vs World-Space
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// # World-space object (affected by camera)
+    /// world_obj = pyg.GameObject("WorldSprite")
+    /// world_obj.position = pyg.Vec2(100.0, 100.0)  # World coordinates
+    /// world_obj.set_mesh_geometry_rectangle(64.0, 64.0)
+    /// world_obj.set_mesh_fill_color(pyg.Color.BLUE)
+    /// # Moves with camera, affected by camera zoom
+    ///
+    /// # Screen-space UI object (ignores camera)
+    /// ui_obj = pyg.GameObject("UIPanel")
+    /// ui_obj.set_object_type("UIObject")
+    /// ui_obj.position = pyg.Vec2(10.0, 10.0)  # Screen pixels from top-left
+    /// ui_obj.set_mesh_geometry_rectangle(200.0, 100.0)
+    /// ui_obj.set_mesh_fill_color(pyg.Color.rgba(0, 0, 0, 128))
+    /// # Always at same screen position, ignores camera
+    /// ```
+    ///
+    /// # See Also
+    /// - `examples/ui_demo.py` - Complete UI system example
+    /// - `ButtonComponent`, `PanelComponent`, `LabelComponent` - UI components
     fn set_object_type(&mut self, object_type: &str) {
         use crate::core::game_object::ObjectType;
         let obj_type = match object_type {
@@ -4554,7 +5632,106 @@ impl PyGameObject {
         self.inner.set_object_type(obj_type);
     }
 
-    /// Add a UI component to this GameObject
+    /// Add a UI component to this GameObject.
+    ///
+    /// Attaches a UI component (button, panel, or label) to the object. The object
+    /// should typically be marked as a `"UIObject"` for proper screen-space rendering.
+    ///
+    /// # Supported Components
+    /// - `ButtonComponent` - Clickable button with callback
+    /// - `PanelComponent` - Rectangular UI container/background
+    /// - `LabelComponent` - Text label for UI
+    ///
+    /// # Arguments
+    /// * `component` - The UI component to attach (ButtonComponent, PanelComponent, or LabelComponent)
+    ///
+    /// # Returns
+    /// - `Ok(())` - Component added successfully
+    /// - `Err(TypeError)` - Invalid component type
+    ///
+    /// # Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// # Create UI object
+    /// ui_obj = pyg.GameObject("UIElement")
+    /// ui_obj.set_object_type("UIObject")
+    ///
+    /// # Add button component
+    /// button = pyg.ButtonComponent("ClickMe", 100, 100, 200, 50)
+    /// button.set_text("Click Me!")
+    /// button.set_on_click(lambda: print("Clicked!"))
+    /// ui_obj.add_component(button)
+    ///
+    /// engine.add_game_object(ui_obj)
+    /// ```
+    ///
+    /// # Complete UI Example
+    /// ```python
+    /// import pyg_engine as pyg
+    ///
+    /// engine = pyg.Engine()
+    ///
+    /// # Panel background
+    /// panel_obj = pyg.GameObject("Panel")
+    /// panel_obj.set_object_type("UIObject")
+    /// panel = pyg.PanelComponent("Background", 50, 50, 300, 200)
+    /// panel.set_background_color(pyg.Color.rgba(50, 50, 50, 200))
+    /// panel_obj.add_component(panel)
+    /// engine.add_game_object(panel_obj)
+    ///
+    /// # Title label
+    /// label_obj = pyg.GameObject("Title")
+    /// label_obj.set_object_type("UIObject")
+    /// label = pyg.LabelComponent("TitleText", 100, 70, "Game Menu")
+    /// label.set_font_size(24.0)
+    /// label.set_text_color(pyg.Color.WHITE)
+    /// label_obj.add_component(label)
+    /// engine.add_game_object(label_obj)
+    ///
+    /// # Play button
+    /// button_obj = pyg.GameObject("PlayButton")
+    /// button_obj.set_object_type("UIObject")
+    /// button = pyg.ButtonComponent("Play", 100, 120, 150, 40)
+    /// button.set_text("Play Game")
+    /// button.set_on_click(lambda: print("Starting game..."))
+    /// button_obj.add_component(button)
+    /// engine.add_game_object(button_obj)
+    ///
+    /// engine.run(title="UI Example")
+    /// ```
+    ///
+    /// # Multiple Components (Not Recommended)
+    /// ```python
+    /// # While technically possible, avoid adding multiple components of the same type
+    /// # to a single GameObject. Instead, create separate GameObjects for each UI element.
+    ///
+    /// # ❌ DON'T: Multiple buttons on one object
+    /// obj = pyg.GameObject("Buttons")
+    /// obj.add_component(button1)
+    /// obj.add_component(button2)  # Replaces button1!
+    ///
+    /// # ✅ DO: Separate objects for each button
+    /// obj1 = pyg.GameObject("Button1")
+    /// obj1.add_component(button1)
+    ///
+    /// obj2 = pyg.GameObject("Button2")
+    /// obj2.add_component(button2)
+    /// ```
+    ///
+    /// # Errors
+    /// Raises `TypeError` if the component is not a valid UI component type:
+    /// ```python
+    /// obj.add_component(mesh)  # TypeError: not a UI component
+    /// obj.add_component(button)  # OK: ButtonComponent
+    /// ```
+    ///
+    /// # See Also
+    /// - `set_object_type()` - Mark object as UIObject
+    /// - `ButtonComponent` - Clickable button
+    /// - `PanelComponent` - UI panel/background
+    /// - `LabelComponent` - Text label
+    /// - `examples/ui_demo.py` - Complete UI examples
     fn add_component(&mut self, component: &Bound<'_, PyAny>) -> PyResult<()> {
         // Try to downcast to each component type
         if let Ok(button) = component.extract::<PyRef<PyButtonComponent>>() {
