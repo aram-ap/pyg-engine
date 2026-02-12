@@ -28,7 +28,7 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 
 - **[Snake](examples/python_snake_demo.py)**: One of the provided examples
 
-![snake](images/snake.png)
+![snake](images/snake.gif)
 
 ## :package: Installation
 
