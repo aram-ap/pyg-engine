@@ -216,4 +216,10 @@ impl UIManager {
     pub fn theme_mut(&mut self) -> &mut UITheme {
         &mut self.theme
     }
+
+    /// Reset UI command tracking when draw commands are cleared
+    /// This should be called when clear_draw_commands() is invoked
+    pub fn reset_command_tracking(&mut self) {
+        self.ui_cmd_start = None;
+    }
 }

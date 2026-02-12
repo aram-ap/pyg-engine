@@ -591,17 +591,8 @@ impl PyEngine {
     ///
     /// The object is copied into the runtime scene using current transform + mesh state.
     fn add_game_object(&mut self, game_object: &PyGameObject) -> Option<u32> {
-        // CRITICAL DEBUG - Using println! to stdout
-        println!("🔵 STDOUT: PyEngine::add_game_object called");
-        eprintln!("🔵 STDERR: PyEngine::add_game_object called");
-
         let runtime_obj = game_object.to_runtime_game_object();
-        println!("🔷 STDOUT: Calling inner.add_game_object");
-
         let object_id = self.inner.add_game_object(runtime_obj);
-
-        println!("🟢 STDOUT: PyEngine::add_game_object returned ID: {:?}", object_id);
-        eprintln!("🟢 STDERR: PyEngine::add_game_object returned ID: {:?}", object_id);
 
         if let Some(id) = object_id {
             game_object.bind_runtime(self.inner.get_command_sender(), id);

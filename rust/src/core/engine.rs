@@ -562,6 +562,10 @@ impl Engine {
     /// Clears all direct draw commands.
     pub fn clear_draw_commands(&mut self) {
         self.draw_manager.clear();
+        // Reset UI command tracking to avoid truncating wrong commands
+        if let Some(ui_manager) = &mut self.ui_manager {
+            ui_manager.reset_command_tracking();
+        }
         self.request_render_redraw();
     }
 
