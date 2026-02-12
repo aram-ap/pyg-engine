@@ -21,13 +21,16 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
         with:
-          # Cache key includes OS to avoid cross-platform cache issues
-          key: ${{ matrix.os }}
-          # Share cache between different Python versions
-          shared-key: "cibuildwheel"
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22
