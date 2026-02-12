@@ -15,11 +15,14 @@ class Button:
     """
     A clickable button UI element.
 
-    Example:
-        >>> def on_click():
-        ...     print("Button clicked!")
-        >>> button = Button("Click Me", x=100, y=50, width=120, height=40, on_click=on_click)
-        >>> engine.ui.add(button)
+    **Example:**
+
+        ```python
+        def on_click():
+            print("Button clicked!")
+        button = Button("Click Me", x=100, y=50, width=120, height=40, on_click=on_click)
+        engine.ui.add(button)
+        ```
     """
 
     def __init__(
@@ -181,11 +184,16 @@ class Panel:
     """
     A rectangular panel/container UI element.
 
-    Example:
-        >>> panel = Panel(x=50, y=50, width=300, height=200)
-        >>> panel.set_background_color(0.9, 0.9, 0.9, 1.0)
-        >>> panel.set_border(2, 0.5, 0.5, 0.5, 1.0)
-        >>> engine.ui.add(panel)
+    **Example:**
+
+        ```python
+
+        panel = Panel(x=50, y=50, width=300, height=200)
+        panel.set_background_color(0.9, 0.9, 0.9, 1.0)
+        panel.set_border(2, 0.5, 0.5, 0.5, 1.0)
+        engine.ui.add(panel)
+
+        ```
     """
 
     def __init__(
@@ -267,10 +275,15 @@ class Label:
     A text label UI element.
 
     Example:
-        >>> label = Label("Hello World", x=100, y=100, font_size=16)
-        >>> label.set_color(0, 0, 0, 1)
-        >>> label.set_align("center")
-        >>> engine.ui.add(label)
+
+        ```python
+
+        label = Label("Hello World", x=100, y=100, font_size=16)
+        label.set_color(0, 0, 0, 1)
+        label.set_align("center")
+        engine.ui.add(label)
+
+        ```
     """
 
     def __init__(
