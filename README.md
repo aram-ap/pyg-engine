@@ -8,7 +8,7 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 
 > **NOTE:** This project is currently in **Alpha**. Features are under active development.
 
-## 🚀 Key Features
+## :rocket: Key Features
 
 *   **Modern Rendering**: Powered by **wgpu** for cross-platform, high-performance graphics.
 *   **Rust Core**: The heavy lifting is done in Rust, ensuring speed and memory safety.
@@ -18,11 +18,17 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 *   **Thread Safety**: Unique `EngineHandle` system allows you to safely issue rendering commands from background Python threads.
 *   **Robust Logging**: Integrated tracing-based logging system with file support and configurable levels.
 
-## 📚 Documentation
+## :books: Documentation
 
 - **[API Reference](https://aram-ap.github.io/pyg-engine/)** - Complete Python API documentation (auto-generated from docstrings)
 
-## 📦 Installation
+## :eyes: Gallary
+
+- **[Snake](*/examples/python_snake_demo.py)**: One of the provided examples
+
+![snake](images/snake.png)
+
+## :package: Installation
 
 Requires **Python 3.7+**.
 
@@ -38,7 +44,7 @@ cd pyg-engine
 pip install -e .
 ```
 
-## ⚡ Quick Start
+## :zap: Quick Start
 
 ### 1. Basic Window & Logging
 ```python
@@ -129,7 +135,7 @@ intended to run in the engine update phase before this global callback.
 Runtime guard: calling `run(...)`/`start_manual(...)` while another loop is active
 raises `RuntimeError`.
 
-## 🔧 Architecture & Roadmap
+## :wrench: Architecture & Roadmap
 
 ### Current Capabilities
 - **Window Management**: Resizable windows, VSync control, Fullscreen support.
@@ -153,7 +159,7 @@ raises `RuntimeError`.
 - **Additional Primitives**: Added capabilities for more basic shapes, arcs, SVGs, and function-based shapes.
 - **Advanced Rendering**: Shaders, Particles, and Post-processing.
 
-## 📂 Examples
+## :open_file_folder: Examples
 
 Check the `examples/` directory for more complete demonstrations:
 
@@ -164,7 +170,7 @@ Check the `examples/` directory for more complete demonstrations:
 - `python_function_update_demo.py`: Shows callback-based loop control via `engine.run(update=...)`.
 - `python_snake_demo.py`: Playable Snake game using immediate-mode drawing and keyboard input.
 
-## 🛠️ Development & Testing
+## :hammer_and_wrench: Development & Testing
 
 To set up the development environment:
 
