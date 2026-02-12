@@ -551,6 +551,36 @@ impl Engine {
         true
     }
 
+    /// Update a runtime GameObject rotation by id.
+    pub fn set_game_object_rotation(&mut self, id: u32, rotation: f32) -> bool {
+        let Some(object_manager) = &mut self.object_manager else {
+            return false;
+        };
+
+        let Some(object) = object_manager.get_object_by_id_mut(id) else {
+            return false;
+        };
+
+        object.transform_mut().set_rotation(rotation);
+        self.request_render_redraw();
+        true
+    }
+
+    /// Update a runtime GameObject scale by id.
+    pub fn set_game_object_scale(&mut self, id: u32, scale: Vec2) -> bool {
+        let Some(object_manager) = &mut self.object_manager else {
+            return false;
+        };
+
+        let Some(object) = object_manager.get_object_by_id_mut(id) else {
+            return false;
+        };
+
+        object.transform_mut().set_scale(scale);
+        self.request_render_redraw();
+        true
+    }
+
     fn request_render_redraw(&mut self) {
         if let Some(render_manager) = &mut self.render_manager {
             render_manager.request_redraw();
@@ -833,6 +863,15 @@ impl Engine {
                     position,
                 } => {
                     let _ = self.set_game_object_position(object_id, position);
+                }
+                EngineCommand::SetGameObjectRotation {
+                    object_id,
+                    rotation,
+                } => {
+                    let _ = self.set_game_object_rotation(object_id, rotation);
+                }
+                EngineCommand::SetGameObjectScale { object_id, scale } => {
+                    let _ = self.set_game_object_scale(object_id, scale);
                 }
                 EngineCommand::SetCameraPosition { position } => {
                     let _ = self.set_camera_position(position);

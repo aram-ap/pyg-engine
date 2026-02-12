@@ -4710,6 +4710,12 @@ impl PyGameObject {
     #[setter]
     fn set_rotation(&mut self, rotation: f32) {
         self.inner.transform_mut().set_rotation(rotation);
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::SetGameObjectRotation {
+                object_id: binding.object_id,
+                rotation,
+            });
+        }
     }
 
     /// Get the scale of this GameObject.
@@ -4848,6 +4854,12 @@ impl PyGameObject {
     #[setter]
     fn set_scale(&mut self, scale: PyVec2) {
         self.inner.transform_mut().set_scale(scale.inner);
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::SetGameObjectScale {
+                object_id: binding.object_id,
+                scale: scale.inner,
+            });
+        }
     }
 
     /// Manually update this GameObject.
