@@ -17,6 +17,12 @@ pub enum EngineCommand {
     /// Update a runtime GameObject position by id
     SetGameObjectPosition { object_id: u32, position: Vec2 },
 
+    /// Update a runtime GameObject rotation by id
+    SetGameObjectRotation { object_id: u32, rotation: f32 },
+
+    /// Update a runtime GameObject scale by id
+    SetGameObjectScale { object_id: u32, scale: Vec2 },
+
     /// Update the active camera world position
     SetCameraPosition { position: Vec2 },
 
