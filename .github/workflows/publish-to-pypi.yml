@@ -16,9 +16,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.16.5
         env:
+          # Install Rust in Linux containers (macOS/Windows use host Rust from previous step)
           CIBW_BEFORE_ALL_LINUX: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
           CIBW_ENVIRONMENT_LINUX: "PATH=$HOME/.cargo/bin:$PATH"
           # Skip PyPy (pp*) AND all 32-bit Linux builds (*i686*)
