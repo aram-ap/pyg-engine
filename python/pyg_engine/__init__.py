@@ -11,6 +11,7 @@ try:
         Color,
         Time,
         GameObject,
+        UIManager,
         MeshComponent,
         TransformComponent,
         ButtonComponent,
@@ -30,6 +31,7 @@ except ImportError:
     Color = None  # type: ignore
     Time = None  # type: ignore
     GameObject = None  # type: ignore
+    UIManager = None # type: ignore
     MeshComponent = None  # type: ignore
     TransformComponent = None  # type: ignore
     ButtonComponent = None  # type: ignore
@@ -58,6 +60,7 @@ __all__ = [
     "Color",
     "Time",
     "GameObject",
+    "UIManager",
     "MeshComponent",
     "TransformComponent",
     "ButtonComponent",
