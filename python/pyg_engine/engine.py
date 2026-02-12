@@ -38,14 +38,49 @@ class EngineHandle:
 
     def add_game_object(self, game_object: Any) -> None:
         """
-        Add a `pyg_engine.GameObject` to the runtime scene.
+        Add a `pyg_engine.GameObject` to the runtime scene from a background thread.
 
         This is thread-safe and will be processed on the next engine update.
+        Useful for loading objects asynchronously or from event callbacks.
+
+        Args:
+            game_object: The GameObject instance to add to the scene.
+
+        Example:
+            ```python
+            import threading
+            from pyg_engine import GameObject, EngineHandle
+
+            def load_async(handle: EngineHandle):
+                obj = GameObject()
+                # ... configure object ...
+                handle.add_game_object(obj)
+
+            handle = engine.get_handle()
+            thread = threading.Thread(target=load_async, args=(handle,))
+            thread.start()
+            ```
         """
         self._inner.add_game_object(game_object)
 
     def remove_game_object(self, object_id: int) -> None:
-        """Remove a runtime GameObject by id via command queue."""
+        """
+        Remove a runtime GameObject by its ID via the command queue.
+
+        This is thread-safe and the removal will be processed on the next engine update.
+
+        Args:
+            object_id: The ID of the GameObject to remove.
+
+        Example:
+            ```python
+            handle = engine.get_handle()
+            obj_id = engine.add_game_object(my_object)
+
+            # Later, from any thread:
+            handle.remove_game_object(obj_id)
+            ```
+        """
         self._inner.remove_game_object(object_id)
 
     def set_game_object_position(self, object_id: int, position: Any) -> None:
@@ -83,7 +118,26 @@ class EngineHandle:
         color: Any,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a pixel in window coordinates via command queue."""
+        """
+        Draw a single pixel in window coordinates via the command queue.
+
+        This is thread-safe and can be called from background threads.
+
+        Args:
+            x: X coordinate in pixels (0 = left edge).
+            y: Y coordinate in pixels (0 = top edge).
+            color: A `pyg_engine.Color` instance.
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            handle = engine.get_handle()
+            red = Color(1.0, 0.0, 0.0, 1.0)
+            handle.draw_pixel(100, 100, red, draw_order=5.0)
+            ```
+        """
         self._inner.draw_pixel(x, y, color, draw_order=draw_order)
 
     def draw_line(
@@ -96,7 +150,30 @@ class EngineHandle:
         thickness: float = 1.0,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a line in window coordinates via command queue."""
+        """
+        Draw a line in window coordinates via the command queue.
+
+        This is thread-safe and can be called from background threads.
+
+        Args:
+            start_x: Starting X coordinate in pixels.
+            start_y: Starting Y coordinate in pixels.
+            end_x: Ending X coordinate in pixels.
+            end_y: Ending Y coordinate in pixels.
+            color: A `pyg_engine.Color` instance.
+            thickness: Line width in pixels (default: 1.0).
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            handle = engine.get_handle()
+            white = Color(1.0, 1.0, 1.0, 1.0)
+            # Draw a diagonal line from top-left to bottom-right
+            handle.draw_line(0, 0, 800, 600, white, thickness=2.0)
+            ```
+        """
         self._inner.draw_line(
             start_x,
             start_y,
@@ -118,7 +195,35 @@ class EngineHandle:
         thickness: float = 1.0,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a rectangle in window coordinates via command queue."""
+        """
+        Draw a rectangle in window coordinates via the command queue.
+
+        This is thread-safe and can be called from background threads.
+
+        Args:
+            x: Top-left X coordinate in pixels.
+            y: Top-left Y coordinate in pixels.
+            width: Rectangle width in pixels.
+            height: Rectangle height in pixels.
+            color: A `pyg_engine.Color` instance.
+            filled: If True, draws a filled rectangle; if False, draws an outline (default: True).
+            thickness: Border thickness when filled=False (default: 1.0).
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            handle = engine.get_handle()
+            blue = Color(0.0, 0.5, 1.0, 1.0)
+
+            # Draw filled rectangle
+            handle.draw_rectangle(100, 100, 200, 150, blue)
+
+            # Draw outline only
+            handle.draw_rectangle(350, 100, 200, 150, blue, filled=False, thickness=3.0)
+            ```
+        """
         self._inner.draw_rectangle(
             x,
             y,
@@ -141,7 +246,35 @@ class EngineHandle:
         segments: int = 32,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a circle in window coordinates via command queue."""
+        """
+        Draw a circle in window coordinates via the command queue.
+
+        This is thread-safe and can be called from background threads.
+
+        Args:
+            center_x: Center X coordinate in pixels.
+            center_y: Center Y coordinate in pixels.
+            radius: Circle radius in pixels.
+            color: A `pyg_engine.Color` instance.
+            filled: If True, draws a filled circle; if False, draws an outline (default: True).
+            thickness: Border thickness when filled=False (default: 1.0).
+            segments: Number of line segments for smoothness (default: 32).
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            handle = engine.get_handle()
+            green = Color(0.0, 1.0, 0.0, 1.0)
+
+            # Draw filled circle
+            handle.draw_circle(400, 300, 50, green)
+
+            # Draw smooth outline with more segments
+            handle.draw_circle(500, 300, 50, green, filled=False, thickness=2.0, segments=64)
+            ```
+        """
         self._inner.draw_circle(
             center_x,
             center_y,
@@ -165,7 +298,36 @@ class EngineHandle:
         top_right: Any,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a gradient rectangle with per-corner colors via command queue."""
+        """
+        Draw a rectangle with gradient colors (different color per corner) via the command queue.
+
+        This is thread-safe and can be called from background threads.
+
+        Args:
+            x: Top-left X coordinate in pixels.
+            y: Top-left Y coordinate in pixels.
+            width: Rectangle width in pixels.
+            height: Rectangle height in pixels.
+            top_left: `pyg_engine.Color` for the top-left corner.
+            bottom_left: `pyg_engine.Color` for the bottom-left corner.
+            bottom_right: `pyg_engine.Color` for the bottom-right corner.
+            top_right: `pyg_engine.Color` for the top-right corner.
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            handle = engine.get_handle()
+            red = Color(1.0, 0.0, 0.0, 1.0)
+            blue = Color(0.0, 0.0, 1.0, 1.0)
+            green = Color(0.0, 1.0, 0.0, 1.0)
+            yellow = Color(1.0, 1.0, 0.0, 1.0)
+
+            # Draw a gradient rectangle with different colors at each corner
+            handle.draw_gradient_rect(100, 100, 300, 200, red, blue, green, yellow)
+            ```
+        """
         self._inner.draw_gradient_rect(
             x,
             y,
@@ -187,7 +349,31 @@ class EngineHandle:
         texture_path: str,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw an image from a file path via command queue."""
+        """
+        Draw an image from a file path via the command queue.
+
+        This is thread-safe and can be called from background threads.
+        The image is cached internally, so repeated calls with the same path are efficient.
+
+        Args:
+            x: Top-left X coordinate in pixels.
+            y: Top-left Y coordinate in pixels.
+            width: Display width in pixels.
+            height: Display height in pixels.
+            texture_path: File path to the image (PNG, JPG, etc.).
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            handle = engine.get_handle()
+
+            # Draw a sprite at position (100, 100) with size 64x64
+            handle.draw_image(100, 100, 64, 64, "assets/player.png")
+
+            # Draw a background image stretched to fit
+            handle.draw_image(0, 0, 1280, 720, "assets/background.jpg", draw_order=-1.0)
+            ```
+        """
         self._inner.draw_image(
             x,
             y,
@@ -209,7 +395,40 @@ class EngineHandle:
         texture_height: int,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw an image from raw RGBA bytes via command queue."""
+        """
+        Draw an image from raw RGBA bytes via the command queue.
+
+        This is thread-safe and can be called from background threads.
+        Useful for procedurally generated textures or image data from memory.
+
+        Args:
+            x: Top-left X coordinate in pixels.
+            y: Top-left Y coordinate in pixels.
+            width: Display width in pixels.
+            height: Display height in pixels.
+            texture_key: Unique identifier for caching this texture.
+            rgba: Raw RGBA bytes (4 bytes per pixel: R, G, B, A).
+            texture_width: Width of the source texture in pixels.
+            texture_height: Height of the source texture in pixels.
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            handle = engine.get_handle()
+
+            # Create a 2x2 checkerboard pattern
+            width, height = 2, 2
+            pixels = bytes([
+                255, 0, 0, 255,    # Red pixel
+                0, 255, 0, 255,    # Green pixel
+                0, 0, 255, 255,    # Blue pixel
+                255, 255, 0, 255   # Yellow pixel
+            ])
+
+            # Draw it scaled up to 100x100
+            handle.draw_image_from_bytes(100, 100, 100, 100, "checkerboard", pixels, width, height)
+            ```
+        """
         self._inner.draw_image_from_bytes(
             x,
             y,
@@ -439,20 +658,94 @@ class Input:
 
     This class provides methods to check the current state of input devices
     and events. It is accessed via the `engine.input` property.
+
+    Example:
+        ```python
+        from pyg_engine import Engine, MouseButton
+
+        engine = Engine()
+
+        def update(ctx):
+            # Check if space key is pressed this frame
+            if ctx.input.key_pressed("Space"):
+                print("Jump!")
+
+            # Check if W key is held down
+            if ctx.input.key_down("W"):
+                print("Moving forward")
+
+            # Check mouse button
+            if ctx.input.mouse_button_pressed(MouseButton.Left):
+                x, y = ctx.input.mouse_position
+                print(f"Clicked at {x}, {y}")
+
+        engine.run(update=update)
+        ```
     """
     def __init__(self, engine: "Engine") -> None:
         self._engine = engine._engine
 
     def key_down(self, key: str) -> bool:
-        """Check if a keyboard key is currently held down."""
+        """
+        Check if a keyboard key is currently held down.
+
+        This returns True for every frame while the key is pressed.
+
+        Args:
+            key: The key name (e.g., "W", "Space", "Escape", "Return").
+
+        Returns:
+            True if the key is currently pressed, False otherwise.
+
+        Example:
+            ```python
+            # Continuous movement while key is held
+            if engine.input.key_down("W"):
+                player_y += speed * dt
+            ```
+        """
         return self._engine.key_down(key)
 
     def key_pressed(self, key: str) -> bool:
-        """Check if a keyboard key was pressed this frame."""
+        """
+        Check if a keyboard key was pressed this frame.
+
+        This returns True only on the frame when the key is first pressed down.
+
+        Args:
+            key: The key name (e.g., "W", "Space", "Escape", "Return").
+
+        Returns:
+            True if the key was just pressed this frame, False otherwise.
+
+        Example:
+            ```python
+            # Single action on key press (not repeated)
+            if engine.input.key_pressed("Space"):
+                player.jump()
+            ```
+        """
         return self._engine.key_pressed(key)
 
     def key_released(self, key: str) -> bool:
-        """Check if a keyboard key was released this frame."""
+        """
+        Check if a keyboard key was released this frame.
+
+        This returns True only on the frame when the key is released.
+
+        Args:
+            key: The key name (e.g., "W", "Space", "Escape", "Return").
+
+        Returns:
+            True if the key was just released this frame, False otherwise.
+
+        Example:
+            ```python
+            # Detect when player stops charging
+            if engine.input.key_released("Space"):
+                player.release_charge()
+            ```
+        """
         return self._engine.key_released(key)
 
     def mouse_button_down(self, button: MouseButton) -> bool:
@@ -469,7 +762,22 @@ class Input:
 
     @property
     def mouse_position(self) -> tuple[float, float]:
-        """Get the current mouse position in window coordinates."""
+        """
+        Get the current mouse position in window coordinates.
+
+        Returns:
+            A tuple (x, y) where x and y are pixel coordinates.
+            (0, 0) is the top-left corner of the window.
+
+        Example:
+            ```python
+            x, y = engine.input.mouse_position
+            print(f"Mouse at: {x}, {y}")
+
+            # Convert to world coordinates if needed
+            world_pos = engine.screen_to_world(x, y)
+            ```
+        """
         return self._engine.mouse_position()
 
     @property
@@ -483,7 +791,27 @@ class Input:
         return self._engine.mouse_wheel()
 
     def axis(self, name: str) -> float:
-        """Get the current value of a logical axis (-1.0 to 1.0)."""
+        """
+        Get the current value of a logical axis (-1.0 to 1.0).
+
+        Axes are useful for smooth, analog-style input from keyboard or gamepad.
+
+        Args:
+            name: The axis name (e.g., "horizontal", "vertical").
+
+        Returns:
+            A float value from -1.0 to 1.0.
+
+        Example:
+            ```python
+            # Configure horizontal axis
+            engine.input.set_axis_keys("horizontal", ["D", "Right"], ["A", "Left"])
+
+            # Use in update loop
+            h_input = engine.input.axis("horizontal")
+            player_x += h_input * speed * dt
+            ```
+        """
         return self._engine.axis(name)
 
     def axis_previous(self, name: str) -> float:
@@ -499,7 +827,27 @@ class Input:
         return self._engine.action_down(action_name)
 
     def action_pressed(self, action_name: str) -> bool:
-        """Check whether an action was pressed this frame."""
+        """
+        Check whether an action was pressed this frame.
+
+        Actions group multiple keys/buttons into a single logical action.
+
+        Args:
+            action_name: The name of the action to check.
+
+        Returns:
+            True if any bound key/button was just pressed this frame.
+
+        Example:
+            ```python
+            # Bind multiple keys to "jump" action
+            engine.input.set_action_keys("jump", ["Space", "W"])
+
+            # Check in game loop
+            if engine.input.action_pressed("jump"):
+                player.jump()
+            ```
+        """
         return self._engine.action_pressed(action_name)
 
     def action_released(self, action_name: str) -> bool:
@@ -521,7 +869,30 @@ class Input:
         negative_keys: list[str],
         sensitivity: float = 1.0,
     ) -> None:
-        """Set keyboard keys for an axis (replaces existing keyboard keys)."""
+        """
+        Set keyboard keys for an axis (replaces existing keyboard keys).
+
+        Positive keys move the axis toward +1.0, negative keys toward -1.0.
+
+        Args:
+            name: The axis name to configure.
+            positive_keys: List of keys that push toward +1.0 (e.g., ["D", "Right"]).
+            negative_keys: List of keys that push toward -1.0 (e.g., ["A", "Left"]).
+            sensitivity: Multiplier for axis value (default: 1.0).
+
+        Example:
+            ```python
+            # Set up WASD and arrow key controls
+            engine.input.set_axis_keys("horizontal", ["D", "Right"], ["A", "Left"])
+            engine.input.set_axis_keys("vertical", ["W", "Up"], ["S", "Down"])
+
+            # Use in game loop
+            def update(ctx):
+                h = ctx.input.axis("horizontal")
+                v = ctx.input.axis("vertical")
+                player.move(h, v)
+            ```
+        """
         self._engine.set_axis_keys(name, positive_keys, negative_keys, sensitivity=sensitivity)
 
     def add_axis_positive_key(self, axis_name: str, key: str) -> None:
@@ -871,10 +1242,33 @@ class Engine:
 
     def get_handle(self) -> EngineHandle:
         """
-        Get a thread-safe handle to the engine that can be passed to background threads.
+        Get a thread-safe handle to the engine for use in background threads or callbacks.
+
+        The handle allows you to safely queue commands from any thread, which will be
+        processed on the main engine thread during the next update.
 
         Returns:
-            EngineHandle: A handle used to queue commands from other threads.
+            EngineHandle: A thread-safe handle for queuing engine commands.
+
+        Example:
+            ```python
+            import threading
+            from pyg_engine import Engine, Color
+
+            engine = Engine()
+            handle = engine.get_handle()
+
+            def background_task():
+                # Safe to call from background thread
+                red = Color(1.0, 0.0, 0.0, 1.0)
+                handle.draw_circle(400, 300, 50, red)
+                handle.log("Drawing from background thread")
+
+            thread = threading.Thread(target=background_task)
+            thread.start()
+
+            engine.run()
+            ```
         """
         return EngineHandle(self._engine.get_handle())
 
@@ -1185,8 +1579,27 @@ class Engine:
         """
         Add a `pyg_engine.GameObject` to the runtime scene.
 
+        Args:
+            game_object: The GameObject instance to add.
+
         Returns:
-            The runtime object id, or None if add failed.
+            The runtime object ID, or None if add failed.
+
+        Example:
+            ```python
+            from pyg_engine import GameObject, MeshComponent, Vec3
+
+            # Create a game object with a mesh
+            obj = GameObject()
+            obj.set_position(Vec3(0, 0, 0))
+            mesh = MeshComponent()
+            mesh.set_mesh("cube")
+            obj.add_component(mesh)
+
+            # Add to scene
+            obj_id = engine.add_game_object(obj)
+            print(f"Added object with ID: {obj_id}")
+            ```
         """
         return self._engine.add_game_object(game_object)
 
@@ -1250,11 +1663,51 @@ class Engine:
         return self._engine.get_camera_background_color()
 
     def world_to_screen(self, world_position: Any) -> tuple[float, float]:
-        """Convert world-space coordinates to screen-space pixel coordinates."""
+        """
+        Convert world-space coordinates to screen-space pixel coordinates.
+
+        Args:
+            world_position: A `pyg_engine.Vec3` or `pyg_engine.Vec2` in world space.
+
+        Returns:
+            A tuple (x, y) with pixel coordinates in screen space.
+
+        Example:
+            ```python
+            from pyg_engine import Vec3
+
+            # Get screen position of a world object
+            world_pos = Vec3(10.0, 5.0, 0.0)
+            screen_x, screen_y = engine.world_to_screen(world_pos)
+
+            # Draw UI element at that position
+            engine.draw_text(f"Object here!", screen_x, screen_y, color)
+            ```
+        """
         return self._engine.world_to_screen(world_position)
 
     def screen_to_world(self, screen_x: float, screen_y: float) -> Any:
-        """Convert screen-space pixel coordinates to world-space coordinates."""
+        """
+        Convert screen-space pixel coordinates to world-space coordinates.
+
+        Args:
+            screen_x: X coordinate in pixels (0 = left edge).
+            screen_y: Y coordinate in pixels (0 = top edge).
+
+        Returns:
+            A `pyg_engine.Vec3` in world space.
+
+        Example:
+            ```python
+            # Spawn object at mouse position in world space
+            mouse_x, mouse_y = engine.input.mouse_position
+            world_pos = engine.screen_to_world(mouse_x, mouse_y)
+
+            obj = GameObject()
+            obj.set_position(world_pos)
+            engine.add_game_object(obj)
+            ```
+        """
         return self._engine.screen_to_world(screen_x, screen_y)
 
     def clear_draw_commands(self) -> None:

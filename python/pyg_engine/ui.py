@@ -13,15 +13,59 @@ from .pyg_engine_native import (
 
 class Button:
     """
-    A clickable button UI element.
+    A clickable button UI element with customizable appearance and behavior.
 
-    **Example:**
+    Buttons can trigger callbacks on press or release, and optionally repeat
+    while held down. The callback can optionally receive an `EngineHandle`
+    parameter for thread-safe engine access.
+
+    **Basic Example:**
 
         ```python
+        from pyg_engine import Engine, Button
+
+        engine = Engine()
+
         def on_click():
             print("Button clicked!")
+
         button = Button("Click Me", x=100, y=50, width=120, height=40, on_click=on_click)
         engine.ui.add(button)
+
+        engine.run()
+        ```
+
+    **Advanced Example with Engine Access:**
+
+        ```python
+        # Callback with engine handle parameter
+        def on_click(engine_handle):
+            engine_handle.log("Button clicked with engine access!")
+            engine_handle.draw_circle(200, 200, 50, Color(1.0, 0.0, 0.0, 1.0))
+
+        button = Button("Action", x=100, y=100, on_click=on_click)
+        engine.ui.add(button)
+        ```
+
+    **Hold and Repeat Example:**
+
+        ```python
+        counter = [0]
+        label = Label(f"Count: {counter[0]}", x=300, y=100)
+
+        def increment():
+            counter[0] += 1
+            label.text = f"Count: {counter[0]}"
+
+        # Button repeats callback every 100ms while held
+        button = Button(
+            "Hold to Increment",
+            x=100, y=100,
+            on_click=increment,
+            repeat_interval_ms=100
+        )
+        engine.ui.add(button)
+        engine.ui.add(label)
         ```
     """
 
@@ -135,11 +179,41 @@ class Button:
         self._component.set_enabled(value)
 
     def set_position(self, x: float, y: float):
-        """Set the button position."""
+        """
+        Set the button position in screen coordinates.
+
+        Args:
+            x: X coordinate in pixels (0 = left edge).
+            y: Y coordinate in pixels (0 = top edge).
+
+        Example:
+            ```python
+            button = Button("Move Me", x=100, y=100)
+            engine.ui.add(button)
+
+            # Move button to new position
+            button.set_position(200, 150)
+            ```
+        """
         self._component.set_position(x, y)
 
     def set_size(self, width: float, height: float):
-        """Set the button size."""
+        """
+        Set the button size in pixels.
+
+        Args:
+            width: Button width in pixels.
+            height: Button height in pixels.
+
+        Example:
+            ```python
+            button = Button("Resize Me", x=100, y=100)
+            engine.ui.add(button)
+
+            # Make button larger
+            button.set_size(200, 60)
+            ```
+        """
         self._component.set_size(width, height)
 
     def set_on_click(self, callback: Optional[Callable[..., None]]):
@@ -166,7 +240,20 @@ class Button:
         Set when the button callback is triggered.
 
         Args:
-            trigger: "press" to trigger on mouse down, "release" to trigger on mouse up (default)
+            trigger: "press" to trigger on mouse down, "release" to trigger on mouse up (default).
+
+        Example:
+            ```python
+            # Fire on press for more responsive feel
+            button = Button("Quick Action", x=100, y=100)
+            button.set_trigger_on("press")
+            engine.ui.add(button)
+
+            # Standard button behavior (fire on release)
+            button2 = Button("Standard", x=100, y=150)
+            button2.set_trigger_on("release")
+            engine.ui.add(button2)
+            ```
         """
         self._component.set_trigger_on(trigger)
 
@@ -174,25 +261,67 @@ class Button:
         """
         Set the repeat interval for when the button is held down.
 
+        When set, the callback will be repeatedly called while the button is held,
+        with the specified time between each call.
+
         Args:
-            interval_ms: Interval in milliseconds between repeats, or None to disable repeating
+            interval_ms: Interval in milliseconds between repeats, or None to disable repeating.
+
+        Example:
+            ```python
+            volume = [50]
+
+            def increase_volume():
+                volume[0] = min(100, volume[0] + 1)
+                print(f"Volume: {volume[0]}")
+
+            button = Button("Volume +", x=100, y=100, on_click=increase_volume)
+            button.set_repeat_interval(100)  # Repeat every 100ms while held
+            engine.ui.add(button)
+
+            # Disable repeating
+            # button.set_repeat_interval(None)
+            ```
         """
         self._component.set_repeat_interval(interval_ms)
 
 
 class Panel:
     """
-    A rectangular panel/container UI element.
+    A rectangular panel/container UI element with customizable background and border.
 
-    **Example:**
+    Panels are useful for creating UI backgrounds, separators, and visual containers
+    for other UI elements. They support depth ordering for layering.
+
+    **Basic Example:**
 
         ```python
+        from pyg_engine import Engine, Panel
 
+        engine = Engine()
+
+        # Create a simple gray panel
         panel = Panel(x=50, y=50, width=300, height=200)
         panel.set_background_color(0.9, 0.9, 0.9, 1.0)
         panel.set_border(2, 0.5, 0.5, 0.5, 1.0)
         engine.ui.add(panel)
 
+        engine.run()
+        ```
+
+    **Layered Panels Example:**
+
+        ```python
+        # Background panel (lower depth)
+        bg_panel = Panel(x=100, y=100, width=400, height=300, depth=0)
+        bg_panel.set_background_color(0.2, 0.2, 0.2, 0.8)
+        engine.ui.add(bg_panel)
+
+        # Foreground panel (higher depth, drawn on top)
+        fg_panel = Panel(x=150, y=150, width=300, height=200, depth=1)
+        fg_panel.set_background_color(0.9, 0.9, 0.9, 1.0)
+        fg_panel.set_border(3, 0.0, 0.5, 1.0, 1.0)  # Blue border
+        engine.ui.add(fg_panel)
         ```
     """
 
@@ -237,11 +366,41 @@ class Panel:
         return engine.add_game_object(self._game_object)
 
     def set_position(self, x: float, y: float):
-        """Set the panel position."""
+        """
+        Set the panel position in screen coordinates.
+
+        Args:
+            x: X coordinate in pixels (0 = left edge).
+            y: Y coordinate in pixels (0 = top edge).
+
+        Example:
+            ```python
+            panel = Panel(x=100, y=100, width=200, height=150)
+            engine.ui.add(panel)
+
+            # Move panel to new position
+            panel.set_position(300, 200)
+            ```
+        """
         self._component.set_position(x, y)
 
     def set_size(self, width: float, height: float):
-        """Set the panel size."""
+        """
+        Set the panel size in pixels.
+
+        Args:
+            width: Panel width in pixels.
+            height: Panel height in pixels.
+
+        Example:
+            ```python
+            panel = Panel(x=100, y=100, width=200, height=150)
+            engine.ui.add(panel)
+
+            # Resize panel
+            panel.set_size(400, 300)
+            ```
+        """
         self._component.set_size(width, height)
 
     def set_background_color(self, r: float, g: float, b: float, a: float = 1.0):
@@ -249,40 +408,111 @@ class Panel:
         Set the panel background color.
 
         Args:
-            r: Red component (0-1)
-            g: Green component (0-1)
-            b: Blue component (0-1)
-            a: Alpha component (0-1)
+            r: Red component (0.0-1.0).
+            g: Green component (0.0-1.0).
+            b: Blue component (0.0-1.0).
+            a: Alpha/transparency component (0.0=transparent, 1.0=opaque).
+
+        Example:
+            ```python
+            panel = Panel(x=100, y=100, width=300, height=200)
+
+            # Semi-transparent blue background
+            panel.set_background_color(0.0, 0.5, 1.0, 0.7)
+
+            # Solid red background
+            panel.set_background_color(1.0, 0.0, 0.0, 1.0)
+
+            engine.ui.add(panel)
+            ```
         """
         self._component.set_background_color(r, g, b, a)
 
     def set_border(self, width: float, r: float, g: float, b: float, a: float = 1.0):
         """
-        Set the panel border.
+        Set the panel border width and color.
 
         Args:
-            width: Border width in pixels
-            r: Red component (0-1)
-            g: Green component (0-1)
-            b: Blue component (0-1)
-            a: Alpha component (0-1)
+            width: Border width in pixels (0 = no border).
+            r: Red component (0.0-1.0).
+            g: Green component (0.0-1.0).
+            b: Blue component (0.0-1.0).
+            a: Alpha/transparency component (0.0=transparent, 1.0=opaque).
+
+        Example:
+            ```python
+            panel = Panel(x=100, y=100, width=300, height=200)
+            panel.set_background_color(0.95, 0.95, 0.95, 1.0)
+
+            # Add a 3-pixel black border
+            panel.set_border(3, 0.0, 0.0, 0.0, 1.0)
+
+            # Add a thick red border
+            panel.set_border(5, 1.0, 0.0, 0.0, 1.0)
+
+            engine.ui.add(panel)
+            ```
         """
         self._component.set_border(width, r, g, b, a)
 
 
 class Label:
     """
-    A text label UI element.
+    A text label UI element for displaying static or dynamic text.
 
-    Example:
+    Labels support customizable font size, color, and alignment. The text
+    can be updated at runtime using the `text` property, which is useful
+    for displaying scores, status information, or other dynamic content.
+
+    **Basic Example:**
 
         ```python
+        from pyg_engine import Engine, Label
+
+        engine = Engine()
 
         label = Label("Hello World", x=100, y=100, font_size=16)
-        label.set_color(0, 0, 0, 1)
+        label.set_color(0.0, 0.0, 0.0, 1.0)  # Black text
         label.set_align("center")
         engine.ui.add(label)
 
+        engine.run()
+        ```
+
+    **Dynamic Text Example:**
+
+        ```python
+        score = [0]
+        score_label = Label(f"Score: {score[0]}", x=400, y=30, font_size=24, align="center")
+        score_label.set_color(1.0, 1.0, 1.0, 1.0)  # White text
+        engine.ui.add(score_label)
+
+        def on_click():
+            score[0] += 10
+            # Update label text dynamically
+            score_label.text = f"Score: {score[0]}"
+
+        button = Button("Add Points", x=350, y=100, on_click=on_click)
+        engine.ui.add(button)
+        ```
+
+    **Multi-Style Labels Example:**
+
+        ```python
+        # Title (large, centered)
+        title = Label("Game Title", x=400, y=50, font_size=32, align="center")
+        title.set_color(0.0, 0.5, 1.0, 1.0)  # Blue
+        engine.ui.add(title)
+
+        # Left-aligned info text
+        info = Label("Health: 100", x=20, y=20, font_size=14, align="left")
+        info.set_color(0.0, 1.0, 0.0, 1.0)  # Green
+        engine.ui.add(info)
+
+        # Right-aligned timer
+        timer = Label("Time: 0:00", x=760, y=20, font_size=14, align="right")
+        timer.set_color(1.0, 1.0, 1.0, 1.0)  # White
+        engine.ui.add(timer)
         ```
     """
 
@@ -336,23 +566,83 @@ class Label:
 
     @property
     def text(self) -> str:
-        """Get the label text."""
+        """
+        Get the current label text.
+
+        Returns:
+            The current text string displayed by the label.
+        """
         return self._component.get_text()
 
     @text.setter
     def text(self, value: str):
-        """Set the label text."""
+        """
+        Set the label text dynamically.
+
+        If the label has been added to the engine, the text is updated immediately
+        and will be reflected in the next frame.
+
+        Args:
+            value: The new text to display.
+
+        Example:
+            ```python
+            label = Label("Initial Text", x=100, y=100)
+            engine.ui.add(label)
+
+            # Update text dynamically (e.g., in a callback or update loop)
+            label.text = "Updated Text"
+            label.text = f"Score: {player_score}"
+            ```
+        """
         self._component.set_text(value)
         # Update runtime component if already added to engine
         if self._engine is not None and self._object_id is not None:
             self._engine.update_ui_label_text(self._object_id, value)
 
     def set_position(self, x: float, y: float):
-        """Set the label position."""
+        """
+        Set the label position in screen coordinates.
+
+        The position interpretation depends on the alignment:
+        - "left": x is the left edge of the text
+        - "center": x is the center of the text
+        - "right": x is the right edge of the text
+
+        Args:
+            x: X coordinate in pixels.
+            y: Y coordinate in pixels (top of the text).
+
+        Example:
+            ```python
+            label = Label("Move Me", x=100, y=100)
+            engine.ui.add(label)
+
+            # Move label to new position
+            label.set_position(300, 200)
+            ```
+        """
         self._component.set_position(x, y)
 
     def set_font_size(self, size: float):
-        """Set the label font size."""
+        """
+        Set the label font size in pixels.
+
+        Args:
+            size: Font size in pixels (e.g., 12, 16, 24, 32).
+
+        Example:
+            ```python
+            label = Label("Resize Me", x=100, y=100, font_size=14)
+            engine.ui.add(label)
+
+            # Make text larger
+            label.set_font_size(24)
+
+            # Make text smaller
+            label.set_font_size(10)
+            ```
+        """
         self._component.set_font_size(size)
 
     def set_color(self, r: float, g: float, b: float, a: float = 1.0):
@@ -360,19 +650,53 @@ class Label:
         Set the label text color.
 
         Args:
-            r: Red component (0-1)
-            g: Green component (0-1)
-            b: Blue component (0-1)
-            a: Alpha component (0-1)
+            r: Red component (0.0-1.0).
+            g: Green component (0.0-1.0).
+            b: Blue component (0.0-1.0).
+            a: Alpha/transparency component (0.0=transparent, 1.0=opaque).
+
+        Example:
+            ```python
+            label = Label("Colorful Text", x=100, y=100)
+
+            # White text
+            label.set_color(1.0, 1.0, 1.0, 1.0)
+
+            # Red text
+            label.set_color(1.0, 0.0, 0.0, 1.0)
+
+            # Semi-transparent blue text
+            label.set_color(0.0, 0.5, 1.0, 0.7)
+
+            engine.ui.add(label)
+            ```
         """
         self._component.set_color(r, g, b, a)
 
     def set_align(self, align: str):
         """
-        Set the text alignment.
+        Set the text alignment relative to the label's position.
 
         Args:
-            align: "left", "center", or "right"
+            align: Text alignment mode - "left", "center", or "right".
+
+        Example:
+            ```python
+            # Left-aligned at x=100
+            left_label = Label("Left", x=100, y=100, align="left")
+            engine.ui.add(left_label)
+
+            # Centered at x=400 (middle of 800px window)
+            center_label = Label("Center", x=400, y=150, align="center")
+            engine.ui.add(center_label)
+
+            # Right-aligned at x=700 (near right edge)
+            right_label = Label("Right", x=700, y=200, align="right")
+            engine.ui.add(right_label)
+
+            # Change alignment dynamically
+            center_label.set_align("left")
+            ```
         """
         self._component.set_align(align)
 
