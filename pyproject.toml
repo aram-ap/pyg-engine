@@ -48,3 +48,14 @@ where = ["python"]
 
 [tool.setuptools.package-data]
 pyg_engine = ["etc/*.png"]
+
+[tool.cibuildwheel]
+# Skip 32-bit musllinux because rustup doesn't support it easily
+skip = ["*-musllinux_i686"]
+
+[tool.cibuildwheel.linux]
+# Install Rust before building
+before-all = "curl -sSf https://sh.rustup.rs | sh -s -- -y"
+# Add cargo to PATH for the build step
+environment = { PATH = "$HOME/.cargo/bin:$PATH" }
+
