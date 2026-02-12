@@ -160,6 +160,13 @@ impl UIManager {
 
         crate::core::logging::log_debug(&format!("UIManager::render: Found {} UI objects to render", ui_objects.len()));
 
+        // Only track and truncate UI commands if there are actually UI objects to render
+        if ui_objects.is_empty() {
+            // No UI objects - don't set ui_cmd_start or truncate anything
+            // This preserves non-UI draw commands that should persist across frames
+            return;
+        }
+
         // Sort by depth (ascending, back to front)
         ui_objects.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 

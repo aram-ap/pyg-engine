@@ -481,10 +481,8 @@ impl Engine {
     /// Returns the ID of the added object, or None if the object manager is not initialized.
     pub fn add_game_object(&mut self, object: GameObject) -> Option<u32> {
         let object_type = object.get_object_type();
-        eprintln!("🔧 RUST: Adding GameObject with type: {:?}", object_type);
         if let Some(object_manager) = &mut self.object_manager {
             let object_id = object_manager.add_object(object);
-            eprintln!("✅ RUST: GameObject added with ID: {:?}", object_id);
             if object_type == ObjectType::Camera && self.active_camera_object_id.is_none() {
                 self.active_camera_object_id = object_id;
             }

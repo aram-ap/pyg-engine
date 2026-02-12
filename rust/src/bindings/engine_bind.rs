@@ -7,6 +7,8 @@ use std::sync::Arc;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
 
+use crate::core::logging;
+
 use crate::core::command::EngineCommand;
 use crate::core::component::{ComponentTrait, MeshComponent, MeshGeometry, TransformComponent};
 use crate::core::draw_manager::DrawCommand;
@@ -2118,7 +2120,11 @@ impl PyButtonComponent {
                     Ok(_) => {},
                     Err(e) => {
                         e.print(py);
-                        eprintln!("Error calling button callback: {:?}", e);
+
+                        logging::log_error(&format!(
+                                "Error calling button callback: {:?}",
+                                e
+                        ));
                     }
                 }
             });
@@ -2135,7 +2141,10 @@ impl PyButtonComponent {
             "press" | "down" => ButtonTrigger::Press,
             "release" | "up" | "click" => ButtonTrigger::Release,
             _ => {
-                eprintln!("Warning: Invalid trigger_on value '{}'. Use 'press' or 'release'. Defaulting to 'release'.", trigger_on);
+                logging::log_warn(&format!(
+                    "Warning: Invalid trigger_on value '{}'. Use 'press' or 'release'. Defaulting to 'release'.",
+                    trigger_on
+                ));
                 ButtonTrigger::Release
             }
         };
