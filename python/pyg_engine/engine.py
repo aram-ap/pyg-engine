@@ -84,19 +84,87 @@ class EngineHandle:
         self._inner.remove_game_object(object_id)
 
     def set_game_object_position(self, object_id: int, position: Any) -> None:
-        """Update a runtime GameObject position by id via command queue."""
+        """
+        Update a runtime GameObject position by ID via command queue.
+
+        This is thread-safe and the update will be processed on the next engine update.
+
+        Args:
+            object_id: The ID of the GameObject to update.
+            position: A `pyg_engine.Vec2` or `pyg_engine.Vec3` for the new position.
+
+        Example:
+            ```python
+            from pyg_engine import Vec2
+
+            handle = engine.get_handle()
+            new_pos = Vec2(100.0, 200.0)
+            handle.set_game_object_position(player_id, new_pos)
+            ```
+        """
         self._inner.set_game_object_position(object_id, position)
 
     def set_camera_position(self, position: Any) -> None:
-        """Update the active camera world position via command queue."""
+        """
+        Update the active camera world position via command queue.
+
+        This is thread-safe and can be called from background threads.
+
+        Args:
+            position: A `pyg_engine.Vec2` or `pyg_engine.Vec3` in world space.
+
+        Example:
+            ```python
+            from pyg_engine import Vec2
+
+            handle = engine.get_handle()
+            # Center camera on player
+            handle.set_camera_position(Vec2(player_x, player_y))
+            ```
+        """
         self._inner.set_camera_position(position)
 
     def set_camera_viewport_size(self, width: float, height: float) -> None:
-        """Update the active camera viewport size in world units via command queue."""
+        """
+        Update the active camera viewport size in world units via command queue.
+
+        This is thread-safe and can be called from background threads.
+        The viewport size defines how many world units are visible on screen.
+
+        Args:
+            width: Viewport width in world units.
+            height: Viewport height in world units.
+
+        Example:
+            ```python
+            handle = engine.get_handle()
+            # Show 20 world units wide, 15 units tall
+            handle.set_camera_viewport_size(20.0, 15.0)
+            ```
+        """
         self._inner.set_camera_viewport_size(width, height)
 
     def set_camera_aspect_mode(self, mode: str) -> None:
-        """Update camera aspect handling mode via command queue."""
+        """
+        Update camera aspect handling mode via command queue.
+
+        This is thread-safe and can be called from background threads.
+
+        Args:
+            mode: Aspect mode string. Options:
+                - "stretch": Stretch to fill window (may distort)
+                - "match_horizontal": Match width, adjust height
+                - "match_vertical": Match height, adjust width
+                - "fit_both": Fit entire viewport with letterboxing
+                - "fill_both": Fill window, may crop viewport
+
+        Example:
+            ```python
+            handle = engine.get_handle()
+            # Keep consistent horizontal view
+            handle.set_camera_aspect_mode("match_horizontal")
+            ```
+        """
         self._inner.set_camera_aspect_mode(mode)
 
     def set_camera_background_color(self, color: Any) -> None:
@@ -456,8 +524,48 @@ class EngineHandle:
         """
         Draw text via command queue.
 
-        By default, this uses the engine's built-in open-source font.
+        This is thread-safe and can be called from background threads.
+        By default, uses the engine's built-in open-source font.
         Provide `font_path` to use a custom TTF/OTF font file.
+
+        Args:
+            text: The text string to display.
+            x: Left edge X coordinate in pixels.
+            y: Top edge Y coordinate in pixels.
+            color: A `pyg_engine.Color` instance.
+            font_size: Font size in points (default: 24.0).
+            font_path: Optional path to custom TTF/OTF font file.
+            letter_spacing: Extra spacing between characters in pixels (default: 0.0).
+            line_spacing: Extra spacing between lines in pixels for multi-line text (default: 0.0).
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            handle = engine.get_handle()
+            white = Color.WHITE
+
+            # Simple text with default font
+            handle.draw_text("Score: 100", 10, 10, white, font_size=18)
+
+            # Custom font with spacing
+            handle.draw_text(
+                "Game Title",
+                400, 50, white,
+                font_size=48,
+                font_path="assets/fonts/title.ttf",
+                letter_spacing=2.0
+            )
+
+            # Multi-line text
+            handle.draw_text(
+                "Line 1\\nLine 2\\nLine 3",
+                100, 100, white,
+                font_size=16,
+                line_spacing=5.0
+            )
+            ```
         """
         self._inner.draw_text(
             text,
@@ -749,15 +857,73 @@ class Input:
         return self._engine.key_released(key)
 
     def mouse_button_down(self, button: MouseButton) -> bool:
-        """Check if a mouse button is currently held down."""
+        """
+        Check if a mouse button is currently held down.
+
+        This returns True for every frame while the button is pressed.
+
+        Args:
+            button: The mouse button to check (MouseButton.Left, MouseButton.Right, or MouseButton.Middle).
+
+        Returns:
+            True if the button is currently pressed, False otherwise.
+
+        Example:
+            ```python
+            from pyg_engine import MouseButton
+
+            # Continuous action while button is held
+            if engine.input.mouse_button_down(MouseButton.Left):
+                player.fire_continuously()
+            ```
+        """
         return self._engine.mouse_button_down(button)
 
     def mouse_button_pressed(self, button: MouseButton) -> bool:
-        """Check if a mouse button was pressed this frame."""
+        """
+        Check if a mouse button was pressed this frame.
+
+        This returns True only on the frame when the button is first pressed down.
+
+        Args:
+            button: The mouse button to check (MouseButton.Left, MouseButton.Right, or MouseButton.Middle).
+
+        Returns:
+            True if the button was just pressed this frame, False otherwise.
+
+        Example:
+            ```python
+            from pyg_engine import MouseButton
+
+            # Single action on button press
+            if engine.input.mouse_button_pressed(MouseButton.Left):
+                x, y = engine.input.mouse_position
+                player.shoot_at(x, y)
+            ```
+        """
         return self._engine.mouse_button_pressed(button)
 
     def mouse_button_released(self, button: MouseButton) -> bool:
-        """Check if a mouse button was released this frame."""
+        """
+        Check if a mouse button was released this frame.
+
+        This returns True only on the frame when the button is released.
+
+        Args:
+            button: The mouse button to check (MouseButton.Left, MouseButton.Right, or MouseButton.Middle).
+
+        Returns:
+            True if the button was just released this frame, False otherwise.
+
+        Example:
+            ```python
+            from pyg_engine import MouseButton
+
+            # Detect when player stops dragging
+            if engine.input.mouse_button_released(MouseButton.Left):
+                player.finish_drag()
+            ```
+        """
         return self._engine.mouse_button_released(button)
 
     @property
@@ -782,12 +948,52 @@ class Input:
 
     @property
     def mouse_delta(self) -> tuple[float, float]:
-        """Get the mouse movement delta for this frame."""
+        """
+        Get the mouse movement delta for this frame in pixels.
+
+        Returns the distance the mouse moved since the last frame.
+        Useful for camera controls, drag operations, or cursor-relative input.
+
+        Returns:
+            A tuple (delta_x, delta_y) where positive values mean:
+            - delta_x > 0: Mouse moved right
+            - delta_y > 0: Mouse moved down
+
+        Example:
+            ```python
+            # Camera look control
+            dx, dy = engine.input.mouse_delta
+            camera_yaw += dx * sensitivity
+            camera_pitch -= dy * sensitivity  # Invert Y for natural feel
+            ```
+        """
         return self._engine.mouse_delta()
 
     @property
     def mouse_wheel(self) -> tuple[float, float]:
-        """Get the mouse wheel delta accumulated this frame."""
+        """
+        Get the mouse wheel scroll delta accumulated this frame.
+
+        Returns scroll amount in both horizontal and vertical directions.
+        Most mice only have vertical scroll (Y axis).
+
+        Returns:
+            A tuple (scroll_x, scroll_y) where:
+            - scroll_y > 0: Scrolled up/away from user
+            - scroll_y < 0: Scrolled down/toward user
+            - scroll_x: Horizontal scroll (rare, usually 0)
+
+        Example:
+            ```python
+            # Zoom control
+            _, scroll_y = engine.input.mouse_wheel
+            camera_zoom += scroll_y * zoom_speed
+
+            # UI scrolling
+            if scroll_y != 0:
+                scroll_offset += scroll_y * 20  # 20 pixels per scroll tick
+            ```
+        """
         return self._engine.mouse_wheel()
 
     def axis(self, name: str) -> float:
@@ -815,7 +1021,30 @@ class Input:
         return self._engine.axis(name)
 
     def axis_previous(self, name: str) -> float:
-        """Get the previous frame's value of a logical axis."""
+        """
+        Get the previous frame's value of a logical axis.
+
+        Useful for detecting axis changes or calculating input acceleration.
+
+        Args:
+            name: The axis name to query.
+
+        Returns:
+            The axis value from the previous frame (-1.0 to 1.0).
+
+        Example:
+            ```python
+            # Detect when axis input changes
+            current = engine.input.axis("horizontal")
+            previous = engine.input.axis_previous("horizontal")
+
+            if current != 0 and previous == 0:
+                print("Started moving horizontally")
+
+            # Calculate input acceleration
+            acceleration = current - previous
+            ```
+        """
         return self._engine.axis_previous(name)
 
     def axis_names(self) -> list[str]:
@@ -823,7 +1052,27 @@ class Input:
         return self._engine.axis_names()
 
     def action_down(self, action_name: str) -> bool:
-        """Check whether an action is currently active (held)."""
+        """
+        Check whether an action is currently active (held down).
+
+        Returns True for every frame while any bound key/button for this action is held.
+
+        Args:
+            action_name: The name of the action to check.
+
+        Returns:
+            True if any bound key/button is currently pressed, False otherwise.
+
+        Example:
+            ```python
+            # Bind multiple keys to "fire" action
+            engine.input.set_action_keys("fire", ["Space", "LCtrl"])
+
+            # Check if any fire key is held
+            if engine.input.action_down("fire"):
+                weapon.charge_power += dt * charge_rate
+            ```
+        """
         return self._engine.action_down(action_name)
 
     def action_pressed(self, action_name: str) -> bool:
@@ -964,6 +1213,45 @@ class UpdateContext:
     Mutable frame context passed to function-based engine update callbacks.
 
     This object is reused each frame to keep callback overhead low.
+    It provides access to engine systems, timing information, and user data.
+
+    Attributes:
+        engine: The Engine instance for this frame.
+        input: The Input manager (alias for engine.input).
+        delta_time: Time since last frame in seconds (clamped by max_delta_time).
+        elapsed_time: Total time since engine started in seconds.
+        frame: Current frame number (starts at 0).
+        user_data: Arbitrary user data passed to Engine.run().
+
+    Callback Signature Examples:
+        ```python
+        # No arguments - callback takes nothing
+        def update():
+            print("Frame updated")
+
+        # Single argument - receives UpdateContext
+        def update(ctx):
+            print(f"Frame {ctx.frame}, dt={ctx.delta_time}")
+
+        # Named arguments - auto-injected by name
+        def update(dt, engine):
+            player.move(dt)
+            engine.log("Moved player")
+
+        # All supported argument names:
+        def update(ctx, context, engine, input, dt, delta_time,
+                   elapsed, elapsed_time, frame, user_data):
+            pass  # Use any subset of these names
+
+        # Stopping the loop
+        def update(ctx):
+            if ctx.input.key_pressed("Escape"):
+                ctx.stop()  # Request exit after this frame
+        ```
+
+    See Also:
+        - `Engine.run()` - Pass update callbacks here
+        - `examples/python_function_update_demo.py` - Complete examples
     """
 
     __slots__ = (
@@ -1021,12 +1309,38 @@ def _compile_update_callback(update_callback: Callable[..., object]) -> _Callbac
     """
     Compile callback argument injection once for low per-frame overhead.
 
-    Supported styles:
-    - `def update(): ...`
-    - `def update(dt): ...`
-    - `def update(delta_time, engine): ...`
-    - `def update(context): ...`
-    - `def update(any_name): ...`  # single unknown arg receives UpdateContext
+    This function inspects the callback signature once at startup and generates
+    an optimized invoker that provides the requested arguments each frame.
+    This avoids reflection overhead on every frame.
+
+    Optimization strategy:
+    - Fast path: Positional-only arguments (no dict allocation)
+    - Slow path: Keyword-only arguments (requires dict)
+    - Special case: Single unknown argument receives full UpdateContext
+
+    Supported callback styles:
+    - `def update(): ...`  # No arguments
+    - `def update(dt): ...`  # Delta time only
+    - `def update(delta_time, engine): ...`  # Multiple named args
+    - `def update(context): ...`  # Full context object
+    - `def update(any_name): ...`  # Single unknown arg gets UpdateContext
+    - `def update(ctx, *, dt): ...`  # Mixed positional and keyword-only
+
+    Supported argument names (case-sensitive):
+    - ctx, context: Full UpdateContext object
+    - engine: Engine instance
+    - input: Input manager
+    - dt, delta_time: Frame delta time
+    - elapsed, elapsed_time: Total elapsed time
+    - frame: Frame number
+    - user_data: User-provided data
+
+    Returns:
+        A compiled invoker function that takes UpdateContext and calls the callback
+        with the appropriate arguments extracted from it.
+
+    Raises:
+        TypeError: If callback has unsupported required parameters.
     """
     if not callable(update_callback):
         raise TypeError("update_callback must be callable")
@@ -1631,27 +1945,125 @@ class Engine:
         return self._engine.camera_object_id()
 
     def get_camera_position(self) -> Any:
-        """Get the active camera world position."""
+        """
+        Get the active camera world position.
+
+        Returns:
+            A `pyg_engine.Vec2` or `pyg_engine.Vec3` representing the camera position in world space.
+
+        Example:
+            ```python
+            cam_pos = engine.get_camera_position()
+            print(f"Camera at: {cam_pos.x}, {cam_pos.y}")
+            ```
+        """
         return self._engine.get_camera_position()
 
     def set_camera_position(self, position: Any) -> bool:
-        """Set the active camera world position."""
+        """
+        Set the active camera world position.
+
+        Args:
+            position: A `pyg_engine.Vec2` or `pyg_engine.Vec3` in world space.
+
+        Returns:
+            True if successful, False otherwise.
+
+        Example:
+            ```python
+            from pyg_engine import Vec2
+
+            # Follow player position
+            player_pos = Vec2(player_x, player_y)
+            engine.set_camera_position(player_pos)
+            ```
+        """
         return self._engine.set_camera_position(position)
 
     def get_camera_viewport_size(self) -> tuple[float, float]:
-        """Get the active camera viewport size in world units."""
+        """
+        Get the active camera viewport size in world units.
+
+        Returns:
+            A tuple (width, height) in world units.
+
+        Example:
+            ```python
+            width, height = engine.get_camera_viewport_size()
+            print(f"Viewing {width}x{height} world units")
+            ```
+        """
         return self._engine.get_camera_viewport_size()
 
     def set_camera_viewport_size(self, width: float, height: float) -> bool:
-        """Set the active camera viewport size in world units."""
+        """
+        Set the active camera viewport size in world units.
+
+        The viewport size determines how many world units are visible on screen.
+        Smaller values = more zoomed in, larger values = more zoomed out.
+
+        Args:
+            width: Viewport width in world units.
+            height: Viewport height in world units.
+
+        Returns:
+            True if successful, False otherwise.
+
+        Example:
+            ```python
+            # Show 20x15 world units (zoomed in)
+            engine.set_camera_viewport_size(20.0, 15.0)
+
+            # Show 100x75 world units (zoomed out)
+            engine.set_camera_viewport_size(100.0, 75.0)
+            ```
+        """
         return self._engine.set_camera_viewport_size(width, height)
 
     def get_camera_aspect_mode(self) -> str:
-        """Get the camera aspect handling mode."""
+        """
+        Get the camera aspect handling mode.
+
+        Returns:
+            The current aspect mode string ("stretch", "match_horizontal", etc.).
+
+        Example:
+            ```python
+            mode = engine.get_camera_aspect_mode()
+            print(f"Aspect mode: {mode}")
+            ```
+        """
         return self._engine.get_camera_aspect_mode()
 
     def set_camera_aspect_mode(self, mode: str) -> bool:
-        """Set the camera aspect handling mode."""
+        """
+        Set the camera aspect handling mode.
+
+        Controls how the viewport adapts when the window is resized.
+
+        Args:
+            mode: Aspect mode string. Options:
+                - **"stretch"**: Stretch viewport to fill window (may distort)
+                - **"match_horizontal"**: Keep horizontal view constant, adjust vertical
+                - **"match_vertical"**: Keep vertical view constant, adjust horizontal
+                - **"fit_both"**: Fit entire viewport with letterboxing/pillarboxing
+                - **"fill_both"**: Fill window completely, may crop viewport edges
+
+        Returns:
+            True if successful, False if mode is invalid.
+
+        Example:
+            ```python
+            # Keep consistent horizontal field of view (common for platformers)
+            engine.set_camera_aspect_mode("match_horizontal")
+
+            # Keep consistent vertical field of view (common for top-down)
+            engine.set_camera_aspect_mode("match_vertical")
+
+            # Prevent distortion with letterboxing
+            engine.set_camera_aspect_mode("fit_both")
+            ```
+        """
         return self._engine.set_camera_aspect_mode(mode)
 
     def set_camera_background_color(self, color: Any) -> None:
@@ -1725,7 +2137,23 @@ class Engine:
         color: Any,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a pixel in window coordinates."""
+        """
+        Draw a single pixel in window coordinates.
+
+        Args:
+            x: X coordinate in pixels (0 = left edge).
+            y: Y coordinate in pixels (0 = top edge).
+            color: A `pyg_engine.Color` instance.
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            white = Color.WHITE
+            engine.draw_pixel(100, 100, white, draw_order=5.0)
+            ```
+        """
         self._engine.draw_pixel(x, y, color, draw_order=draw_order)
 
     def draw_line(
@@ -1738,7 +2166,27 @@ class Engine:
         thickness: float = 1.0,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a line in window coordinates."""
+        """
+        Draw a line in window coordinates.
+
+        Args:
+            start_x: Starting X coordinate in pixels.
+            start_y: Starting Y coordinate in pixels.
+            end_x: Ending X coordinate in pixels.
+            end_y: Ending Y coordinate in pixels.
+            color: A `pyg_engine.Color` instance.
+            thickness: Line width in pixels (default: 1.0).
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            white = Color.WHITE
+            # Draw diagonal line
+            engine.draw_line(0, 0, 800, 600, white, thickness=2.0)
+            ```
+        """
         self._engine.draw_line(
             start_x,
             start_y,
@@ -1760,7 +2208,31 @@ class Engine:
         thickness: float = 1.0,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a rectangle in window coordinates."""
+        """
+        Draw a rectangle in window coordinates.
+
+        Args:
+            x: Top-left X coordinate in pixels.
+            y: Top-left Y coordinate in pixels.
+            width: Rectangle width in pixels.
+            height: Rectangle height in pixels.
+            color: A `pyg_engine.Color` instance.
+            filled: If True, draws filled; if False, draws outline (default: True).
+            thickness: Border thickness when filled=False (default: 1.0).
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            blue = Color.BLUE
+            # Filled rectangle
+            engine.draw_rectangle(100, 100, 200, 150, blue)
+
+            # Outline only
+            engine.draw_rectangle(350, 100, 200, 150, blue, filled=False, thickness=3.0)
+            ```
+        """
         self._engine.draw_rectangle(
             x,
             y,
@@ -1783,7 +2255,31 @@ class Engine:
         segments: int = 32,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a circle in window coordinates."""
+        """
+        Draw a circle in window coordinates.
+
+        Args:
+            center_x: Center X coordinate in pixels.
+            center_y: Center Y coordinate in pixels.
+            radius: Circle radius in pixels.
+            color: A `pyg_engine.Color` instance.
+            filled: If True, draws filled; if False, draws outline (default: True).
+            thickness: Border thickness when filled=False (default: 1.0).
+            segments: Number of line segments for smoothness (default: 32).
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            green = Color.GREEN
+            # Filled circle
+            engine.draw_circle(400, 300, 50, green)
+
+            # Smooth outline with more segments
+            engine.draw_circle(500, 300, 50, green, filled=False, thickness=2.0, segments=64)
+            ```
+        """
         self._engine.draw_circle(
             center_x,
             center_y,
@@ -1807,7 +2303,33 @@ class Engine:
         top_right: Any,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw a gradient rectangle with per-corner colors."""
+        """
+        Draw a gradient rectangle with per-corner colors.
+
+        Args:
+            x: Top-left X coordinate in pixels.
+            y: Top-left Y coordinate in pixels.
+            width: Rectangle width in pixels.
+            height: Rectangle height in pixels.
+            top_left: `pyg_engine.Color` for top-left corner.
+            bottom_left: `pyg_engine.Color` for bottom-left corner.
+            bottom_right: `pyg_engine.Color` for bottom-right corner.
+            top_right: `pyg_engine.Color` for top-right corner.
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            from pyg_engine import Color
+
+            red = Color.RED
+            blue = Color.BLUE
+            green = Color.GREEN
+            yellow = Color.YELLOW
+
+            # Gradient with different colors at each corner
+            engine.draw_gradient_rect(100, 100, 300, 200, red, blue, green, yellow)
+            ```
+        """
         self._engine.draw_gradient_rect(
             x,
             y,
@@ -1829,7 +2351,28 @@ class Engine:
         texture_path: str,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw an image from a file path."""
+        """
+        Draw an image from a file path.
+
+        The image is cached internally, so repeated calls are efficient.
+
+        Args:
+            x: Top-left X coordinate in pixels.
+            y: Top-left Y coordinate in pixels.
+            width: Display width in pixels.
+            height: Display height in pixels.
+            texture_path: File path to image (PNG, JPG, etc.).
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            # Draw sprite
+            engine.draw_image(100, 100, 64, 64, "assets/player.png")
+
+            # Draw background
+            engine.draw_image(0, 0, 1280, 720, "assets/bg.jpg", draw_order=-1.0)
+            ```
+        """
         self._engine.draw_image(
             x,
             y,
@@ -1851,7 +2394,37 @@ class Engine:
         texture_height: int,
         draw_order: float = 0.0,
     ) -> None:
-        """Draw an image from raw RGBA bytes."""
+        """
+        Draw an image from raw RGBA bytes.
+
+        Useful for procedurally generated textures or in-memory image data.
+
+        Args:
+            x: Top-left X coordinate in pixels.
+            y: Top-left Y coordinate in pixels.
+            width: Display width in pixels.
+            height: Display height in pixels.
+            texture_key: Unique identifier for caching this texture.
+            rgba: Raw RGBA bytes (4 bytes per pixel: R, G, B, A).
+            texture_width: Width of source texture in pixels.
+            texture_height: Height of source texture in pixels.
+            draw_order: Rendering order (higher values drawn on top).
+
+        Example:
+            ```python
+            # Create 2x2 checkerboard pattern
+            width, height = 2, 2
+            pixels = bytes([
+                255, 0, 0, 255,    # Red
+                0, 255, 0, 255,    # Green
+                0, 0, 255, 255,    # Blue
+                255, 255, 0, 255   # Yellow
+            ])
+
+            # Draw scaled up to 100x100
+            engine.draw_image_from_bytes(100, 100, 100, 100, "checkerboard", pixels, width, height)
+            ```
+        """
         self._engine.draw_image_from_bytes(
             x,
             y,

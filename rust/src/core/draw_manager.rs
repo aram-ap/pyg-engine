@@ -1,14 +1,138 @@
+//! Immediate-mode drawing API for 2D graphics.
+//!
+//! The draw manager accumulates draw commands each frame which are then batched
+//! and rendered by the render manager. All drawing uses screen-space pixel coordinates
+//! with origin at top-left (0, 0).
+//!
+//! # Coordinate System
+//!
+//! **Screen-space coordinates:**
+//! - Origin: Top-left corner (0, 0)
+//! - X-axis: Increases to the right
+//! - Y-axis: Increases downward
+//! - Units: Pixels
+//!
+//! # Draw Order (Z-Index)
+//!
+//! All draw commands include a `draw_order` field that controls rendering order:
+//! - Higher values render **on top** (closer to camera)
+//! - Lower values render **behind** (further from camera)
+//! - Default: 0.0
+//! - Typical ranges:
+//!   - Background: -10.0 to 0.0
+//!   - Game objects: 0.0 to 5.0
+//!   - UI elements: 10.0 to 20.0
+//!
+//! # Usage Patterns
+//!
+//! ## Direct Drawing (via Engine)
+//! ```rust
+//! # use pyg_engine::Engine;
+//! # use pyg_engine::Color;
+//! # let mut engine = Engine::new();
+//! engine.draw_line(0.0, 0.0, 100.0, 100.0, 2.0, Color::WHITE, 0.0);
+//! engine.draw_circle(50.0, 50.0, 25.0, Color::RED, true, 1.0, 32, 0.0);
+//! ```
+//!
+//! ## Bulk Drawing (DrawCommand API)
+//! ```rust
+//! # use pyg_engine::DrawCommand;
+//! # use pyg_engine::Color;
+//! let commands = vec![
+//!     DrawCommand::Rectangle {
+//!         x: 10.0, y: 10.0, width: 80.0, height: 80.0,
+//!         color: Color::BLUE, filled: true, thickness: 1.0, draw_order: 1.0,
+//!     },
+//!     DrawCommand::Circle {
+//!         center_x: 50.0, center_y: 50.0, radius: 20.0,
+//!         color: Color::RED, filled: true, thickness: 1.0, segments: 32, draw_order: 2.0,
+//!     },
+//! ];
+//! // Submit to draw manager
+//! ```
+//!
+//! # See Also
+//! - Python examples: `examples/python_direct_draw_demo.py`, `examples/python_bulk_draw_demo.py`
+//! - [`RenderManager`](crate::core::render_manager::RenderManager) - Processes draw commands
+
 use crate::types::Color;
 use std::sync::Arc;
 
+/// Immediate-mode draw command for 2D rendering.
+///
+/// `DrawCommand` variants represent individual drawing operations that can be
+/// submitted to the engine for rendering. All coordinates are in screen-space
+/// pixels with origin at top-left (0, 0).
+///
+/// # Draw Order
+///
+/// All variants include a `draw_order` field that controls rendering order:
+/// - **Higher values** render **on top** (z-index behavior)
+/// - **Lower values** render **behind**
+///
+/// # Variants
+///
+/// - [`Pixel`](DrawCommand::Pixel) - Single pixel
+/// - [`Line`](DrawCommand::Line) - Line segment with thickness
+/// - [`Rectangle`](DrawCommand::Rectangle) - Filled or outlined rectangle
+/// - [`Circle`](DrawCommand::Circle) - Filled or outlined circle with configurable segments
+/// - [`GradientRect`](DrawCommand::GradientRect) - Rectangle with gradient between corners
+/// - [`Image`](DrawCommand::Image) - Image loaded from file path
+/// - [`ImageBytes`](DrawCommand::ImageBytes) - Image from raw RGBA pixel data
+/// - [`Text`](DrawCommand::Text) - Text rendered with TrueType font
+///
+/// # Examples
+///
+/// ```rust
+/// use pyg_engine::DrawCommand;
+/// use pyg_engine::Color;
+///
+/// // Draw a line
+/// let line = DrawCommand::Line {
+///     start_x: 0.0,
+///     start_y: 0.0,
+///     end_x: 100.0,
+///     end_y: 100.0,
+///     thickness: 2.0,
+///     color: Color::WHITE,
+///     draw_order: 5.0,
+/// };
+///
+/// // Draw a filled circle
+/// let circle = DrawCommand::Circle {
+///     center_x: 50.0,
+///     center_y: 50.0,
+///     radius: 25.0,
+///     color: Color::RED,
+///     filled: true,
+///     thickness: 1.0,
+///     segments: 32,
+///     draw_order: 10.0,
+/// };
+/// ```
 #[derive(Clone, Debug)]
 pub enum DrawCommand {
+    /// Draw a single pixel at the specified position.
+    ///
+    /// # Fields
+    /// - `x`, `y`: Screen coordinates in pixels
+    /// - `color`: Pixel color
+    /// - `draw_order`: Rendering layer (higher = on top)
     Pixel {
         x: f32,
         y: f32,
         color: Color,
         draw_order: f32,
     },
+
+    /// Draw a line segment between two points.
+    ///
+    /// # Fields
+    /// - `start_x`, `start_y`: Line start point in screen pixels
+    /// - `end_x`, `end_y`: Line end point in screen pixels
+    /// - `thickness`: Line width in pixels
+    /// - `color`: Line color
+    /// - `draw_order`: Rendering layer (higher = on top)
     Line {
         start_x: f32,
         start_y: f32,
@@ -18,6 +142,18 @@ pub enum DrawCommand {
         color: Color,
         draw_order: f32,
     },
+
+    /// Draw a rectangle at the specified position.
+    ///
+    /// Position (x, y) represents the **top-left corner**.
+    ///
+    /// # Fields
+    /// - `x`, `y`: Top-left corner position in screen pixels
+    /// - `width`, `height`: Rectangle dimensions in pixels
+    /// - `color`: Rectangle color
+    /// - `filled`: If `true`, fills rectangle; if `false`, draws outline only
+    /// - `thickness`: Outline width in pixels (only used when `filled = false`)
+    /// - `draw_order`: Rendering layer (higher = on top)
     Rectangle {
         x: f32,
         y: f32,
@@ -28,6 +164,17 @@ pub enum DrawCommand {
         thickness: f32,
         draw_order: f32,
     },
+
+    /// Draw a circle at the specified center position.
+    ///
+    /// # Fields
+    /// - `center_x`, `center_y`: Circle center position in screen pixels
+    /// - `radius`: Circle radius in pixels
+    /// - `color`: Circle color
+    /// - `filled`: If `true`, fills circle; if `false`, draws outline only
+    /// - `thickness`: Outline width in pixels (only used when `filled = false`)
+    /// - `segments`: Number of segments for circle approximation (higher = smoother, default: 32)
+    /// - `draw_order`: Rendering layer (higher = on top)
     Circle {
         center_x: f32,
         center_y: f32,
@@ -38,6 +185,17 @@ pub enum DrawCommand {
         segments: u32,
         draw_order: f32,
     },
+
+    /// Draw a rectangle with gradient colors at each corner.
+    ///
+    /// Creates smooth color interpolation between the four corners using
+    /// bilinear interpolation.
+    ///
+    /// # Fields
+    /// - `x`, `y`: Top-left corner position in screen pixels
+    /// - `width`, `height`: Rectangle dimensions in pixels
+    /// - `top_left`, `bottom_left`, `bottom_right`, `top_right`: Colors at each corner
+    /// - `draw_order`: Rendering layer (higher = on top)
     GradientRect {
         x: f32,
         y: f32,
@@ -49,6 +207,17 @@ pub enum DrawCommand {
         top_right: Color,
         draw_order: f32,
     },
+
+    /// Draw an image loaded from a file path.
+    ///
+    /// Loads and renders an image file at the specified position. Images are
+    /// automatically cached by path for performance.
+    ///
+    /// # Fields
+    /// - `x`, `y`: Top-left corner position in screen pixels
+    /// - `width`, `height`: Display dimensions in pixels (may scale image)
+    /// - `texture_path`: File path to image (PNG, JPEG, BMP, etc.)
+    /// - `draw_order`: Rendering layer (higher = on top)
     Image {
         x: f32,
         y: f32,
@@ -57,6 +226,22 @@ pub enum DrawCommand {
         texture_path: String,
         draw_order: f32,
     },
+
+    /// Draw an image from raw RGBA pixel data.
+    ///
+    /// Creates a texture from a byte array of RGBA pixel data. Useful for
+    /// procedurally generated textures or video frames.
+    ///
+    /// # Fields
+    /// - `x`, `y`: Top-left corner position in screen pixels
+    /// - `width`, `height`: Display dimensions in pixels (may scale from texture size)
+    /// - `texture_key`: Unique identifier for caching (e.g., `"procedural_1"`)
+    /// - `rgba`: Byte array of RGBA pixel data (must be `texture_width × texture_height × 4` bytes)
+    /// - `texture_width`, `texture_height`: Source texture dimensions in pixels
+    /// - `draw_order`: Rendering layer (higher = on top)
+    ///
+    /// # RGBA Format
+    /// Each pixel is 4 bytes: R, G, B, A (each 0-255), in row-major order.
     ImageBytes {
         x: f32,
         y: f32,
@@ -68,6 +253,21 @@ pub enum DrawCommand {
         texture_height: u32,
         draw_order: f32,
     },
+
+    /// Draw text at the specified position.
+    ///
+    /// Renders text using a TrueType font. Position (x, y) represents the
+    /// **top-left** corner of the text's bounding box.
+    ///
+    /// # Fields
+    /// - `text`: String to render (supports newlines `\n`)
+    /// - `x`, `y`: Top-left position in screen pixels
+    /// - `font_size`: Font size in pixels
+    /// - `color`: Text color
+    /// - `font_path`: Optional path to TTF font file (uses default if `None`)
+    /// - `letter_spacing`: Extra spacing between characters in pixels
+    /// - `line_spacing`: Extra spacing between lines in pixels
+    /// - `draw_order`: Rendering layer (higher = on top)
     Text {
         text: String,
         x: f32,
@@ -81,6 +281,37 @@ pub enum DrawCommand {
     },
 }
 
+/// Manages immediate-mode draw commands for 2D rendering.
+///
+/// The `DrawManager` accumulates draw commands each frame which are then processed
+/// by the render manager. It tracks a scene version number that increments whenever
+/// the command list changes, enabling change detection for conditional rendering.
+///
+/// # Usage
+///
+/// ```rust
+/// use pyg_engine::DrawManager;
+/// use pyg_engine::DrawCommand;
+/// use pyg_engine::Color;
+///
+/// let mut draw_manager = DrawManager::new();
+///
+/// // Clear previous frame's commands
+/// draw_manager.clear();
+///
+/// // Add draw commands
+/// draw_manager.draw_line(0.0, 0.0, 100.0, 100.0, Color::WHITE);
+/// draw_manager.draw_circle(50.0, 50.0, 25.0, Color::RED);
+///
+/// // Or add commands directly
+/// draw_manager.add_command(DrawCommand::Rectangle {
+///     x: 10.0, y: 10.0, width: 80.0, height: 80.0,
+///     color: Color::BLUE, filled: true, thickness: 1.0, draw_order: 0.0,
+/// });
+///
+/// // Get commands for rendering
+/// let commands = draw_manager.commands();
+/// ```
 #[derive(Default)]
 pub struct DrawManager {
     commands: Vec<DrawCommand>,
@@ -88,6 +319,9 @@ pub struct DrawManager {
 }
 
 impl DrawManager {
+    /// Create a new empty DrawManager.
+    ///
+    /// Initializes with an empty command list and scene version 0.
     pub fn new() -> Self {
         Self {
             commands: Vec::new(),
@@ -95,6 +329,13 @@ impl DrawManager {
         }
     }
 
+    /// Clear all draw commands.
+    ///
+    /// Removes all pending draw commands and increments the scene version,
+    /// triggering a redraw if `redraw_on_change_only` is enabled.
+    ///
+    /// This is typically called at the start of each frame to clear the
+    /// previous frame's drawing operations.
     pub fn clear(&mut self) {
         if self.commands.is_empty() {
             return;
@@ -104,10 +345,21 @@ impl DrawManager {
         self.bump_scene_version();
     }
 
+    /// Get a slice of all current draw commands.
+    ///
+    /// Returns an immutable reference to the internal command list for rendering.
     pub fn commands(&self) -> &[DrawCommand] {
         &self.commands
     }
 
+    /// Get the current scene version number.
+    ///
+    /// The scene version increments whenever the command list changes. This can be
+    /// used for change detection to optimize rendering (e.g., skip rendering if
+    /// the scene hasn't changed).
+    ///
+    /// # Returns
+    /// A monotonically increasing version number (wraps on overflow)
     pub fn scene_version(&self) -> u64 {
         self.scene_version
     }
@@ -121,10 +373,23 @@ impl DrawManager {
         self.bump_scene_version();
     }
 
+    /// Add a single draw command.
+    ///
+    /// Appends the command to the internal list and increments the scene version.
+    ///
+    /// # Arguments
+    /// * `command` - The draw command to add
     pub fn add_command(&mut self, command: DrawCommand) {
         self.push_command(command);
     }
 
+    /// Add multiple draw commands in bulk.
+    ///
+    /// More efficient than calling `add_command()` repeatedly as it only
+    /// increments the scene version once.
+    ///
+    /// # Arguments
+    /// * `commands` - Vector of draw commands to add
     pub fn add_commands(&mut self, mut commands: Vec<DrawCommand>) {
         if commands.is_empty() {
             return;

@@ -9,16 +9,123 @@ use crate::types::color::Color;
 use std::any::Any;
 use std::sync::{Arc, Mutex};
 
-/// Determines when a button callback is triggered
+/// Determines when a button callback is triggered.
+///
+/// Controls whether the button's `on_click` callback fires when the mouse button
+/// goes down (Press) or up (Release). This affects the button's responsiveness
+/// and "feel" for different use cases.
+///
+/// # Variants
+///
+/// ## Release (Default)
+/// Triggers when the mouse button is **released** over the button. This is the
+/// standard behavior for UI buttons, allowing users to cancel by moving the
+/// mouse away before releasing.
+///
+/// - **Pros**: Feels like a "click", users can cancel, industry standard
+/// - **Cons**: Slightly less responsive than Press
+/// - **Use cases**: Menu buttons, confirmations, UI interactions
+///
+/// ## Press
+/// Triggers immediately when the mouse button goes **down** over the button.
+/// More responsive but doesn't allow cancellation.
+///
+/// - **Pros**: Instant feedback, more game-like
+/// - **Cons**: No way to cancel, less forgiving
+/// - **Use cases**: Game controls, rapid-fire actions, instant response needs
+///
+/// # Examples
+///
+/// ```rust
+/// use pyg_engine::ButtonComponent;
+/// use pyg_engine::ButtonTrigger;
+///
+/// // Standard click button (release)
+/// let menu_button = ButtonComponent::new("StartButton")
+///     .with_text("Start Game")
+///     .with_trigger_on(ButtonTrigger::Release);  // Default
+///
+/// // Instant response button (press)
+/// let fire_button = ButtonComponent::new("FireButton")
+///     .with_text("Fire!")
+///     .with_trigger_on(ButtonTrigger::Press);
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ButtonTrigger {
-    /// Trigger on mouse button release (click) - default behavior
+    /// Trigger on mouse button **release** (click) - default behavior.
+    ///
+    /// Standard button behavior. Callback fires when the user releases the
+    /// mouse button while over the button. Users can cancel by moving the
+    /// mouse away before releasing.
     Release,
-    /// Trigger on mouse button press (down)
+
+    /// Trigger on mouse button **press** (down).
+    ///
+    /// Immediate response. Callback fires as soon as the user presses down
+    /// on the button, with no way to cancel.
     Press,
 }
 
-/// Button UI component
+/// Button UI component for clickable buttons.
+///
+/// A clickable button with customizable appearance, text label, and callback.
+/// Supports hover states, press states, enabled/disabled states, and optional
+/// continuous firing while held.
+///
+/// # Features
+///
+/// - **Callback system**: Register functions to be called on click
+/// - **Trigger modes**: Fire on press or release
+/// - **Repeat mode**: Optionally fire continuously while held
+/// - **Visual states**: Normal, hovered, pressed, disabled
+/// - **Styling**: Customizable colors, borders, fonts
+/// - **Builder pattern**: Fluent API for construction
+///
+/// # Builder Pattern
+///
+/// ```rust
+/// use pyg_engine::ButtonComponent;
+/// use pyg_engine::ButtonTrigger;
+///
+/// let button = ButtonComponent::new("PlayButton")
+///     .with_text("Play Game")
+///     .with_bounds(100.0, 200.0, 200.0, 50.0)
+///     .with_depth(10.0)
+///     .with_trigger_on(ButtonTrigger::Release);
+///
+/// // Set callback later
+/// // button.set_on_click(|| println!("Button clicked!"));
+/// ```
+///
+/// # Callback Registration
+///
+/// ```rust
+/// use pyg_engine::ButtonComponent;
+///
+/// let mut button = ButtonComponent::new("MyButton");
+///
+/// // Register callback
+/// button.set_on_click(|| {
+///     println!("Button was clicked!");
+/// });
+/// ```
+///
+/// # Repeat Mode
+///
+/// Enable continuous firing while the button is held:
+///
+/// ```rust
+/// use pyg_engine::ButtonComponent;
+///
+/// let mut button = ButtonComponent::new("IncrementButton")
+///     .with_text("+");
+///
+/// // Fire every 100ms while held
+/// button.set_repeat_interval_ms(Some(100.0));
+/// ```
+///
+/// # See Also
+/// - Python examples: `examples/button_features_demo.py`, `examples/ui_demo.py`
 #[derive(Clone)]
 pub struct ButtonComponent {
     name: String,
@@ -49,6 +156,29 @@ impl std::fmt::Debug for ButtonComponent {
 }
 
 impl ButtonComponent {
+    /// Create a new button with the given name.
+    ///
+    /// Creates a button with default properties:
+    /// - Position: (0, 0)
+    /// - Size: 100×30 pixels
+    /// - Text: Empty
+    /// - Trigger: Release
+    /// - Enabled: true
+    /// - Depth: 0.0
+    ///
+    /// Use builder methods to customize.
+    ///
+    /// # Arguments
+    /// * `name` - Unique identifier for this button
+    ///
+    /// # Examples
+    /// ```rust
+    /// use pyg_engine::ButtonComponent;
+    ///
+    /// let button = ButtonComponent::new("PlayButton")
+    ///     .with_text("Play Game")
+    ///     .with_bounds(100.0, 200.0, 200.0, 50.0);
+    /// ```
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -68,35 +198,85 @@ impl ButtonComponent {
         }
     }
 
+    /// Set the button text (builder pattern).
+    ///
+    /// # Arguments
+    /// * `text` - Display text for the button
+    ///
+    /// # Returns
+    /// Self for method chaining
     pub fn with_text(mut self, text: impl Into<String>) -> Self {
         self.label = text.into();
         self
     }
 
+    /// Set the button position and size (builder pattern).
+    ///
+    /// # Arguments
+    /// * `x` - Left edge X coordinate in pixels
+    /// * `y` - Top edge Y coordinate in pixels
+    /// * `width` - Button width in pixels
+    /// * `height` - Button height in pixels
+    ///
+    /// # Returns
+    /// Self for method chaining
     pub fn with_bounds(mut self, x: f32, y: f32, width: f32, height: f32) -> Self {
         self.bounds = Rect::new(x, y, width, height);
         self.layout = UILayoutComponent::with_fixed_size(width, height);
         self
     }
 
+    /// Set the button style (builder pattern).
+    ///
+    /// Customize colors, borders, fonts, and other visual properties.
+    ///
+    /// # Arguments
+    /// * `style` - StyleSet defining button appearance
+    ///
+    /// # Returns
+    /// Self for method chaining
     pub fn with_style(mut self, style: StyleSet) -> Self {
         self.style = style;
         self
     }
 
+    /// Set the button depth/z-index (builder pattern).
+    ///
+    /// Controls rendering order. Higher depth values render on top.
+    ///
+    /// # Arguments
+    /// * `depth` - Depth value (higher = on top)
+    ///
+    /// # Returns
+    /// Self for method chaining
     pub fn with_depth(mut self, depth: f32) -> Self {
         self.depth = depth;
         self
     }
 
+    /// Set the button text.
+    ///
+    /// # Arguments
+    /// * `text` - New display text
     pub fn set_text(&mut self, text: impl Into<String>) {
         self.label = text.into();
     }
 
+    /// Get the current button text.
+    ///
+    /// # Returns
+    /// String slice containing the button text
     pub fn text(&self) -> &str {
         &self.label
     }
 
+    /// Enable or disable the button.
+    ///
+    /// Disabled buttons don't respond to clicks and typically display
+    /// with a "disabled" visual state.
+    ///
+    /// # Arguments
+    /// * `enabled` - `true` to enable, `false` to disable
     pub fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
         self.current_state = if enabled {
