@@ -252,6 +252,30 @@ class EngineHandle:
             draw_order=draw_order,
         )
 
+    def update_ui_label_text(self, object_id: int, text: str) -> None:
+        """
+        Update a UI label's text at runtime by object ID via command queue.
+
+        This is thread-safe and can be called from callbacks without borrow issues.
+
+        Args:
+            object_id: The GameObject ID of the label to update.
+            text: The new text for the label.
+        """
+        self._inner.update_ui_label_text(object_id, text)
+
+    def update_ui_button_text(self, object_id: int, text: str) -> None:
+        """
+        Update a UI button's text at runtime by object ID via command queue.
+
+        This is thread-safe and can be called from callbacks without borrow issues.
+
+        Args:
+            object_id: The GameObject ID of the button to update.
+            text: The new text for the button.
+        """
+        self._inner.update_ui_button_text(object_id, text)
+
 
 class Input:
     """
@@ -1242,11 +1266,31 @@ class Engine:
             draw_order=draw_order,
         )
     
+    def update_ui_label_text(self, object_id: int, text: str) -> None:
+        """
+        Update a UI label's text at runtime by object ID.
+
+        Args:
+            object_id: The GameObject ID of the label to update.
+            text: The new text for the label.
+        """
+        self._engine.update_ui_label_text(object_id, text)
+
+    def update_ui_button_text(self, object_id: int, text: str) -> None:
+        """
+        Update a UI button's text at runtime by object ID.
+
+        Args:
+            object_id: The GameObject ID of the button to update.
+            text: The new text for the button.
+        """
+        self._engine.update_ui_button_text(object_id, text)
+
     @property
     def version(self) -> str:
         """
         Get the engine version.
-        
+
         Returns:
             The version string (e.g., "1.2.0").
         """

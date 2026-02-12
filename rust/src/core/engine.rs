@@ -7,6 +7,7 @@ use super::logging;
 use super::object_manager::ObjectManager;
 use super::render_manager::{CameraAspectMode, RenderManager};
 use super::time::Time;
+use super::ui_manager::UIManager;
 use super::window_manager::{WindowConfig, WindowManager};
 use crate::types::Color;
 use crate::types::vector::Vec2;
@@ -28,6 +29,7 @@ pub struct Engine {
     pub input_manager: Option<InputManager>,
     pub draw_manager: DrawManager,
     pub time: Time,
+    pub ui_manager: Option<UIManager>,
 
     // Command Queue
     command_receiver: Receiver<EngineCommand>,
@@ -63,6 +65,7 @@ impl Engine {
             input_manager: Some(InputManager::new()),
             draw_manager: DrawManager::new(),
             time: Time::new(),
+            ui_manager: None,
             command_receiver: receiver,
             command_sender: sender,
             window_config: None,
@@ -115,6 +118,7 @@ impl Engine {
             input_manager: Some(InputManager::new()),
             draw_manager: DrawManager::new(),
             time: Time::new(),
+            ui_manager: None,
             command_receiver: receiver,
             command_sender: sender,
             window_config: None,
@@ -477,8 +481,10 @@ impl Engine {
     /// Returns the ID of the added object, or None if the object manager is not initialized.
     pub fn add_game_object(&mut self, object: GameObject) -> Option<u32> {
         let object_type = object.get_object_type();
+        eprintln!("🔧 RUST: Adding GameObject with type: {:?}", object_type);
         if let Some(object_manager) = &mut self.object_manager {
             let object_id = object_manager.add_object(object);
+            eprintln!("✅ RUST: GameObject added with ID: {:?}", object_id);
             if object_type == ObjectType::Camera && self.active_camera_object_id.is_none() {
                 self.active_camera_object_id = object_id;
             }
@@ -977,6 +983,28 @@ impl Engine {
                         draw_order,
                     );
                 }
+                EngineCommand::UpdateUILabelText { object_id, text } => {
+                    if let Some(object_manager) = &mut self.object_manager {
+                        if let Some(obj) = object_manager.get_object_by_id_mut(object_id) {
+                            if let Some(comp) = obj.get_component_by_name_mut("Label") {
+                                if let Some(label) = comp.as_any_mut().downcast_mut::<crate::core::ui::label::LabelComponent>() {
+                                    label.set_text(text);
+                                }
+                            }
+                        }
+                    }
+                }
+                EngineCommand::UpdateUIButtonText { object_id, text } => {
+                    if let Some(object_manager) = &mut self.object_manager {
+                        if let Some(obj) = object_manager.get_object_by_id_mut(object_id) {
+                            if let Some(comp) = obj.get_component_by_name_mut("Button") {
+                                if let Some(btn) = comp.as_any_mut().downcast_mut::<crate::core::ui::button::ButtonComponent>() {
+                                    btn.set_text(text);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -1010,6 +1038,11 @@ impl Engine {
         // Event System - enqueue input events
 
         // UI - input handling / hit-testing (UI gets first right of refusal)
+        if let (Some(ui_manager), Some(input_manager), Some(object_manager)) =
+            (&mut self.ui_manager, &self.input_manager, &mut self.object_manager)
+        {
+            ui_manager.update(input_manager, object_manager);
+        }
 
         // Event System - dispatch "unconsumed" gameplay input events
 
@@ -1074,6 +1107,12 @@ impl Engine {
     /// Render a frame
     pub fn render(&mut self) {
         self.ensure_active_camera_object();
+
+        // Render UI elements
+        if let (Some(ui_manager), Some(object_manager)) = (&mut self.ui_manager, &self.object_manager) {
+            ui_manager.render(&mut self.draw_manager, object_manager);
+        }
+
         if let Some(render_manager) = &mut self.render_manager {
             match render_manager.render(&self.object_manager, Some(&self.draw_manager)) {
                 Ok(_) => {
@@ -1120,6 +1159,10 @@ impl Engine {
 
         if let Some(render_manager) = &mut self.render_manager {
             render_manager.resize(physical_size);
+        }
+
+        if let Some(ui_manager) = &mut self.ui_manager {
+            ui_manager.resize(physical_size.width as f32, physical_size.height as f32);
         }
 
         if let Some(window_manager) = &self.window_manager {
@@ -1214,6 +1257,17 @@ impl ApplicationHandler for Engine {
                             Ok(render_manager) => {
                                 logging::log_info("Render manager initialized successfully");
                                 self.render_manager = Some(render_manager);
+
+                                // Initialize UI manager with window size and scale factor
+                                let window_size = window_manager.size();
+                                let scale_factor = window_manager.scale_factor() as f32;
+                                self.ui_manager = Some(UIManager::new(
+                                    window_size.width as f32,
+                                    window_size.height as f32,
+                                    scale_factor,
+                                ));
+                                logging::log_info("UI manager initialized");
+
                                 self.window_manager = Some(window_manager);
                                 self.ensure_active_camera_object();
 

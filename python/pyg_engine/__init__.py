@@ -13,6 +13,9 @@ try:
         GameObject,
         MeshComponent,
         TransformComponent,
+        ButtonComponent,
+        PanelComponent,
+        LabelComponent,
         CameraAspectMode,
         MouseButton,
         Keys,
@@ -29,6 +32,9 @@ except ImportError:
     GameObject = None  # type: ignore
     MeshComponent = None  # type: ignore
     TransformComponent = None  # type: ignore
+    ButtonComponent = None  # type: ignore
+    PanelComponent = None  # type: ignore
+    LabelComponent = None  # type: ignore
     CameraAspectMode = None  # type: ignore
     MouseButton = None  # type: ignore
     Keys = None  # type: ignore
@@ -37,6 +43,9 @@ except ImportError:
 __version__ = "1.2.0"
 __author__ = "Aram Aprahamian"
 __description__ = "A Python game engine with Rust-powered native performance"
+
+# Import UI wrappers
+from pyg_engine.ui import Button, Panel, Label
 
 __all__ = [
     "Engine",
@@ -51,6 +60,12 @@ __all__ = [
     "GameObject",
     "MeshComponent",
     "TransformComponent",
+    "ButtonComponent",
+    "PanelComponent",
+    "LabelComponent",
+    "Button",
+    "Panel",
+    "Label",
     "CameraAspectMode",
     "MouseButton",
     "Keys",

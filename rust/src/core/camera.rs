@@ -76,6 +76,3 @@ impl Camera {
         cgmath::ortho(-aspect, aspect, -1.0, 1.0, -1.0, 1.0).into()
     }
 }
-
-// Uhh gonna change this later
-fn queue_is_not_needed_here_conceptually_but_passed_later(w: u32, h: u32) {}

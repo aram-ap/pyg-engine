@@ -12,6 +12,8 @@ pub mod object_manager;
 pub mod render_manager;
 mod texture;
 pub mod time;
+pub mod ui;
+pub mod ui_manager;
 pub mod window_manager;
 
 pub use command::*;
@@ -24,4 +26,5 @@ pub use logging::*;
 pub use object_manager::*;
 pub use render_manager::*;
 pub use time::*;
+pub use ui_manager::*;
 pub use window_manager::*;

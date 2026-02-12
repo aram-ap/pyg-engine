@@ -134,6 +134,72 @@ impl DrawManager {
         self.bump_scene_version();
     }
 
+    /// Remove all draw commands from index `start` onward.
+    /// Used by UIManager to clear previous frame's UI commands before re-rendering.
+    pub fn truncate_from(&mut self, start: usize) {
+        if start < self.commands.len() {
+            self.commands.truncate(start);
+            self.bump_scene_version();
+        }
+    }
+
+    /// Scale all draw commands from index `start` onward by `scale`.
+    /// Used to convert UI coordinates from logical to physical pixels.
+    pub fn scale_commands_from(&mut self, start: usize, scale: f32) {
+        for cmd in self.commands[start..].iter_mut() {
+            match cmd {
+                DrawCommand::Rectangle { x, y, width, height, thickness, .. } => {
+                    *x *= scale;
+                    *y *= scale;
+                    *width *= scale;
+                    *height *= scale;
+                    *thickness *= scale;
+                }
+                DrawCommand::Text { x, y, font_size, .. } => {
+                    *x *= scale;
+                    *y *= scale;
+                    *font_size *= scale;
+                }
+                DrawCommand::Line { start_x, start_y, end_x, end_y, thickness, .. } => {
+                    *start_x *= scale;
+                    *start_y *= scale;
+                    *end_x *= scale;
+                    *end_y *= scale;
+                    *thickness *= scale;
+                }
+                DrawCommand::Pixel { x, y, .. } => {
+                    *x *= scale;
+                    *y *= scale;
+                }
+                DrawCommand::Circle { center_x, center_y, radius, thickness, .. } => {
+                    *center_x *= scale;
+                    *center_y *= scale;
+                    *radius *= scale;
+                    *thickness *= scale;
+                }
+                DrawCommand::GradientRect { x, y, width, height, .. } => {
+                    *x *= scale;
+                    *y *= scale;
+                    *width *= scale;
+                    *height *= scale;
+                }
+                DrawCommand::Image { x, y, width, height, .. } => {
+                    *x *= scale;
+                    *y *= scale;
+                    *width *= scale;
+                    *height *= scale;
+                }
+                DrawCommand::ImageBytes { x, y, width, height, .. } => {
+                    *x *= scale;
+                    *y *= scale;
+                    *width *= scale;
+                    *height *= scale;
+                }
+            }
+        }
+        self.bump_scene_version();
+    }
+
     pub fn draw_pixel(&mut self, x: u32, y: u32, color: Color) {
         self.draw_pixel_with_order(x, y, color, 0.0);
     }

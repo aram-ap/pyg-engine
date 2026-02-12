@@ -20,9 +20,7 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 
 ## 📚 Documentation
 
-- **[API Reference](https://aram-ap.github.io/pyg_engine/)** - Complete Python API documentation (auto-generated from docstrings)
-- **[Logging Guide](LOGGING_GUIDE.md)** - Comprehensive guide to the logging system
-- **[Examples](examples/README.md)** - Collection of example projects and demos
+- **[API Reference](https://aram-ap.github.io/pyg-engine/)** - Complete Python API documentation (auto-generated from docstrings)
 
 ## 📦 Installation
 
@@ -143,10 +141,11 @@ raises `RuntimeError`.
 - **Component System**: Basic `GameObject` with `TransformComponent` and `MeshComponent`.
 - **Input System**: Rust input manager (Keyboard, Mouse, Gamepad) to Python.
 - **Loop Control**: `run(...)` with optional callback and explicit `start_manual(...)` mode.
+- **Object Positioning System**: A straightforward method for moving and transforming your objects.
+- **Camera Controls**: Move your camera, customize backgrounds, set view area and fitment properties.
 
 ### Planned Features (Roadmap)
 - **Audio Manager**: Audio loading, playback, mixing, and timing.
-- **World-Based Camera**: A straightforward method for keeping your game objects in frame.
 - **Engine Loop (Upgrade)**: Coroutines and global event systems.
 - **Physics Engine**: 2D rigid body physics and collision detection.
 - **Scripting**: Enhanced script attachment to GameObjects with frame-lifecycle hooks.

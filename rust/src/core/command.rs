@@ -117,6 +117,12 @@ pub enum EngineCommand {
         draw_order: f32,
     },
 
+    /// Update a UI label's text by object ID
+    UpdateUILabelText { object_id: u32, text: String },
+
+    /// Update a UI button's text by object ID
+    UpdateUIButtonText { object_id: u32, text: String },
+
     /// Draw text with optional custom font (helper wrapper around AddDrawCommand)
     DrawText {
         text: String,
