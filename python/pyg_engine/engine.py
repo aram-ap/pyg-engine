@@ -30,7 +30,7 @@ DrawCommand = _RustDrawCommand
 class EngineHandle:
     """
     Thread-safe handle to the engine that can be passed to background threads.
-    
+
     Use this handle to queue commands like adding objects or drawing from other threads.
     """
     def __init__(self, inner: _RustEngineHandle) -> None:
@@ -39,7 +39,7 @@ class EngineHandle:
     def add_game_object(self, game_object: Any) -> None:
         """
         Add a `pyg_engine.GameObject` to the runtime scene.
-        
+
         This is thread-safe and will be processed on the next engine update.
         """
         self._inner.add_game_object(game_object)
@@ -339,20 +339,22 @@ class UIManager:
     It is accessed via the `engine.ui` property.
 
     Example:
-        >>> engine = Engine()
-        >>>
-        >>> # Create and add a button
-        >>> button = Button("Click Me", x=100, y=50, width=120, height=40)
-        >>> engine.ui.add(button)
-        >>>
-        >>> # Create and add a panel
-        >>> panel = Panel(x=50, y=50, width=300, height=200)
-        >>> panel.set_background_color(0.9, 0.9, 0.9, 1.0)
-        >>> engine.ui.add(panel)
-        >>>
-        >>> # Create and add a label
-        >>> label = Label("Score: 0", x=100, y=100, font_size=16)
-        >>> engine.ui.add(label)
+        ```python
+        engine = Engine()
+
+        # Create and add a button
+        button = Button("Click Me", x=100, y=50, width=120, height=40)
+        engine.ui.add(button)
+
+        # Create and add a panel
+        panel = Panel(x=50, y=50, width=300, height=200)
+        panel.set_background_color(0.9, 0.9, 0.9, 1.0)
+        engine.ui.add(panel)
+
+        # Create and add a label
+        label = Label("Score: 0", x=100, y=100, font_size=16)
+        engine.ui.add(label)
+        ```
     """
     def __init__(self, engine: "Engine") -> None:
         self._engine = engine
@@ -368,14 +370,16 @@ class UIManager:
             The runtime object ID, or None if add failed.
 
         Example:
-            >>> button = Button("Click Me", x=100, y=50)
-            >>> engine.ui.add(button)
-            >>>
-            >>> panel = Panel(x=50, y=50, width=300, height=200)
-            >>> engine.ui.add(panel)
-            >>>
-            >>> label = Label("Hello", x=100, y=100)
-            >>> engine.ui.add(label)
+        ```python
+            button = Button("Click Me", x=100, y=50)
+            engine.ui.add(button)
+
+            panel = Panel(x=50, y=50, width=300, height=200)
+            engine.ui.add(panel)
+
+            label = Label("Hello", x=100, y=100)
+            engine.ui.add(label)
+        ```
         """
         # Import here to avoid circular dependency
         from . import ui as ui_module
@@ -438,50 +442,50 @@ class Input:
     """
     def __init__(self, engine: "Engine") -> None:
         self._engine = engine._engine
-    
+
     def key_down(self, key: str) -> bool:
         """Check if a keyboard key is currently held down."""
         return self._engine.key_down(key)
-    
+
     def key_pressed(self, key: str) -> bool:
         """Check if a keyboard key was pressed this frame."""
         return self._engine.key_pressed(key)
-    
+
     def key_released(self, key: str) -> bool:
         """Check if a keyboard key was released this frame."""
         return self._engine.key_released(key)
-    
+
     def mouse_button_down(self, button: MouseButton) -> bool:
         """Check if a mouse button is currently held down."""
         return self._engine.mouse_button_down(button)
-    
+
     def mouse_button_pressed(self, button: MouseButton) -> bool:
         """Check if a mouse button was pressed this frame."""
         return self._engine.mouse_button_pressed(button)
-    
+
     def mouse_button_released(self, button: MouseButton) -> bool:
         """Check if a mouse button was released this frame."""
         return self._engine.mouse_button_released(button)
-    
+
     @property
     def mouse_position(self) -> tuple[float, float]:
         """Get the current mouse position in window coordinates."""
         return self._engine.mouse_position()
-    
+
     @property
     def mouse_delta(self) -> tuple[float, float]:
         """Get the mouse movement delta for this frame."""
         return self._engine.mouse_delta()
-    
+
     @property
     def mouse_wheel(self) -> tuple[float, float]:
         """Get the mouse wheel delta accumulated this frame."""
         return self._engine.mouse_wheel()
-    
+
     def axis(self, name: str) -> float:
         """Get the current value of a logical axis (-1.0 to 1.0)."""
         return self._engine.axis(name)
-    
+
     def axis_previous(self, name: str) -> float:
         """Get the previous frame's value of a logical axis."""
         return self._engine.axis_previous(name)
@@ -771,20 +775,24 @@ class Engine:
 
     Example:
         Basic usage with console logging:
-        >>> engine = Engine()
-        >>> engine.log_info("Engine started")
-        >>> engine.log_warn("Low memory warning")
-        >>> engine.log_error("Failed to load resource")
-        
+        ```python
+        engine = Engine()
+        engine.log_info("Engine started")
+        engine.log_warn("Low memory warning")
+        engine.log_error("Failed to load resource")
+        ```
         With file logging enabled:
-        >>> engine = Engine(
-        ...     enable_file_logging=True,
-        ...     log_directory="./logs",
-        ...     log_level="DEBUG"
-        ... )
-        >>> engine.log_debug("Debug information")
+
+        ```python
+        engine = Engine(
+            enable_file_logging=True,
+            log_directory="./logs",
+            log_level="DEBUG"
+        )
+        engine.log_debug("Debug information")
+        ```
     """
-    
+
     def __init__(
         self,
         enable_file_logging: bool = False,
@@ -793,7 +801,7 @@ class Engine:
     ) -> None:
         """
         Initialize a new Engine instance with optional logging configuration.
-        
+
         Args:
             enable_file_logging: Enable logging to files (default: False).
                 Files are rotated daily and stored in the log directory.
@@ -805,17 +813,19 @@ class Engine:
                 - "INFO": Info and higher (default)
                 - "WARN": Warnings and errors only
                 - "ERROR": Errors only
-        
+
         Example:
-            >>> # Console only with INFO level (default)
-            >>> engine = Engine()
-            
-            >>> # Enable file logging with DEBUG level
-            >>> engine = Engine(
-            ...     enable_file_logging=True,
-            ...     log_directory="./my_logs",
-            ...     log_level="DEBUG"
-            ... )
+            ```python
+            # Console only with INFO level (default)
+            engine = Engine()
+
+            # Enable file logging with DEBUG level
+            engine = Engine(
+                enable_file_logging=True,
+                log_directory="./my_logs",
+                log_level="DEBUG"
+            )
+            ```
         """
         self._engine = _RustEngine(
             enable_file_logging=enable_file_logging,
@@ -826,7 +836,7 @@ class Engine:
         self._ui = UIManager(self)
         self._runtime_state = _RUNTIME_STATE_IDLE
         self._window_icon_path: Optional[str] = None
-    
+
     @property
     def input(self) -> Input:
         """
@@ -862,77 +872,77 @@ class Engine:
     def get_handle(self) -> EngineHandle:
         """
         Get a thread-safe handle to the engine that can be passed to background threads.
-        
+
         Returns:
             EngineHandle: A handle used to queue commands from other threads.
         """
         return EngineHandle(self._engine.get_handle())
-    
+
     def log(self, message: str) -> None:
         """
         Log a message at INFO level (default log method).
-        
+
         This is an alias for log_info() for backward compatibility.
-        
+
         Args:
             message: The message to log.
         """
         self._engine.log(message)
-    
+
     def log_trace(self, message: str) -> None:
         """
         Log a message at TRACE level (most verbose).
-        
+
         Use for very detailed debugging information.
         Only visible when log level is set to TRACE.
-        
+
         Args:
             message: The message to log.
         """
         self._engine.log_trace(message)
-    
+
     def log_debug(self, message: str) -> None:
         """
         Log a message at DEBUG level.
-        
+
         Use for debugging information that's useful during development.
         Visible when log level is DEBUG or TRACE.
-        
+
         Args:
             message: The message to log.
         """
         self._engine.log_debug(message)
-    
+
     def log_info(self, message: str) -> None:
         """
         Log a message at INFO level.
-        
+
         Use for general informational messages about engine operation.
         This is the default log level.
-        
+
         Args:
             message: The message to log.
         """
         self._engine.log_info(message)
-    
+
     def log_warn(self, message: str) -> None:
         """
         Log a message at WARN level.
-        
+
         Use for warnings that don't prevent operation but indicate
         potential issues.
-        
+
         Args:
             message: The message to log.
         """
         self._engine.log_warn(message)
-    
+
     def log_error(self, message: str) -> None:
         """
         Log a message at ERROR level.
-        
+
         Use for errors that may affect engine operation.
-        
+
         Args:
             message: The message to log.
         """
@@ -941,7 +951,7 @@ class Engine:
     def set_window_title(self, title: str) -> None:
         """
         Set the window title.
-        
+
         Args:
             title: The new window title.
         """
@@ -1022,7 +1032,7 @@ class Engine:
     def poll_events(self) -> bool:
         """
         Poll events from the window system.
-        
+
         Returns:
             bool: True if the loop should continue, False if exit requested.
         """
@@ -1430,7 +1440,7 @@ class Engine:
             line_spacing=line_spacing,
             draw_order=draw_order,
         )
-    
+
     def update_ui_label_text(self, object_id: int, text: str) -> None:
         """
         Update a UI label's text at runtime by object ID.
