@@ -2120,9 +2120,9 @@ impl PyButtonComponent {
     /// The callback should be a callable that takes no arguments.
     fn set_on_click(&mut self, py_callback: Py<PyAny>) {
         self.inner.set_on_click(move || {
-            // Use with_gil to ensure we have the GIL when calling Python callback
+            // Use attach to ensure we have the GIL when calling Python callback
             // from the Rust event loop context
-            let _ = pyo3::Python::with_gil(|py| {
+            let _ = pyo3::Python::attach(|py| {
                 match py_callback.call0(py) {
                     Ok(_) => {},
                     Err(e) => {
