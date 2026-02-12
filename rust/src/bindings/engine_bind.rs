@@ -2134,6 +2134,31 @@ impl PyButtonComponent {
         });
     }
 
+    /// Set when the button callback is triggered.
+    ///
+    /// Args:
+    ///     trigger_on: "press" to trigger on mouse down, "release" to trigger on mouse up (default)
+    fn set_trigger_on(&mut self, trigger_on: &str) {
+        use crate::core::ui::button::ButtonTrigger;
+        let trigger = match trigger_on.to_lowercase().as_str() {
+            "press" | "down" => ButtonTrigger::Press,
+            "release" | "up" | "click" => ButtonTrigger::Release,
+            _ => {
+                eprintln!("Warning: Invalid trigger_on value '{}'. Use 'press' or 'release'. Defaulting to 'release'.", trigger_on);
+                ButtonTrigger::Release
+            }
+        };
+        self.inner.set_trigger_on(trigger);
+    }
+
+    /// Set the repeat interval in milliseconds for when the button is held down.
+    ///
+    /// Args:
+    ///     interval_ms: Interval in milliseconds between repeats, or None to disable repeating
+    fn set_repeat_interval(&mut self, interval_ms: Option<f32>) {
+        self.inner.set_repeat_interval_ms(interval_ms);
+    }
+
     #[getter]
     fn name(&self) -> String {
         self.inner.name().to_string()

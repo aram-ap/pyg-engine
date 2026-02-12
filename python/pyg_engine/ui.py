@@ -32,6 +32,8 @@ class Button:
         on_click: Optional[Callable[..., None]] = None,
         enabled: bool = True,
         depth: float = 0,
+        trigger_on: str = "release",
+        repeat_interval_ms: Optional[float] = None,
     ):
         """
         Create a new button.
@@ -46,6 +48,9 @@ class Button:
                 Can be `def callback():` or `def callback(engine_handle):` to receive engine access.
             enabled: Whether the button is enabled
             depth: Rendering depth (higher = in front)
+            trigger_on: When to trigger the callback - "press" (on mouse down) or "release" (on mouse up, default)
+            repeat_interval_ms: If set, the callback will repeat every X milliseconds while the button is held.
+                Set to None (default) to disable repeating.
         """
         self._component = ButtonComponent(text, x, y, width, height)
         self._game_object = None
@@ -54,6 +59,9 @@ class Button:
 
         self._component.set_enabled(enabled)
         self._component.set_depth(depth)
+        self._component.set_trigger_on(trigger_on)
+        if repeat_interval_ms is not None:
+            self._component.set_repeat_interval(repeat_interval_ms)
 
     def add_to_engine(self, engine) -> int:
         """
@@ -149,6 +157,24 @@ class Button:
         else:
             # Clear callback
             self._component.set_on_click(lambda: None)
+
+    def set_trigger_on(self, trigger: str):
+        """
+        Set when the button callback is triggered.
+
+        Args:
+            trigger: "press" to trigger on mouse down, "release" to trigger on mouse up (default)
+        """
+        self._component.set_trigger_on(trigger)
+
+    def set_repeat_interval(self, interval_ms: Optional[float]):
+        """
+        Set the repeat interval for when the button is held down.
+
+        Args:
+            interval_ms: Interval in milliseconds between repeats, or None to disable repeating
+        """
+        self._component.set_repeat_interval(interval_ms)
 
 
 class Panel:
