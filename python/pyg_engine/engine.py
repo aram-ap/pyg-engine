@@ -331,10 +331,92 @@ class EngineHandle:
         self._inner.log_error(message)
 
 
+class UIManager:
+    """
+    Manages UI elements like buttons, panels, and labels.
+
+    This class provides methods to add UI components to the engine.
+    It is accessed via the `engine.ui` property.
+    """
+    def __init__(self, engine: "Engine") -> None:
+        self._engine = engine
+
+    def add(self, ui_component: Any) -> Optional[int]:
+        """
+        Add a UI component (Button, Panel, or Label) to the engine.
+
+        Args:
+            ui_component: A Button, Panel, or Label instance.
+
+        Returns:
+            The runtime object ID, or None if add failed.
+
+        Example:
+            >>> button = Button("Click Me", x=100, y=50)
+            >>> engine.ui.add(button)
+            >>>
+            >>> panel = Panel(x=50, y=50, width=300, height=200)
+            >>> engine.ui.add(panel)
+            >>>
+            >>> label = Label("Hello", x=100, y=100)
+            >>> engine.ui.add(label)
+        """
+        # Import here to avoid circular dependency
+        from . import ui as ui_module
+
+        if isinstance(ui_component, ui_module.Button):
+            return self._add_button(ui_component)
+        elif isinstance(ui_component, ui_module.Panel):
+            return self._add_panel(ui_component)
+        elif isinstance(ui_component, ui_module.Label):
+            return self._add_label(ui_component)
+        else:
+            raise TypeError(
+                f"Expected Button, Panel, or Label, got {type(ui_component).__name__}"
+            )
+
+    def _add_button(self, button: Any) -> Optional[int]:
+        """Internal: Add a Button to the engine."""
+        from .pyg_engine_native import GameObject
+
+        # Store engine handle for callbacks
+        button._engine_handle = self._engine.get_handle()
+
+        # Set up callback wrapper if user provided a callback
+        if button._user_callback:
+            button._setup_callback()
+
+        button._game_object = GameObject()
+        button._game_object.set_object_type("UIObject")
+        button._game_object.add_component(button._component)
+        return self._engine.add_game_object(button._game_object)
+
+    def _add_panel(self, panel: Any) -> Optional[int]:
+        """Internal: Add a Panel to the engine."""
+        from .pyg_engine_native import GameObject
+
+        panel._game_object = GameObject()
+        panel._game_object.set_object_type("UIObject")
+        panel._game_object.add_component(panel._component)
+        return self._engine.add_game_object(panel._game_object)
+
+    def _add_label(self, label: Any) -> Optional[int]:
+        """Internal: Add a Label to the engine."""
+        from .pyg_engine_native import GameObject
+
+        # Store engine handle instead of engine to avoid borrow checker issues in callbacks
+        label._engine = self._engine.get_handle()
+        label._game_object = GameObject()
+        label._game_object.set_object_type("UIObject")
+        label._game_object.add_component(label._component)
+        label._object_id = self._engine.add_game_object(label._game_object)
+        return label._object_id
+
+
 class Input:
     """
     Handles keyboard, mouse, and joystick input.
-    
+
     This class provides methods to check the current state of input devices
     and events. It is accessed via the `engine.input` property.
     """
@@ -723,6 +805,7 @@ class Engine:
             log_level=log_level,
         )
         self._input = Input(self)
+        self._ui = UIManager(self)
         self._runtime_state = _RUNTIME_STATE_IDLE
         self._window_icon_path: Optional[str] = None
     
@@ -730,11 +813,21 @@ class Engine:
     def input(self) -> Input:
         """
         Get the input manager for the engine.
-        
+
         Returns:
             Input: The input manager instance.
         """
         return self._input
+
+    @property
+    def ui(self) -> UIManager:
+        """
+        Get the UI manager for the engine.
+
+        Returns:
+            UIManager: The UI manager instance for adding UI components.
+        """
+        return self._ui
 
     @property
     def is_running(self) -> bool:

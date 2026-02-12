@@ -19,7 +19,7 @@ class Button:
         >>> def on_click():
         ...     print("Button clicked!")
         >>> button = Button("Click Me", x=100, y=50, width=120, height=40, on_click=on_click)
-        >>> button.add_to_engine(engine)
+        >>> engine.ui.add(button)
     """
 
     def __init__(
@@ -58,6 +58,9 @@ class Button:
     def add_to_engine(self, engine) -> int:
         """
         Add this button to the engine and return its object ID.
+
+        .. deprecated::
+            Use ``engine.ui.add(button)`` instead.
 
         Args:
             engine: The Engine instance
@@ -156,7 +159,7 @@ class Panel:
         >>> panel = Panel(x=50, y=50, width=300, height=200)
         >>> panel.set_background_color(0.9, 0.9, 0.9, 1.0)
         >>> panel.set_border(2, 0.5, 0.5, 0.5, 1.0)
-        >>> panel.add_to_engine(engine)
+        >>> engine.ui.add(panel)
     """
 
     def __init__(
@@ -184,6 +187,9 @@ class Panel:
     def add_to_engine(self, engine) -> int:
         """
         Add this panel to the engine and return its object ID.
+
+        .. deprecated::
+            Use ``engine.ui.add(panel)`` instead.
 
         Args:
             engine: The Engine instance
@@ -238,7 +244,7 @@ class Label:
         >>> label = Label("Hello World", x=100, y=100, font_size=16)
         >>> label.set_color(0, 0, 0, 1)
         >>> label.set_align("center")
-        >>> label.add_to_engine(engine)
+        >>> engine.ui.add(label)
     """
 
     def __init__(
@@ -271,6 +277,9 @@ class Label:
     def add_to_engine(self, engine) -> int:
         """
         Add this label to the engine and return its object ID.
+
+        .. deprecated::
+            Use ``engine.ui.add(label)`` instead.
 
         Args:
             engine: The Engine instance

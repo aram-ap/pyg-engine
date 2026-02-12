@@ -41,7 +41,7 @@ def main() -> None:
     panel = Panel(x=50, y=50, width=700, height=500, depth=0)
     panel.set_background_color(0.95, 0.95, 0.95, 1.0)
     panel.set_border(2, 0.3, 0.3, 0.3, 1.0)
-    panel.add_to_engine(engine)
+    engine.ui.add(panel)
 
     # Title label
     title = Label(
@@ -53,7 +53,7 @@ def main() -> None:
         depth=1
     )
     title.set_color(0.1, 0.1, 0.1, 1.0)
-    title.add_to_engine(engine)
+    engine.ui.add(title)
 
     # Description label
     desc = Label(
@@ -65,7 +65,7 @@ def main() -> None:
         depth=1
     )
     desc.set_color(0.4, 0.4, 0.4, 1.0)
-    desc.add_to_engine(engine)
+    engine.ui.add(desc)
 
     # Counter label
     counter_label = Label(
@@ -77,7 +77,7 @@ def main() -> None:
         depth=1
     )
     counter_label.set_color(0.0, 0.5, 0.0, 1.0)
-    counter_label.add_to_engine(engine)
+    engine.ui.add(counter_label)
     label_obj[0] = counter_label  # Store reference
 
     # Button row 1
@@ -90,18 +90,7 @@ def main() -> None:
         on_click=on_increment_click,
         depth=1
     )
-    btn1.add_to_engine(engine)
-
-    # engine.draw_circle(
-    #         250,
-    #         350,
-    #         30,
-    #         pyg.Color.RED,
-    #         thickness=4.0,
-    #         segments=48,
-    #         draw_order=4,
-    #         )
-
+    engine.ui.add(btn1)
 
     btn2 = Button(
         "Decrement",
@@ -112,7 +101,7 @@ def main() -> None:
         on_click=on_decrement_click,
         depth=1
     )
-    btn2.add_to_engine(engine)
+    engine.ui.add(btn2)
 
     btn3 = Button(
         "Reset",
@@ -123,13 +112,13 @@ def main() -> None:
         on_click=on_reset_click,
         depth=1
     )
-    btn3.add_to_engine(engine)
+    engine.ui.add(btn3)
 
     # Info panel
     info_panel = Panel(x=100, y=350, width=600, height=150, depth=0.5)
     info_panel.set_background_color(0.9, 0.95, 1.0, 1.0)
     info_panel.set_border(1, 0.4, 0.6, 0.8, 1.0)
-    info_panel.add_to_engine(engine)
+    engine.ui.add(info_panel)
 
     # Info labels
     info1 = Label(
@@ -141,7 +130,7 @@ def main() -> None:
         depth=1
     )
     info1.set_color(0.0, 0.0, 0.0, 1.0)
-    info1.add_to_engine(engine)
+    engine.ui.add(info1)
 
     info2 = Label(
         "- Clickable buttons with callbacks",
@@ -152,7 +141,7 @@ def main() -> None:
         depth=1
     )
     info2.set_color(0.2, 0.2, 0.2, 1.0)
-    info2.add_to_engine(engine)
+    engine.ui.add(info2)
 
     info3 = Label(
         "- Nested panels with borders and backgrounds",
@@ -163,7 +152,7 @@ def main() -> None:
         depth=1
     )
     info3.set_color(0.2, 0.2, 0.2, 1.0)
-    info3.add_to_engine(engine)
+    engine.ui.add(info3)
 
     info4 = Label(
         "- Dynamic text updates",
@@ -174,7 +163,7 @@ def main() -> None:
         depth=1
     )
     info4.set_color(0.2, 0.2, 0.2, 1.0)
-    info4.add_to_engine(engine)
+    engine.ui.add(info4)
 
     info5 = Label(
         "- Depth-based layering",
@@ -185,7 +174,7 @@ def main() -> None:
         depth=1
     )
     info5.set_color(0.2, 0.2, 0.2, 1.0)
-    info5.add_to_engine(engine)
+    engine.ui.add(info5)
 
     print("UI Demo started!")
     print("Click the buttons to interact with the UI.")
