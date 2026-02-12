@@ -10,15 +10,14 @@ from pyg_engine import Engine, Button, Panel, Label, Color, MouseButton
 
 
 def main() -> None:
-    engine = Engine()
+    engine = Engine(log_level="info")
 
     click_count = [0]  # Use list to allow modification in closure
     label_obj = [None]  # Store label reference
 
-
     def on_increment_click(engine: Engine):
         """Handle increment button click."""
-        engine.log_info(f"Incremented! Count: {click_count[0]}")
+        engine.log(f"Incremented! Count: {click_count[0]}")
         click_count[0] += 1
         if label_obj[0]:
             label_obj[0].text = f"Clicks: {click_count[0]}"
@@ -88,6 +87,7 @@ def main() -> None:
         width=150,
         height=40,
         on_click=on_increment_click,
+        trigger_on="press",
         depth=1
     )
     engine.ui.add(btn1)
@@ -99,6 +99,7 @@ def main() -> None:
         width=150,
         height=40,
         on_click=on_decrement_click,
+        trigger_on="press",
         depth=1
     )
     engine.ui.add(btn2)
@@ -110,6 +111,7 @@ def main() -> None:
         width=150,
         height=40,
         on_click=on_reset_click,
+        trigger_on="press",
         depth=1
     )
     engine.ui.add(btn3)
@@ -176,9 +178,9 @@ def main() -> None:
     info5.set_color(0.2, 0.2, 0.2, 1.0)
     engine.ui.add(info5)
 
-    print("UI Demo started!")
-    print("Click the buttons to interact with the UI.")
-    print("Press ESC or close window to quit.")
+    engine.log("UI Demo started!")
+    engine.log("Click the buttons to interact with the UI.")
+    engine.log("Press ESC or close window to quit.")
 
     # Run the engine
     engine.run(
