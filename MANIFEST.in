@@ -8,7 +8,8 @@ recursive-include python/etc *.png
 recursive-include images *.png
 recursive-include rust *.rs
 recursive-include rust *.toml
+recursive-include rust *.wgsl
 recursive-include examples *.py
 recursive-include docs *.md
 recursive-include tests *.py
-recursive-include tests *.md 
+recursive-include tests *.md
