@@ -15,12 +15,6 @@ def main() -> None:
     click_count = [0]  # Use list to allow modification in closure
     label_obj = [None]  # Store label reference
 
-    def update(dt: float, engine: pyg.Engine, user_data: dict[str, float]) -> bool:
-        # if engine.input.key_down(pyg.Keys.ESCAPE):
-        #     exit()
-        # if engine.input.mouse_button_down(MouseButton.LEFT):
-        #     engine.log("Mouse button down")
-        pass
 
     def on_increment_click():
         """Handle increment button click."""
@@ -64,9 +58,9 @@ def main() -> None:
     # Description label
     desc = Label(
         "Click the buttons below to test the UI system",
-        x=400,
-        y=120,
-        font_size=14,
+        x=430,
+        y=160,
+        font_size=12,
         align="center",
         depth=1
     )
@@ -202,7 +196,6 @@ def main() -> None:
         title="PyG Engine - UI Demo",
         width=800,
         height=600,
-        update=update
     )
 
 

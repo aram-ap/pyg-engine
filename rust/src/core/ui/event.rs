@@ -1,6 +1,5 @@
 use super::UIComponentTrait;
 use crate::core::input_manager::{InputManager, MouseButtonType};
-use std::time::Instant;
 
 /// UI event types
 #[derive(Debug, Clone, PartialEq)]
@@ -26,10 +25,6 @@ pub struct UIEventManager {
     pressed_component: Option<u32>,
     /// Last mouse position
     last_mouse_pos: (f64, f64),
-    /// Last click time for double-click detection
-    last_click_time: Option<Instant>,
-    /// Last clicked component for double-click
-    last_clicked_component: Option<u32>,
     /// Whether input was consumed this frame
     input_consumed: bool,
     /// Mouse button states from previous frame
@@ -43,8 +38,6 @@ impl UIEventManager {
             focused_component: None,
             pressed_component: None,
             last_mouse_pos: (0.0, 0.0),
-            last_click_time: None,
-            last_clicked_component: None,
             input_consumed: false,
             prev_mouse_buttons: [false; 3],
         }
@@ -143,29 +136,9 @@ impl UIEventManager {
 
                     // Check for click (mouse up on same component)
                     if Some(pressed_id) == self.hovered_component {
-                        // Check for double-click
-                        let now = Instant::now();
-                        let is_double_click = if let Some(last_time) = self.last_click_time {
-                            if let Some(last_comp) = self.last_clicked_component {
-                                last_comp == pressed_id && now.duration_since(last_time).as_millis() < 500
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        };
-
-                        if is_double_click {
-                            crate::core::logging::log_debug(&format!("UI: Double-click event on component {}", pressed_id));
-                            events.push((pressed_id, UIEvent::DoubleClick { x: mouse_x, y: mouse_y, button }));
-                            self.last_click_time = None; // Reset after double-click
-                            self.last_clicked_component = None;
-                        } else {
-                            crate::core::logging::log_debug(&format!("UI: Click event on component {} at ({}, {})", pressed_id, mouse_x, mouse_y));
-                            events.push((pressed_id, UIEvent::Click { x: mouse_x, y: mouse_y, button }));
-                            self.last_click_time = Some(now);
-                            self.last_clicked_component = Some(pressed_id);
-                        }
+                        // Generate a click event for every mouse up
+                        crate::core::logging::log_debug(&format!("UI: Click event on component {} at ({}, {})", pressed_id, mouse_x, mouse_y));
+                        events.push((pressed_id, UIEvent::Click { x: mouse_x, y: mouse_y, button }));
                     }
 
                     self.pressed_component = None;

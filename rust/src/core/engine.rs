@@ -1042,6 +1042,15 @@ impl Engine {
             (&mut self.ui_manager, &self.input_manager, &mut self.object_manager)
         {
             ui_manager.update(input_manager, object_manager);
+
+            // If UI consumed input, mark scene dirty and request redraw
+            // This ensures UI updates continue even in redraw_on_change_only mode
+            if ui_manager.is_input_consumed() {
+                if let Some(object_manager) = &mut self.object_manager {
+                    object_manager.mark_scene_dirty();
+                }
+                self.request_render_redraw();
+            }
         }
 
         // Event System - dispatch "unconsumed" gameplay input events
@@ -1364,6 +1373,15 @@ impl ApplicationHandler for Engine {
             if self.show_fps_in_title {
                 window_manager.request_redraw();
                 return;
+            }
+
+            // If there are UI objects, continuously update to process input
+            // This ensures UI works in redraw_on_change_only mode without callbacks
+            if let Some(object_manager) = &self.object_manager {
+                if object_manager.has_ui_objects() {
+                    window_manager.request_redraw();
+                    return;
+                }
             }
         }
 

@@ -176,9 +176,8 @@ impl UIComponentTrait for ButtonComponent {
                 self.update_state();
                 true
             }
-            UIEvent::Click { .. } | UIEvent::DoubleClick { .. } => {
-                // Trigger callback for both single and double clicks
-                // This allows rapid clicking without missing every other click
+            UIEvent::Click { .. } => {
+                // Trigger callback on every click
                 crate::core::logging::log_debug(&format!("Button '{}' clicked!", self.label));
                 if let Ok(mut guard) = self.on_click.lock() {
                     if let Some(callback) = guard.as_mut() {
