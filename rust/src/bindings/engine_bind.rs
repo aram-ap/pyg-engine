@@ -4112,15 +4112,15 @@ impl PyTime {
 ///
 /// # Create a named GameObject
 /// player = GameObject("Player")
-/// player.set_position(Vec2(100.0, 100.0))
-/// player.set_rotation(math.radians(45))  # Rotation in radians
-/// player.set_scale(Vec2(2.0, 2.0))
+/// player.position = Vec2(0, 0) # Note that we're using *World Position* not pixel location
+/// player.rotation = math.radians(45)  # Rotation in radians
+/// player.scale = Vec2(1.0, 1.0)
 ///
 /// # Add mesh rendering
-/// mesh = MeshComponent()
-/// mesh.set_geometry_rectangle(64.0, 64.0)
+/// mesh = MeshComponent("Rectangle")
+/// mesh.set_geometry_rectangle(1.0, 1.0)
 /// mesh.set_fill_color(Color.BLUE)
-/// player.add_component(mesh)
+/// player.set_mesh_component(mesh)
 ///
 /// # Add to engine
 /// engine.add_game_object(player)
