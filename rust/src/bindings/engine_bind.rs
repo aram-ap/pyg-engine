@@ -5755,65 +5755,6 @@ impl PyGameObject {
 
 /// Python wrapper for MeshComponent.
 /// 2D mesh rendering component for GameObjects.
-///
-/// `MeshComponent` handles rendering of 2D shapes and images. Attach it to a GameObject
-/// to make it visible. Supports:
-/// - **Geometry**: Rectangles, circles (custom geometry coming soon)
-/// - **Rendering**: Solid colors, images/textures
-/// - **Control**: Visibility, draw order (z-index)
-///
-/// # Basic Usage
-///
-/// ## Rectangle with Color
-/// ```python
-/// from pyg_engine import GameObject, MeshComponent, Color, Vec2
-///
-/// obj = GameObject("ColoredRect")
-/// obj.set_position(Vec2(100.0, 100.0))
-///
-/// mesh = MeshComponent()
-/// mesh.set_geometry_rectangle(64.0, 64.0)  # 64x64 square
-/// mesh.set_fill_color(Color.BLUE)
-/// obj.add_component(mesh)
-///
-/// engine.add_game_object(obj)
-/// ```
-///
-/// ## Circle with Image
-/// ```python
-/// from pyg_engine import GameObject, MeshComponent, Vec2
-///
-/// obj = GameObject("Sprite")
-/// obj.set_position(Vec2(200.0, 150.0))
-///
-/// mesh = MeshComponent()
-/// mesh.set_geometry_circle(32.0, segments=64)  # Radius 32, smooth circle
-/// mesh.set_image_path("assets/player.png")
-/// obj.add_component(mesh)
-///
-/// engine.add_game_object(obj)
-/// ```
-///
-/// # Draw Order
-///
-/// Control rendering order with `draw_order` (higher values draw on top):
-/// ```python
-/// background.draw_order = -5.0  # Draw behind
-/// player.draw_order = 0.0       # Default layer
-/// ui_element.draw_order = 10.0  # Draw in front
-/// ```
-///
-/// # Visibility
-///
-/// Toggle visibility without removing the object:
-/// ```python
-/// mesh.visible = False  # Hide
-/// mesh.visible = True   # Show
-/// ```
-///
-/// # See Also
-/// - `examples/python_mesh_demo.py` - Complete mesh examples
-/// - `examples/python_game_object_transform_demo.py` - Transform + rendering
 #[pyclass(name = "MeshComponent")]
 #[derive(Clone)]
 pub struct PyMeshComponent {
