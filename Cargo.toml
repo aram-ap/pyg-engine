@@ -29,8 +29,3 @@ anyhow = "1.0"
 crossbeam-channel = "0.5.15"
 font8x8 = "0.3.1"
 fontdue = "0.9.3"
-
-[[example]]
-name = "window_demo"
-crate-type = ["bin"]
-required-features = []
