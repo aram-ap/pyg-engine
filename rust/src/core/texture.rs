@@ -1,10 +1,12 @@
 use anyhow::*;
 use image::GenericImageView;
 
+#[allow(dead_code)]
 pub struct Texture {
     pub bind_group: wgpu::BindGroup,
 }
 
+#[allow(dead_code)]
 impl Texture {
     pub fn from_bytes(
         device: &wgpu::Device,

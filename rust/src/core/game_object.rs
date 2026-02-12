@@ -237,6 +237,20 @@ impl GameObject {
     }
 
     /**
+        Gets a mutable component by name.
+        @param name: The name of the component to get.
+        @return: The mutable component.
+    */
+    pub fn get_component_by_name_mut(&mut self, name: &str) -> Option<&mut (dyn ComponentTrait + '_)> {
+        for component in self.components.iter_mut() {
+            if component.name() == name {
+                return Some(component.as_mut());
+            }
+        }
+        None
+    }
+
+    /**
         Checks if the game object is active.
         @return: True if the game object is active, false otherwise.
     */

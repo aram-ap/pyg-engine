@@ -1,6 +1,7 @@
 use super::time::Time;
 use crate::types::color::Color;
 use crate::types::vector::Vec2;
+use std::any::Any;
 // use crate::types::texture::Texture;
 
 // Game objects contain components.
@@ -30,6 +31,12 @@ pub trait ComponentTrait: Send + Sync + std::fmt::Debug {
     fn on_destroy(&self);
     fn on_enable(&self);
     fn on_disable(&self);
+
+    /// Downcast to Any for type checking
+    fn as_any(&self) -> &dyn Any;
+
+    /// Downcast to Any (mutable) for type checking
+    fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -163,6 +170,14 @@ impl ComponentTrait for TransformComponent {
     fn on_destroy(&self) {}
     fn on_enable(&self) {}
     fn on_disable(&self) {}
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 impl TransformComponent {
@@ -227,6 +242,14 @@ impl ComponentTrait for MeshComponent {
     fn on_destroy(&self) {}
     fn on_enable(&self) {}
     fn on_disable(&self) {}
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 impl MeshComponent {
@@ -344,6 +367,14 @@ impl ComponentTrait for SpriteComponent {
     fn on_destroy(&self) {}
     fn on_enable(&self) {}
     fn on_disable(&self) {}
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 impl SpriteComponent {

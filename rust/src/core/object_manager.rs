@@ -135,6 +135,12 @@ impl ObjectManager {
         self.active_objects
     }
 
+    /// Check if there are any UI objects in the scene
+    pub fn has_ui_objects(&self) -> bool {
+        use crate::core::game_object::ObjectType;
+        self.objects.values().any(|obj| obj.get_object_type() == ObjectType::UIObject)
+    }
+
     /**
         Gets the objects.
         @return: The objects.

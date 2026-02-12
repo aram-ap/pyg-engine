@@ -117,6 +117,12 @@ pub enum EngineCommand {
         draw_order: f32,
     },
 
+    /// Update a UI label's text by object ID
+    UpdateUILabelText { object_id: u32, text: String },
+
+    /// Update a UI button's text by object ID
+    UpdateUIButtonText { object_id: u32, text: String },
+
     /// Draw text with optional custom font (helper wrapper around AddDrawCommand)
     DrawText {
         text: String,
@@ -129,4 +135,19 @@ pub enum EngineCommand {
         line_spacing: f32,
         draw_order: f32,
     },
+
+    /// Log a message at TRACE level
+    LogTrace(String),
+
+    /// Log a message at DEBUG level
+    LogDebug(String),
+
+    /// Log a message at INFO level
+    LogInfo(String),
+
+    /// Log a message at WARN level
+    LogWarn(String),
+
+    /// Log a message at ERROR level
+    LogError(String),
 }

@@ -40,12 +40,14 @@ pub struct Mesh {
 
 // --- Shape Logic ---
 
+#[allow(dead_code)]
 pub struct Rect {
     pub w: f32,
     pub h: f32,
     pub color: [f32; 4],
 }
 
+#[allow(dead_code)]
 impl Rect {
     pub fn generate_vertices(&self) -> (Vec<Vertex>, Vec<u16>) {
         let (w, h) = (self.w / 2.0, self.h / 2.0);

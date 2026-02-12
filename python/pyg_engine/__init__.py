@@ -2,7 +2,7 @@
 pyg_engine - A Python game engine with Rust-powered native performance.
 """
 
-from pyg_engine.engine import DrawCommand, Engine, EngineHandle, Input, UpdateContext
+from pyg_engine.engine import DrawCommand, Engine, EngineHandle, Input, UpdateContext, UIManager
 
 try:
     from pyg_engine.pyg_engine_native import (
@@ -13,6 +13,9 @@ try:
         GameObject,
         MeshComponent,
         TransformComponent,
+        ButtonComponent,
+        PanelComponent,
+        LabelComponent,
         CameraAspectMode,
         MouseButton,
         Keys,
@@ -29,6 +32,9 @@ except ImportError:
     GameObject = None  # type: ignore
     MeshComponent = None  # type: ignore
     TransformComponent = None  # type: ignore
+    ButtonComponent = None  # type: ignore
+    PanelComponent = None  # type: ignore
+    LabelComponent = None  # type: ignore
     CameraAspectMode = None  # type: ignore
     MouseButton = None  # type: ignore
     Keys = None  # type: ignore
@@ -37,6 +43,9 @@ except ImportError:
 __version__ = "1.2.0"
 __author__ = "Aram Aprahamian"
 __description__ = "A Python game engine with Rust-powered native performance"
+
+# Import UI wrappers
+from pyg_engine.ui import Button, Panel, Label
 
 __all__ = [
     "Engine",
@@ -49,8 +58,15 @@ __all__ = [
     "Color",
     "Time",
     "GameObject",
+    "UIManager",
     "MeshComponent",
     "TransformComponent",
+    "ButtonComponent",
+    "PanelComponent",
+    "LabelComponent",
+    "Button",
+    "Panel",
+    "Label",
     "CameraAspectMode",
     "MouseButton",
     "Keys",

@@ -15,6 +15,10 @@ use crate::core::game_object::GameObject as RustGameObject;
 use crate::core::input_manager::{MouseAxisBinding, MouseAxisType};
 use crate::core::render_manager::CameraAspectMode;
 use crate::core::time::Time as RustTime;
+use crate::core::ui::{Rect, UIComponentTrait};
+use crate::core::ui::button::ButtonComponent;
+use crate::core::ui::panel::PanelComponent;
+use crate::core::ui::label::{LabelComponent, TextAlign};
 use crate::core::window_manager::{FullscreenMode, WindowConfig, load_window_icon_from_path};
 
 // Import bindings from separate modules
@@ -587,9 +591,18 @@ impl PyEngine {
     ///
     /// The object is copied into the runtime scene using current transform + mesh state.
     fn add_game_object(&mut self, game_object: &PyGameObject) -> Option<u32> {
-        let object_id = self
-            .inner
-            .add_game_object(game_object.to_runtime_game_object());
+        // CRITICAL DEBUG - Using println! to stdout
+        println!("🔵 STDOUT: PyEngine::add_game_object called");
+        eprintln!("🔵 STDERR: PyEngine::add_game_object called");
+
+        let runtime_obj = game_object.to_runtime_game_object();
+        println!("🔷 STDOUT: Calling inner.add_game_object");
+
+        let object_id = self.inner.add_game_object(runtime_obj);
+
+        println!("🟢 STDOUT: PyEngine::add_game_object returned ID: {:?}", object_id);
+        eprintln!("🟢 STDERR: PyEngine::add_game_object returned ID: {:?}", object_id);
+
         if let Some(id) = object_id {
             game_object.bind_runtime(self.inner.get_command_sender(), id);
         }
@@ -911,6 +924,22 @@ impl PyEngine {
             line_spacing,
             draw_order,
         );
+    }
+
+    /// Update a UI label's text at runtime by object ID.
+    fn update_ui_label_text(&self, object_id: u32, text: String) {
+        let _ = self
+            .inner
+            .get_command_sender()
+            .send(EngineCommand::UpdateUILabelText { object_id, text });
+    }
+
+    /// Update a UI button's text at runtime by object ID.
+    fn update_ui_button_text(&self, object_id: u32, text: String) {
+        let _ = self
+            .inner
+            .get_command_sender()
+            .send(EngineCommand::UpdateUIButtonText { object_id, text });
     }
 
     /// Log a message at INFO level (default log method).
@@ -1560,6 +1589,50 @@ impl PyEngineHandle {
             draw_order,
         });
     }
+
+    /// Update a UI label's text at runtime by object ID via command queue.
+    fn update_ui_label_text(&self, object_id: u32, text: String) {
+        let _ = self
+            .sender
+            .send(EngineCommand::UpdateUILabelText { object_id, text });
+    }
+
+    /// Update a UI button's text at runtime by object ID via command queue.
+    fn update_ui_button_text(&self, object_id: u32, text: String) {
+        let _ = self
+            .sender
+            .send(EngineCommand::UpdateUIButtonText { object_id, text });
+    }
+
+    /// Log a message at INFO level (default log method).
+    fn log(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogInfo(message.to_string()));
+    }
+
+    /// Log a message at TRACE level (most verbose).
+    fn log_trace(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogTrace(message.to_string()));
+    }
+
+    /// Log a message at DEBUG level.
+    fn log_debug(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogDebug(message.to_string()));
+    }
+
+    /// Log a message at INFO level.
+    fn log_info(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogInfo(message.to_string()));
+    }
+
+    /// Log a message at WARN level.
+    fn log_warn(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogWarn(message.to_string()));
+    }
+
+    /// Log a message at ERROR level.
+    fn log_error(&self, message: &str) {
+        let _ = self.sender.send(EngineCommand::LogError(message.to_string()));
+    }
 }
 
 /// Python wrapper for Time.
@@ -1631,6 +1704,19 @@ impl PyGameObject {
 
         if let Some(mesh) = self.inner.mesh_component() {
             runtime.add_mesh_component(mesh.clone());
+        }
+
+        // Copy UI components (Button, Panel, Label) by downcasting and cloning
+        for comp_name in &["Button", "Panel", "Label"] {
+            if let Some(comp) = self.inner.get_component_by_name(comp_name) {
+                if let Some(btn) = comp.as_any().downcast_ref::<ButtonComponent>() {
+                    runtime.add_component(Box::new(btn.clone()));
+                } else if let Some(panel) = comp.as_any().downcast_ref::<PanelComponent>() {
+                    runtime.add_component(Box::new(panel.clone()));
+                } else if let Some(label) = comp.as_any().downcast_ref::<LabelComponent>() {
+                    runtime.add_component(Box::new(label.clone()));
+                }
+            }
         }
 
         runtime
@@ -1809,6 +1895,39 @@ impl PyGameObject {
     fn mesh_draw_order(&self) -> Option<f32> {
         self.inner.mesh_component().map(|mesh| mesh.draw_order())
     }
+
+    /// Set the object type (e.g., "UIObject", "GameObject", etc.)
+    fn set_object_type(&mut self, object_type: &str) {
+        use crate::core::game_object::ObjectType;
+        let obj_type = match object_type {
+            "UIObject" => ObjectType::UIObject,
+            "ParticleSystem" => ObjectType::ParticleSystem,
+            "Sound" => ObjectType::Sound,
+            "Light" => ObjectType::Light,
+            "Camera" => ObjectType::Camera,
+            _ => ObjectType::GameObject,
+        };
+        self.inner.set_object_type(obj_type);
+    }
+
+    /// Add a UI component to this GameObject
+    fn add_component(&mut self, component: &Bound<'_, PyAny>) -> PyResult<()> {
+        // Try to downcast to each component type
+        if let Ok(button) = component.extract::<PyRef<PyButtonComponent>>() {
+            self.inner.add_component(Box::new(button.inner.clone()));
+            Ok(())
+        } else if let Ok(panel) = component.extract::<PyRef<PyPanelComponent>>() {
+            self.inner.add_component(Box::new(panel.inner.clone()));
+            Ok(())
+        } else if let Ok(label) = component.extract::<PyRef<PyLabelComponent>>() {
+            self.inner.add_component(Box::new(label.inner.clone()));
+            Ok(())
+        } else {
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                "Component must be ButtonComponent, PanelComponent, or LabelComponent"
+            ))
+        }
+    }
 }
 
 // ========== MeshComponent Bindings ==========
@@ -1951,6 +2070,207 @@ fn version() -> String {
     crate::core::engine::VERSION.to_string()
 }
 
+// ========== UI Component Bindings ==========
+
+/// Python wrapper for ButtonComponent.
+#[pyclass(name = "ButtonComponent")]
+pub struct PyButtonComponent {
+    inner: ButtonComponent,
+}
+
+#[pymethods]
+impl PyButtonComponent {
+    #[new]
+    #[pyo3(signature = (text="", x=0.0, y=0.0, width=100.0, height=30.0))]
+    fn new(text: &str, x: f32, y: f32, width: f32, height: f32) -> Self {
+        let button = ButtonComponent::new("Button")
+            .with_text(text)
+            .with_bounds(x, y, width, height);
+        Self { inner: button }
+    }
+
+    fn set_text(&mut self, text: &str) {
+        self.inner.set_text(text);
+    }
+
+    fn get_text(&self) -> String {
+        self.inner.text().to_string()
+    }
+
+    fn set_enabled(&mut self, enabled: bool) {
+        self.inner.set_enabled(enabled);
+    }
+
+    fn set_position(&mut self, x: f32, y: f32) {
+        let bounds = self.inner.bounds();
+        self.inner.set_bounds(Rect::new(x, y, bounds.width, bounds.height));
+    }
+
+    fn set_size(&mut self, width: f32, height: f32) {
+        let bounds = self.inner.bounds();
+        self.inner.set_bounds(Rect::new(bounds.x, bounds.y, width, height));
+    }
+
+    fn set_depth(&mut self, depth: f32) {
+        self.inner = std::mem::replace(&mut self.inner, ButtonComponent::new("temp"))
+            .with_depth(depth);
+    }
+
+    /// Set a Python callback for the button click event.
+    /// The callback should be a callable that takes no arguments.
+    fn set_on_click(&mut self, py_callback: Py<PyAny>) {
+        self.inner.set_on_click(move || {
+            // Use attach to ensure we have the GIL when calling Python callback
+            // from the Rust event loop context
+            let _ = pyo3::Python::attach(|py| {
+                match py_callback.call0(py) {
+                    Ok(_) => {},
+                    Err(e) => {
+                        e.print(py);
+                        eprintln!("Error calling button callback: {:?}", e);
+                    }
+                }
+            });
+        });
+    }
+
+    /// Set when the button callback is triggered.
+    ///
+    /// Args:
+    ///     trigger_on: "press" to trigger on mouse down, "release" to trigger on mouse up (default)
+    fn set_trigger_on(&mut self, trigger_on: &str) {
+        use crate::core::ui::button::ButtonTrigger;
+        let trigger = match trigger_on.to_lowercase().as_str() {
+            "press" | "down" => ButtonTrigger::Press,
+            "release" | "up" | "click" => ButtonTrigger::Release,
+            _ => {
+                eprintln!("Warning: Invalid trigger_on value '{}'. Use 'press' or 'release'. Defaulting to 'release'.", trigger_on);
+                ButtonTrigger::Release
+            }
+        };
+        self.inner.set_trigger_on(trigger);
+    }
+
+    /// Set the repeat interval in milliseconds for when the button is held down.
+    ///
+    /// Args:
+    ///     interval_ms: Interval in milliseconds between repeats, or None to disable repeating
+    fn set_repeat_interval(&mut self, interval_ms: Option<f32>) {
+        self.inner.set_repeat_interval_ms(interval_ms);
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+}
+
+/// Python wrapper for PanelComponent.
+#[pyclass(name = "PanelComponent")]
+pub struct PyPanelComponent {
+    inner: PanelComponent,
+}
+
+#[pymethods]
+impl PyPanelComponent {
+    #[new]
+    #[pyo3(signature = (x=0.0, y=0.0, width=200.0, height=200.0))]
+    fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
+        let panel = PanelComponent::new("Panel")
+            .with_bounds(x, y, width, height);
+        Self { inner: panel }
+    }
+
+    fn set_position(&mut self, x: f32, y: f32) {
+        let bounds = self.inner.bounds();
+        self.inner.set_bounds(Rect::new(x, y, bounds.width, bounds.height));
+    }
+
+    fn set_size(&mut self, width: f32, height: f32) {
+        let bounds = self.inner.bounds();
+        self.inner.set_bounds(Rect::new(bounds.x, bounds.y, width, height));
+    }
+
+    fn set_depth(&mut self, depth: f32) {
+        self.inner = std::mem::replace(&mut self.inner, PanelComponent::new("temp"))
+            .with_depth(depth);
+    }
+
+    fn set_background_color(&mut self, r: f32, g: f32, b: f32, a: f32) {
+        self.inner.style_mut().background_color = [r, g, b, a];
+    }
+
+    fn set_border(&mut self, width: f32, r: f32, g: f32, b: f32, a: f32) {
+        let style = self.inner.style_mut();
+        style.border_width = width;
+        style.border_color = [r, g, b, a];
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+}
+
+/// Python wrapper for LabelComponent.
+#[pyclass(name = "LabelComponent")]
+pub struct PyLabelComponent {
+    inner: LabelComponent,
+}
+
+#[pymethods]
+impl PyLabelComponent {
+    #[new]
+    #[pyo3(signature = (text="", x=0.0, y=0.0, font_size=14.0))]
+    fn new(text: &str, x: f32, y: f32, font_size: f32) -> Self {
+        let mut label = LabelComponent::new("Label")
+            .with_text(text)
+            .with_position(x, y);
+        label.set_font_size(font_size);
+        Self { inner: label }
+    }
+
+    fn set_text(&mut self, text: &str) {
+        self.inner.set_text(text);
+    }
+
+    fn get_text(&self) -> String {
+        self.inner.text().to_string()
+    }
+
+    fn set_position(&mut self, x: f32, y: f32) {
+        self.inner.set_position(x, y);
+    }
+
+    fn set_font_size(&mut self, size: f32) {
+        self.inner.set_font_size(size);
+    }
+
+    fn set_color(&mut self, r: f32, g: f32, b: f32, a: f32) {
+        self.inner.set_color([r, g, b, a]);
+    }
+
+    fn set_align(&mut self, align: &str) {
+        let text_align = match align.to_lowercase().as_str() {
+            "left" => TextAlign::Left,
+            "center" => TextAlign::Center,
+            "right" => TextAlign::Right,
+            _ => TextAlign::Left,
+        };
+        self.inner.set_align(text_align);
+    }
+
+    fn set_depth(&mut self, depth: f32) {
+        self.inner = std::mem::replace(&mut self.inner, LabelComponent::new("temp"))
+            .with_depth(depth);
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+}
+
 // ========== Module Initialization ==========
 
 /// Module initialization function.
@@ -1967,6 +2287,9 @@ fn pyg_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyGameObject>()?;
     m.add_class::<PyMeshComponent>()?;
     m.add_class::<PyTransformComponent>()?;
+    m.add_class::<PyButtonComponent>()?;
+    m.add_class::<PyPanelComponent>()?;
+    m.add_class::<PyLabelComponent>()?;
     m.add_class::<PyCameraAspectMode>()?;
     m.add_class::<PyMouseButton>()?;
     m.add_class::<PyKeys>()?;

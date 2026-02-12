@@ -16,41 +16,45 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(device: &wgpu::Device, width: u32, height: u32) -> Self {
-        let mut camera = Self {
-            uniform: CameraUniform {
-                view_proj: cgmath::Matrix4::identity().into(),
-            },
-            buffer: device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Camera Buffer"),
-                contents: bytemuck::cast_slice(&[CameraUniform {
-                    view_proj: cgmath::Matrix4::identity().into(),
-                }]),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            }),
-            bind_group: unsafe { std::mem::zeroed() }, // Placeholder, created below
-            bind_group_layout: device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-                label: Some("camera_layout"),
-            }),
+        let uniform = CameraUniform {
+            view_proj: cgmath::Matrix4::identity().into(),
         };
 
-        camera.bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &camera.bind_group_layout,
+        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: Some("camera_layout"),
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: camera.buffer.as_entire_binding(),
+                resource: buffer.as_entire_binding(),
             }],
             label: Some("camera_bind_group"),
         });
+
+        let mut camera = Self {
+            uniform,
+            buffer,
+            bind_group,
+            bind_group_layout,
+        };
 
         // camera.resize(queue_is_not_needed_here_conceptually_but_passed_later(width, height));
         camera
@@ -72,6 +76,3 @@ impl Camera {
         cgmath::ortho(-aspect, aspect, -1.0, 1.0, -1.0, 1.0).into()
     }
 }
-
-// Uhh gonna change this later
-fn queue_is_not_needed_here_conceptually_but_passed_later(w: u32, h: u32) {}
