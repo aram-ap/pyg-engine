@@ -13,10 +13,12 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 *   **Modern Rendering**: Powered by **wgpu** for cross-platform, high-performance graphics.
 *   **Rust Core**: The heavy lifting is done in Rust, ensuring speed and memory safety.
 *   **Pythonic API**: Designed to feel natural for Python developers.
-*   **Immediate Mode Drawing**: Easily draw lines, rectangles, circles, and pixels using pixel coordinates.
+*   **Flexible Drawing**: Easily draw lines, rectangles, circles, and pixels using pixel coordinates.
 *   **Mesh System**: Render textured quads and game objects with a component-based architecture (using normalized coordinates).
-*   **Thread Safety**: Unique `EngineHandle` system allows you to safely issue rendering commands from background Python threads.
+*   **Thread Safety**: Safely issue rendering commands from background Python threads.
 *   **Robust Logging**: Integrated tracing-based logging system with file support and configurable levels.
+*   **UI Components**: Built in UI components built with extendability and custom styling. Easy callback function implementations included for buttons.
+*   **Unified Input System**: Easily implement controls with an Axis system, keyboard macros, and event-based callback functions.
 
 ## :books: Documentation
 
@@ -111,7 +113,8 @@ import pyg_engine as pyg
 engine = pyg.Engine()
 
 def update(dt, engine, frame):
-    if engine.input.key_pressed(pyg.Keys.ESCAPE):
+    if engine.input.key_down(pyg.Keys.ESCAPE):
+        engine.log("Exiting Pyg-Engine!")
         return False
     engine.clear_draw_commands()
     # draw/update game state...
@@ -149,19 +152,19 @@ raises `RuntimeError`.
 - **Loop Control**: `run(...)` with optional callback and explicit `start_manual(...)` mode.
 - **Object Positioning System**: A straightforward method for moving and transforming your objects.
 - **Camera Controls**: Move your camera, customize backgrounds, set view area and fitment properties.
+- **UI System**: Built-in UI components.
 
 ### Planned Features (Roadmap)
 - **Audio Manager**: Audio loading, playback, mixing, and timing.
 - **Engine Loop (Upgrade)**: Coroutines and global event systems.
 - **Physics Engine**: 2D rigid body physics and collision detection.
 - **Scripting**: Enhanced script attachment to GameObjects with frame-lifecycle hooks.
-- **UI System**: Built-in UI components.
 - **Additional Primitives**: Added capabilities for more basic shapes, arcs, SVGs, and function-based shapes.
 - **Advanced Rendering**: Shaders, Particles, and Post-processing.
 
 ## :open_file_folder: Examples
 
-Check the `examples/` directory for more complete demonstrations:
+Check the [`examples/`](examples) directory for more complete demonstrations:
 
 - `python_direct_draw_demo.py`: Shows how to draw basic shapes (pixels, lines, rects).
 - `python_mesh_demo.py`: Demonstrates the GameObject and Mesh system.
@@ -169,6 +172,8 @@ Check the `examples/` directory for more complete demonstrations:
 - `python_manual_loop.py`: Shows how to control the game loop manually (`start_manual` -> poll -> update -> render).
 - `python_function_update_demo.py`: Shows callback-based loop control via `engine.run(update=...)`.
 - `python_snake_demo.py`: Playable Snake game using immediate-mode drawing and keyboard input.
+- `python_camera_worldspace_demo.py`: Shows how to move objects and use the camera system along with other mouse and keyboard controls.
+- `ui_demo.py`: Demonstrates the UI system, button functions, and text label updates.
 
 ## :hammer_and_wrench: Development & Testing
 
@@ -184,4 +189,4 @@ pytest tests/ -v
 
 ## 📄 License
 
-MIT License
+[MIT License](LICENSE)
