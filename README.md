@@ -22,7 +22,7 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 
 ## :books: Documentation
 
-- **[API Reference](https://aram-ap.github.io/pyg-engine/)** - Complete Python API documentation (auto-generated from docstrings)
+- **[API Reference](https://aram-ap.github.io/pyg-engine/)** - Complete Python API documentation
 
 ## :eyes: Gallary
 
