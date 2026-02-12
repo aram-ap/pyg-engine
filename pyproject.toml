@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=65.0", "setuptools-rust>=1.9.0"]
+requires = ["setuptools>=65.0", "setuptools-rust>=1.9.0", "setuptools-scm>=8.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyg-engine"
-version = "1.2.1"
+dynamic = ["version"]
 description = "A Python game engine with Rust-powered native performance"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -48,6 +48,10 @@ where = ["python"]
 
 [tool.setuptools.package-data]
 pyg_engine = ["etc/*.png"]
+
+[tool.setuptools_scm]
+# Auto-generate version from git tags
+write_to = "python/pyg_engine/_version.py"
 
 [tool.cibuildwheel]
 # Skip 32-bit musllinux because rustup doesn't support it easily

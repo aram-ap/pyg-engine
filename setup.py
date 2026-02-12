@@ -5,14 +5,8 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
-    name="pyg-engine",
-    version="1.2.0",
-    author="Aram Aprahamian",
-    author_email="",
-    description="A Python game engine with physics, rendering, and input systems",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="",
+    # Version is auto-generated from git tags via setuptools-scm
+    # All other metadata is in pyproject.toml
     packages=find_packages(where="python"),
     package_dir={"": "python"},
     rust_extensions=[

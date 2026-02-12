@@ -42,7 +42,12 @@ except ImportError:
     Keys = None  # type: ignore
     version = None  # type: ignore
 
-__version__ = "1.2.0"
+# Auto-generated version from git tags via setuptools-scm
+try:
+    from pyg_engine._version import version as __version__
+except ImportError:
+    __version__ = "unknown"
+
 __author__ = "Aram Aprahamian"
 __description__ = "A Python game engine with Rust-powered native performance"
 
