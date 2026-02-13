@@ -1133,7 +1133,7 @@ impl PyCollider {
     /// - `set_on_collision_exit()` - Fires when collision ends
     fn set_on_collision_enter(&mut self, callback: Py<PyAny>) {
         self.component.set_on_collision_enter(move |other_id, normal, penetration| {
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 let _ = callback.call1(
                     py,
                     (other_id, normal.x(), normal.y(), penetration)
@@ -1216,7 +1216,7 @@ impl PyCollider {
     /// - `set_on_collision_exit()` - Fires once when collision ends
     fn set_on_collision_stay(&mut self, callback: Py<PyAny>) {
         self.component.set_on_collision_stay(move |other_id, normal, penetration| {
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 let _ = callback.call1(
                     py,
                     (other_id, normal.x(), normal.y(), penetration)
@@ -1294,7 +1294,7 @@ impl PyCollider {
     /// - `set_on_collision_stay()` - Fires every frame during collision
     fn set_on_collision_exit(&mut self, callback: Py<PyAny>) {
         self.component.set_on_collision_exit(move |other_id| {
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 let _ = callback.call1(py, (other_id,));
             });
         });
