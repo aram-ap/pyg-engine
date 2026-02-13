@@ -37,6 +37,16 @@ pub trait ComponentTrait: Send + Sync + std::fmt::Debug {
 
     /// Downcast to Any (mutable) for type checking
     fn as_any_mut(&mut self) -> &mut dyn Any;
+
+    // Physics callbacks (optional, default implementations do nothing)
+    /// Called when a collision starts
+    fn on_collision_enter(&self, _other_id: u32, _normal: Vec2, _penetration: f32) {}
+
+    /// Called each frame while a collision is ongoing
+    fn on_collision_stay(&self, _other_id: u32, _normal: Vec2, _penetration: f32) {}
+
+    /// Called when a collision ends
+    fn on_collision_exit(&self, _other_id: u32) {}
 }
 
 #[derive(Clone, Copy, Debug)]

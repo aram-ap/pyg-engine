@@ -130,6 +130,36 @@ impl GameObject {
         self.transform = transform;
     }
 
+    /// Gets the position of the game object.
+    pub fn position(&self) -> crate::types::vector::Vec2 {
+        *self.transform.position()
+    }
+
+    /// Sets the position of the game object.
+    pub fn set_position(&mut self, position: crate::types::vector::Vec2) {
+        self.transform.set_position(position);
+    }
+
+    /// Gets the rotation of the game object.
+    pub fn rotation(&self) -> f32 {
+        self.transform.rotation()
+    }
+
+    /// Sets the rotation of the game object.
+    pub fn set_rotation(&mut self, rotation: f32) {
+        self.transform.set_rotation(rotation);
+    }
+
+    /// Gets the scale of the game object.
+    pub fn scale(&self) -> crate::types::vector::Vec2 {
+        *self.transform.scale()
+    }
+
+    /// Sets the scale of the game object.
+    pub fn set_scale(&mut self, scale: crate::types::vector::Vec2) {
+        self.transform.set_scale(scale);
+    }
+
     /// Adds or replaces the mesh component.
     pub fn add_mesh_component(&mut self, mesh: MeshComponent) {
         self.mesh = Some(mesh);
@@ -248,6 +278,40 @@ impl GameObject {
             }
         }
         None
+    }
+
+    /**
+        Gets a component by type using downcast.
+        @return: The component if found and type matches.
+    */
+    pub fn get_component<T: ComponentTrait + 'static>(&self) -> Option<&T> {
+        for component in self.components.iter() {
+            if let Some(concrete) = component.as_any().downcast_ref::<T>() {
+                return Some(concrete);
+            }
+        }
+        None
+    }
+
+    /**
+        Gets a mutable component by type using downcast.
+        @return: The mutable component if found and type matches.
+    */
+    pub fn get_component_mut<T: ComponentTrait + 'static>(&mut self) -> Option<&mut T> {
+        for component in self.components.iter_mut() {
+            if let Some(concrete) = component.as_any_mut().downcast_mut::<T>() {
+                return Some(concrete);
+            }
+        }
+        None
+    }
+
+    /**
+        Gets an iterator over all components.
+        @return: An iterator over all components.
+    */
+    pub fn components_iter(&self) -> impl Iterator<Item = &Box<dyn ComponentTrait>> {
+        self.components.iter()
     }
 
     /**

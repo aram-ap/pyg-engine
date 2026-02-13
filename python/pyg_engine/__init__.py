@@ -21,6 +21,9 @@ try:
         CameraAspectMode,
         MouseButton,
         Keys,
+        PhysicsLayers,
+        ColliderShape,
+        Collider,
         version as _version_func,
     )
     # Expose version as a module-level attribute (from native binary)
@@ -40,6 +43,9 @@ except ImportError:
     CameraAspectMode = None  # type: ignore
     MouseButton = None  # type: ignore
     Keys = None  # type: ignore
+    PhysicsLayers = None  # type: ignore
+    ColliderShape = None  # type: ignore
+    Collider = None  # type: ignore
     version = None  # type: ignore
 
 # Auto-generated version from git tags via setuptools-scm
@@ -77,5 +83,8 @@ __all__ = [
     "CameraAspectMode",
     "MouseButton",
     "Keys",
+    "PhysicsLayers",
+    "ColliderShape",
+    "Collider",
     "version",
 ]

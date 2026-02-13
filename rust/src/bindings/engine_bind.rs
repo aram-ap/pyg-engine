@@ -6624,5 +6624,9 @@ fn pyg_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyCameraAspectMode>()?;
     m.add_class::<PyMouseButton>()?;
     m.add_class::<PyKeys>()?;
+
+    // Register physics bindings
+    crate::bindings::physics_bind::register_physics_bindings(m)?;
+
     Ok(())
 }

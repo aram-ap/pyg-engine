@@ -5,6 +5,7 @@ use super::input_manager::InputManager;
 /// Core engine functionality
 use super::logging;
 use super::object_manager::ObjectManager;
+use super::physics::CollisionWorld;
 use super::render_manager::{CameraAspectMode, RenderManager};
 use super::time::Time;
 use super::ui_manager::UIManager;
@@ -30,6 +31,7 @@ pub struct Engine {
     pub draw_manager: DrawManager,
     pub time: Time,
     pub ui_manager: Option<UIManager>,
+    pub collision_world: Option<CollisionWorld>,
 
     // Command Queue
     command_receiver: Receiver<EngineCommand>,
@@ -66,6 +68,7 @@ impl Engine {
             draw_manager: DrawManager::new(),
             time: Time::new(),
             ui_manager: None,
+            collision_world: Some(CollisionWorld::new()),
             command_receiver: receiver,
             command_sender: sender,
             window_config: None,
@@ -119,6 +122,7 @@ impl Engine {
             draw_manager: DrawManager::new(),
             time: Time::new(),
             ui_manager: None,
+            collision_world: Some(CollisionWorld::new()),
             command_receiver: receiver,
             command_sender: sender,
             window_config: None,
@@ -1139,6 +1143,11 @@ impl Engine {
                 if let Some(object) = object_manager.get_object_by_id(key) {
                     object.fixed_update(&self.time, fixed_time);
                 }
+            }
+
+            // Run collision detection
+            if let Some(collision_world) = &mut self.collision_world {
+                collision_world.step(object_manager);
             }
         }
 
