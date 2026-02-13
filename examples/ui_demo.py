@@ -3,11 +3,7 @@ UI Demo - Demonstrates the PyG Engine UI system
 Shows buttons, panels, and labels with different styling and layouts.
 """
 
-import math
-import time
-import pyg_engine as pyg
-from pyg_engine import Engine, Button, Panel, Label, Color, MouseButton
-
+from pyg_engine import Engine, Button, Panel, Label, Keys
 
 def main() -> None:
     engine = Engine(log_level="info")
@@ -35,6 +31,10 @@ def main() -> None:
         click_count[0] = 0
         if label_obj[0]:
             label_obj[0].text = f"Clicks: {click_count[0]}"
+
+    def update(dt: float, engine: Engine, user_data):
+        if engine.input.key_down(Keys.ESCAPE):
+            return False
 
     # Create a panel as a container
     panel = Panel(x=50, y=50, width=700, height=500, depth=0)
@@ -187,8 +187,8 @@ def main() -> None:
         title="PyG Engine - UI Demo",
         width=800,
         height=600,
+        update=update,
     )
-
 
 if __name__ == "__main__":
     main()
