@@ -23,6 +23,9 @@ pub enum EngineCommand {
     /// Update a runtime GameObject scale by id
     SetGameObjectScale { object_id: u32, scale: Vec2 },
 
+    /// Update a runtime GameObject mesh fill color by id
+    SetGameObjectMeshFillColor { object_id: u32, color: Option<Color> },
+
     /// Update the active camera world position
     SetCameraPosition { position: Vec2 },
 

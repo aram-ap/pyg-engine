@@ -155,6 +155,45 @@ impl PyCollider {
     fn is_trigger(&self) -> bool {
         self.component.is_trigger()
     }
+
+    /// Set collision enter callback
+    /// Called when this collider first overlaps with another
+    /// Callback signature: fn(other_id: int, normal_x: float, normal_y: float, penetration: float)
+    fn set_on_collision_enter(&mut self, callback: Py<PyAny>) {
+        self.component.set_on_collision_enter(move |other_id, normal, penetration| {
+            Python::with_gil(|py| {
+                let _ = callback.call1(
+                    py,
+                    (other_id, normal.x(), normal.y(), penetration)
+                );
+            });
+        });
+    }
+
+    /// Set collision stay callback
+    /// Called each frame while this collider overlaps with another
+    /// Callback signature: fn(other_id: int, normal_x: float, normal_y: float, penetration: float)
+    fn set_on_collision_stay(&mut self, callback: Py<PyAny>) {
+        self.component.set_on_collision_stay(move |other_id, normal, penetration| {
+            Python::with_gil(|py| {
+                let _ = callback.call1(
+                    py,
+                    (other_id, normal.x(), normal.y(), penetration)
+                );
+            });
+        });
+    }
+
+    /// Set collision exit callback
+    /// Called when this collider stops overlapping with another
+    /// Callback signature: fn(other_id: int)
+    fn set_on_collision_exit(&mut self, callback: Py<PyAny>) {
+        self.component.set_on_collision_exit(move |other_id| {
+            Python::with_gil(|py| {
+                let _ = callback.call1(py, (other_id,));
+            });
+        });
+    }
 }
 
 /// Register collision detection bindings with Python
