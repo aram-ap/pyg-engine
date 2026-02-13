@@ -147,9 +147,12 @@ impl CollisionWorld {
                     );
 
                     // Update or insert in AABB tree
-                    if !self.aabb_tree.update(object_id, aabb) {
+                    if !self.aabb_tree.contains(object_id) {
                         // Object not in tree, insert it
                         self.aabb_tree.insert(object_id, aabb);
+                    } else {
+                        // Object in tree, update if needed
+                        self.aabb_tree.update(object_id, aabb);
                     }
                 }
             }

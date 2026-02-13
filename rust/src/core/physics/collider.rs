@@ -6,10 +6,12 @@ use crate::core::component::ComponentTrait;
 use crate::core::time::Time;
 use crate::types::vector::Vec2;
 use std::any::Any;
-use std::sync::RwLock;
+use std::sync::{Arc, Mutex, RwLock};
+
+/// Type alias for collision callbacks
+pub type CollisionCallback = Arc<Mutex<Option<Box<dyn FnMut(u32, Vec2, f32) + Send + Sync>>>>;
 
 /// Collider component for collision detection
-#[derive(Debug)]
 pub struct ColliderComponent {
     name: String,
     shape: ColliderShape,
@@ -20,6 +22,41 @@ pub struct ColliderComponent {
     // Cached AABB for broad-phase optimization
     cached_aabb: RwLock<Option<AABB>>,
     aabb_dirty: RwLock<bool>,
+    // Collision callbacks
+    on_collision_enter: CollisionCallback,
+    on_collision_stay: CollisionCallback,
+    on_collision_exit: Arc<Mutex<Option<Box<dyn FnMut(u32) + Send + Sync>>>>,
+}
+
+impl std::fmt::Debug for ColliderComponent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ColliderComponent")
+            .field("name", &self.name)
+            .field("shape", &self.shape)
+            .field("layer", &self.layer)
+            .field("is_trigger", &self.is_trigger)
+            .finish()
+    }
+}
+
+impl Clone for ColliderComponent {
+    fn clone(&self) -> Self {
+        Self {
+            name: self.name.clone(),
+            shape: self.shape.clone(),
+            offset: self.offset,
+            layer: self.layer,
+            collision_mask: self.collision_mask,
+            is_trigger: self.is_trigger,
+            // Clone the cached AABB by reading the lock
+            cached_aabb: RwLock::new(self.cached_aabb.read().unwrap().clone()),
+            aabb_dirty: RwLock::new(*self.aabb_dirty.read().unwrap()),
+            // Clone callback Arc pointers (shared ownership)
+            on_collision_enter: Arc::clone(&self.on_collision_enter),
+            on_collision_stay: Arc::clone(&self.on_collision_stay),
+            on_collision_exit: Arc::clone(&self.on_collision_exit),
+        }
+    }
 }
 
 impl ComponentTrait for ColliderComponent {
@@ -33,6 +70,9 @@ impl ComponentTrait for ColliderComponent {
             is_trigger: false,
             cached_aabb: RwLock::new(None),
             aabb_dirty: RwLock::new(true),
+            on_collision_enter: Arc::new(Mutex::new(None)),
+            on_collision_stay: Arc::new(Mutex::new(None)),
+            on_collision_exit: Arc::new(Mutex::new(None)),
         }
     }
 
@@ -58,6 +98,21 @@ impl ComponentTrait for ColliderComponent {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+
+    /// Override collision enter callback
+    fn on_collision_enter(&self, other_id: u32, normal: Vec2, penetration: f32) {
+        self.invoke_on_collision_enter(other_id, normal, penetration);
+    }
+
+    /// Override collision stay callback
+    fn on_collision_stay(&self, other_id: u32, normal: Vec2, penetration: f32) {
+        self.invoke_on_collision_stay(other_id, normal, penetration);
+    }
+
+    /// Override collision exit callback
+    fn on_collision_exit(&self, other_id: u32) {
+        self.invoke_on_collision_exit(other_id);
     }
 }
 
@@ -177,5 +232,62 @@ impl ColliderComponent {
     /// Mark the AABB as dirty (needs recomputation)
     pub fn mark_aabb_dirty(&self) {
         *self.aabb_dirty.write().unwrap() = true;
+    }
+
+    /// Set the collision enter callback
+    /// Called when this collider first overlaps with another
+    /// Parameters: other_id (u32), normal (Vec2), penetration (f32)
+    pub fn set_on_collision_enter<F>(&mut self, callback: F)
+    where
+        F: FnMut(u32, Vec2, f32) + Send + Sync + 'static,
+    {
+        *self.on_collision_enter.lock().unwrap() = Some(Box::new(callback));
+    }
+
+    /// Set the collision stay callback
+    /// Called each frame while this collider overlaps with another
+    /// Parameters: other_id (u32), normal (Vec2), penetration (f32)
+    pub fn set_on_collision_stay<F>(&mut self, callback: F)
+    where
+        F: FnMut(u32, Vec2, f32) + Send + Sync + 'static,
+    {
+        *self.on_collision_stay.lock().unwrap() = Some(Box::new(callback));
+    }
+
+    /// Set the collision exit callback
+    /// Called when this collider stops overlapping with another
+    /// Parameters: other_id (u32)
+    pub fn set_on_collision_exit<F>(&mut self, callback: F)
+    where
+        F: FnMut(u32) + Send + Sync + 'static,
+    {
+        *self.on_collision_exit.lock().unwrap() = Some(Box::new(callback));
+    }
+
+    /// Invoke the collision enter callback (internal use)
+    pub(crate) fn invoke_on_collision_enter(&self, other_id: u32, normal: Vec2, penetration: f32) {
+        if let Ok(mut guard) = self.on_collision_enter.lock() {
+            if let Some(callback) = guard.as_mut() {
+                callback(other_id, normal, penetration);
+            }
+        }
+    }
+
+    /// Invoke the collision stay callback (internal use)
+    pub(crate) fn invoke_on_collision_stay(&self, other_id: u32, normal: Vec2, penetration: f32) {
+        if let Ok(mut guard) = self.on_collision_stay.lock() {
+            if let Some(callback) = guard.as_mut() {
+                callback(other_id, normal, penetration);
+            }
+        }
+    }
+
+    /// Invoke the collision exit callback (internal use)
+    pub(crate) fn invoke_on_collision_exit(&self, other_id: u32) {
+        if let Ok(mut guard) = self.on_collision_exit.lock() {
+            if let Some(callback) = guard.as_mut() {
+                callback(other_id);
+            }
+        }
     }
 }

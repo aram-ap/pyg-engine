@@ -585,6 +585,25 @@ impl Engine {
         true
     }
 
+    /// Update a runtime GameObject mesh fill color by id.
+    pub fn set_game_object_mesh_fill_color(&mut self, id: u32, color: Option<Color>) -> bool {
+        let Some(object_manager) = &mut self.object_manager else {
+            return false;
+        };
+
+        let Some(object) = object_manager.get_object_by_id_mut(id) else {
+            return false;
+        };
+
+        if let Some(mesh) = object.mesh_component_mut() {
+            mesh.set_fill_color(color);
+            self.request_render_redraw();
+            true
+        } else {
+            false
+        }
+    }
+
     fn request_render_redraw(&mut self) {
         if let Some(render_manager) = &mut self.render_manager {
             render_manager.request_redraw();
@@ -876,6 +895,9 @@ impl Engine {
                 }
                 EngineCommand::SetGameObjectScale { object_id, scale } => {
                     let _ = self.set_game_object_scale(object_id, scale);
+                }
+                EngineCommand::SetGameObjectMeshFillColor { object_id, color } => {
+                    let _ = self.set_game_object_mesh_fill_color(object_id, color);
                 }
                 EngineCommand::SetCameraPosition { position } => {
                     let _ = self.set_camera_position(position);

@@ -93,6 +93,11 @@ impl AABBTree {
     }
 
     /// Update an object's AABB. Returns false if the fattened AABB still contains it.
+    /// Check if an object is in the tree
+    pub fn contains(&self, object_id: u32) -> bool {
+        self.object_to_node.contains_key(&object_id)
+    }
+
     pub fn update(&mut self, object_id: u32, new_aabb: AABB) -> bool {
         if let Some(&node_index) = self.object_to_node.get(&object_id) {
             let current_aabb = self.nodes[node_index].aabb;

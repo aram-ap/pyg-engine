@@ -26,6 +26,7 @@ use crate::core::window_manager::{FullscreenMode, WindowConfig, load_window_icon
 // Import bindings from separate modules
 use super::color_bind::PyColor;
 use super::input_bind::{PyKeys, PyMouseButton, parse_key, parse_mouse_button};
+use super::physics_bind::PyCollider;
 use super::vector_bind::{PyVec2, PyVec3};
 
 // ========== Engine Bindings ==========
@@ -4211,6 +4212,15 @@ impl PyGameObject {
             }
         }
 
+        // Copy ALL other components (including Colliders)
+        use crate::core::physics::collider::ColliderComponent;
+        for component in self.inner.components_iter() {
+            // Check if it's a Collider (and not already copied above)
+            if let Some(collider) = component.as_any().downcast_ref::<ColliderComponent>() {
+                runtime.add_component(Box::new(collider.clone()));
+            }
+        }
+
         runtime
     }
 
@@ -5275,7 +5285,16 @@ impl PyGameObject {
     /// - `Color` - Color class with creation methods
     fn set_mesh_fill_color(&mut self, color: Option<PyColor>) {
         let mesh = self.ensure_mesh_component();
-        mesh.set_fill_color(color.map(|c| c.inner));
+        let color_inner = color.map(|c| c.inner);
+        mesh.set_fill_color(color_inner);
+
+        // Update runtime object if it exists
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::SetGameObjectMeshFillColor {
+                object_id: binding.object_id,
+                color: color_inner,
+            });
+        }
     }
 
     /// Get the fill color of the mesh.
@@ -5755,9 +5774,12 @@ impl PyGameObject {
         } else if let Ok(label) = component.extract::<PyRef<PyLabelComponent>>() {
             self.inner.add_component(Box::new(label.inner.clone()));
             Ok(())
+        } else if let Ok(collider) = component.extract::<PyRef<PyCollider>>() {
+            self.inner.add_component(Box::new(collider.component.clone()));
+            Ok(())
         } else {
             Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                "Component must be ButtonComponent, PanelComponent, or LabelComponent"
+                "Component must be ButtonComponent, PanelComponent, LabelComponent, or Collider"
             ))
         }
     }
