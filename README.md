@@ -106,22 +106,26 @@ import pyg_engine as pyg
 
 engine = pyg.Engine()
 
-# Create a Game Object
-go = pyg.GameObject("Player")
+# Create a GameObject
+player = pyg.GameObject("Player")
 
-# Add a Mesh Component
+# Add components through the shared component API
 mesh = pyg.MeshComponent("PlayerSprite")
-mesh.set_geometry_rectangle(1.0, 1.0)  # 1 world-unit wide and tall
+mesh.set_geometry_rectangle(1.0, 1.0)  # 1 world unit wide and tall
 mesh.set_fill_color(pyg.Color.RED)
-# mesh.set_image_path("path/to/image.png") # Optional texture
+player.add_component(mesh)
 
-go.set_mesh_component(mesh)
+# Local transform (world-space while unparented)
+player.position = pyg.Vec2(0.0, 0.0)
+player.scale = pyg.Vec2(0.5, 0.5)
 
-# Position is in world space
-go.position = pyg.Vec2(0.0, 0.0)
-go.scale = pyg.Vec2(0.5, 0.5)
+player_id = engine.add_game_object(player)
 
-engine.add_game_object(go)
+# Runtime lookup + lifecycle helpers
+runtime_player = engine.objects.get_id(player_id)
+camera = engine.camera
+runtime_player.enabled = True
+# engine.destroy(runtime_player)
 
 engine.run(title="Game Object Demo")
 ```
