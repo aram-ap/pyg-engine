@@ -119,13 +119,13 @@ class KeyEdgeTracker:
 
 def read_direction_input(engine: Engine) -> Optional[GridPos]:
     """Read one direction change request for this frame."""
-    if engine.input.key_down("w") or engine.input.key_down(Keys.ARROW_UP):
+    if(engine.input.axis("Vertical") > 0):
         return (0, -1)
-    if engine.input.key_down("s") or engine.input.key_down(Keys.ARROW_DOWN):
+    if(engine.input.axis("Vertical") < 0):
         return (0, 1)
-    if engine.input.key_down("a") or engine.input.key_down(Keys.ARROW_LEFT):
+    if(engine.input.axis("Horizontal") < 0):
         return (-1, 0)
-    if engine.input.key_down("d") or engine.input.key_down(Keys.ARROW_RIGHT):
+    if(engine.input.axis("Horizontal") > 0):
         return (1, 0)
     return None
 
