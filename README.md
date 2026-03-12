@@ -26,7 +26,7 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 
 ## :eyes: Gallary
 
-- **[Snake](examples/python_snake_demo.py)**: One of the provided examples
+- **[Snake](examples/snake_demo.py)**: One of the provided examples
 
 ![snake](images/snake.gif)
 
@@ -224,13 +224,13 @@ raises `RuntimeError`.
 
 Check the [`examples/`](examples) directory for more complete demonstrations:
 
-- `python_direct_draw_demo.py`: Shows the new `engine.draw(...)` shape API.
-- `python_mesh_demo.py`: Demonstrates GameObjects, object-based mesh geometry, and world text meshes.
-- `python_threading_demo.py`: **Advanced**: Spawns a background thread that safely updates the UI using `engine.get_handle()`.
-- `python_manual_loop.py`: Shows how to control the game loop manually (`start_manual` -> poll -> update -> render).
-- `python_function_update_demo.py`: Shows callback-based loop control via `engine.run(update=...)`.
-- `python_snake_demo.py`: Playable Snake game using immediate-mode drawing and keyboard input.
-- `python_camera_worldspace_demo.py`: Shows object-style camera control along with world-space objects and HUD text.
+- `direct_draw_demo.py`: Shows the new `engine.draw(...)` shape API.
+- `mesh_demo.py`: Demonstrates GameObjects, object-based mesh geometry, and world text meshes.
+- `threading_demo.py`: **Advanced**: Spawns a background thread that safely updates the UI using `engine.get_handle()`.
+- `manual_loop.py`: Shows how to control the game loop manually (`start_manual` -> poll -> update -> render).
+- `function_update_demo.py`: Shows callback-based loop control via `engine.run(update=...)`.
+- `snake_demo.py`: Playable Snake game using immediate-mode drawing and keyboard input.
+- `camera_worldspace_demo.py`: Shows object-style camera control along with world-space objects and HUD text.
 - `ui_demo.py`: Demonstrates the UI system, button functions, and text label updates.
 
 ## :hammer_and_wrench: Development & Testing

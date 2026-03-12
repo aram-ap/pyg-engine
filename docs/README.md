@@ -23,8 +23,8 @@ pip install -e .
 Then run a Python demo from the project root:
 
 ```bash
-python examples/python_direct_draw_demo.py
-python examples/python_mesh_demo.py
+python examples/direct_draw_demo.py
+python examples/mesh_demo.py
 ```
 
 ## Available Examples
@@ -74,7 +74,7 @@ Demonstrates direct drawing primitives on the Rust backend:
 cargo run --example draw_primitives_demo --no-default-features
 ```
 
-### python_direct_draw_demo.py
+### direct_draw_demo.py
 
 Demonstrates immediate-mode direct draw from Python:
 - `engine.draw_pixel(...)`
@@ -84,10 +84,10 @@ Demonstrates immediate-mode direct draw from Python:
 
 **Run:**
 ```bash
-python examples/python_direct_draw_demo.py
+python examples/direct_draw_demo.py
 ```
 
-### python_mesh_demo.py
+### mesh_demo.py
 
 Demonstrates Python-side scene setup with GameObject + MeshComponent:
 - Build mesh components in Python
@@ -96,7 +96,7 @@ Demonstrates Python-side scene setup with GameObject + MeshComponent:
 
 **Run:**
 ```bash
-python examples/python_mesh_demo.py
+python examples/mesh_demo.py
 ```
 
 See `examples/PYTHON_RENDERING_GUIDE.md` for API details.

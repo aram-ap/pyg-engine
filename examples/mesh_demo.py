@@ -10,9 +10,9 @@ Demonstrates:
 
 Run from project root after installing the package in editable mode:
     pip install -e .
-    python examples/python_mesh_demo.py
-    python examples/python_mesh_demo.py --show-fps
-    python examples/python_mesh_demo.py --no-texture
+    python examples/mesh_demo.py
+    python examples/mesh_demo.py --show-fps
+    python examples/mesh_demo.py --no-texture
 """
 
 import argparse
@@ -71,7 +71,7 @@ def create_text_mesh_label() -> pyg.GameObject:
     label.position = pyg.Vec2(0.0, 0.45)
     label.scale = pyg.Vec2(0.0045, 0.0045)
 
-    text_mesh = pyg.TextMeshComponent("Object-Based Text", font_size=42.0)
+    text_mesh = pyg.TextMeshComponent("Object-Based Text", font_size=22.0)
     text_mesh.color = pyg.Color.WHITE
     text_mesh.draw_order = 3.4
     label.add_text_mesh_component(text_mesh)

@@ -23,8 +23,8 @@ pip install -e .
 Then run a Python demo from the project root:
 
 ```bash
-python examples/python_direct_draw_demo.py
-python examples/python_mesh_demo.py
+python examples/direct_draw_demo.py
+python examples/mesh_demo.py
 ```
 
 For pygame-based comparison demos, install pygame:
@@ -80,7 +80,7 @@ Demonstrates direct drawing primitives on the Rust backend:
 cargo run --example draw_primitives_demo --no-default-features
 ```
 
-### python_direct_draw_demo.py
+### direct_draw_demo.py
 
 Demonstrates immediate-mode shape drawing from Python:
 - `engine.draw(Line(...))`
@@ -93,10 +93,10 @@ Demonstrates immediate-mode shape drawing from Python:
 
 **Run:**
 ```bash
-python examples/python_direct_draw_demo.py
+python examples/direct_draw_demo.py
 ```
 
-### python_bulk_draw_demo.py
+### bulk_draw_demo.py
 
 Demonstrates batched shape submission:
 - Build `Rect(...)` and `Line(...)` objects in Python
@@ -105,10 +105,10 @@ Demonstrates batched shape submission:
 
 **Run:**
 ```bash
-python examples/python_bulk_draw_demo.py
+python examples/bulk_draw_demo.py
 ```
 
-### python_rendering_showcase_demo.py
+### rendering_showcase_demo.py
 
 Unified "all systems" rendering showcase:
 - Mesh + GameObject rendering (solid + textured quads)
@@ -120,7 +120,7 @@ Unified "all systems" rendering showcase:
 
 **Run:**
 ```bash
-python examples/python_rendering_showcase_demo.py
+python examples/rendering_showcase_demo.py
 ```
 
 ### pygame_rendering_showcase_demo.py
@@ -138,7 +138,7 @@ python examples/pygame_rendering_showcase_demo.py
 ### rendering_showcase_side_by_side.py
 
 Launches both versions together:
-- `python_rendering_showcase_demo.py` (pyg_engine)
+- `rendering_showcase_demo.py` (pyg_engine)
 - `pygame_rendering_showcase_demo.py` (pygame clone)
 
 **Run:**
@@ -146,7 +146,7 @@ Launches both versions together:
 python examples/rendering_showcase_side_by_side.py
 ```
 
-### python_visualization_demo.py
+### visualization_demo.py
 
 Demonstrates Phase 1 visualization APIs:
 - Per-corner gradient rectangles
@@ -155,10 +155,10 @@ Demonstrates Phase 1 visualization APIs:
 
 **Run:**
 ```bash
-python examples/python_visualization_demo.py
+python examples/visualization_demo.py
 ```
 
-### python_mesh_demo.py
+### mesh_demo.py
 
 Demonstrates Python-side scene setup with GameObject + MeshComponent:
 - Build mesh components in Python
@@ -167,10 +167,10 @@ Demonstrates Python-side scene setup with GameObject + MeshComponent:
 
 **Run:**
 ```bash
-python examples/python_mesh_demo.py
+python examples/mesh_demo.py
 ```
 
-### python_camera_worldspace_demo.py
+### camera_worldspace_demo.py
 
 Demonstrates world-space camera controls from Python:
 - Move camera in world-space (WASD / Arrow keys)
@@ -180,10 +180,10 @@ Demonstrates world-space camera controls from Python:
 
 **Run:**
 ```bash
-python examples/python_camera_worldspace_demo.py
+python examples/camera_worldspace_demo.py
 ```
 
-### python_snake_demo.py
+### snake_demo.py
 
 Playable Snake game built with the Python API:
 - Grid-based game loop with fixed-step movement
@@ -193,10 +193,10 @@ Playable Snake game built with the Python API:
 
 **Run:**
 ```bash
-python examples/python_snake_demo.py
+python examples/snake_demo.py
 ```
 
-### python_function_update_demo.py
+### function_update_demo.py
 
 Demonstrates callback-driven loop control:
 - Pass a Python function directly to `engine.run(update=...)`
@@ -205,10 +205,10 @@ Demonstrates callback-driven loop control:
 
 **Run:**
 ```bash
-python examples/python_function_update_demo.py
+python examples/function_update_demo.py
 ```
 
-### python_manual_loop.py
+### manual_loop.py
 
 Demonstrates explicit manual loop control:
 - Start manual mode with `engine.start_manual(...)`
@@ -217,10 +217,10 @@ Demonstrates explicit manual loop control:
 
 **Run:**
 ```bash
-python examples/python_manual_loop.py
+python examples/manual_loop.py
 ```
 
-### python_input_demo.py
+### input_demo.py
 
 Demonstrates the logical input system:
 - Unity-style axes (`Horizontal`, `Vertical`, etc.)
@@ -229,7 +229,7 @@ Demonstrates the logical input system:
 
 **Run:**
 ```bash
-python examples/python_input_demo.py
+python examples/input_demo.py
 ```
 
 See `examples/PYTHON_RENDERING_GUIDE.md` for API details.
