@@ -14,6 +14,7 @@ use winit::window::Window;
 
 use super::geometry::Vertex;
 use super::logging;
+use crate::core::component::ComponentTrait;
 use crate::core::draw_manager::{DrawCommand, DrawManager};
 use crate::core::object_manager::ObjectManager;
 use crate::types::Color;
@@ -712,8 +713,7 @@ impl RenderManager {
         };
 
         objects
-            .get_object_by_id(camera_id)
-            .map(|camera| *camera.transform().position())
+            .world_position(camera_id)
             .unwrap_or_else(|| Vec2::new(0.0, 0.0))
     }
 
@@ -2028,7 +2028,9 @@ impl RenderManager {
                 continue;
             }
 
-            let transform = object.transform();
+            let Some(world_transform) = objects.world_transform(id) else {
+                continue;
+            };
             let fill_color = mesh.fill_color().copied().unwrap_or(Color::WHITE);
             let color = [
                 fill_color.r(),
@@ -2037,12 +2039,16 @@ impl RenderManager {
                 fill_color.a(),
             ];
 
-            let cos_t = transform.rotation().cos();
-            let sin_t = transform.rotation().sin();
-            let scale_x = transform.scale().x();
-            let scale_y = transform.scale().y();
-            let pos_x = transform.position().x();
-            let pos_y = transform.position().y();
+            if !mesh.is_effectively_enabled() {
+                continue;
+            }
+
+            let cos_t = world_transform.rotation.cos();
+            let sin_t = world_transform.rotation.sin();
+            let scale_x = world_transform.scale.x();
+            let scale_y = world_transform.scale.y();
+            let pos_x = world_transform.position.x();
+            let pos_y = world_transform.position.y();
 
             let mut vertices = Vec::with_capacity(mesh.geometry().vertices().len());
             for vertex in mesh.geometry().vertices() {

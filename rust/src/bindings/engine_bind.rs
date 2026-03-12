@@ -122,6 +122,18 @@ fn component_type_name_from_py(value: &Bound<'_, PyAny>) -> PyResult<String> {
     ))
 }
 
+fn component_id_from_py(value: &Bound<'_, PyAny>) -> PyResult<u32> {
+    if let Ok(component_id) = value.getattr("id")
+        && let Ok(component_id) = component_id.extract::<u32>()
+    {
+        return Ok(component_id);
+    }
+
+    Err(PyRuntimeError::new_err(
+        "Component must expose an integer 'id' property",
+    ))
+}
+
 #[pyclass(name = "CameraAspectMode")]
 pub struct PyCameraAspectMode;
 
@@ -4311,8 +4323,9 @@ impl PyTime {
 ///
 /// `GameObject` is the fundamental building block of your game. Each GameObject has:
 /// - **Transform**: Position, rotation, scale
-/// - **Components**: Rendering (mesh), UI elements (button, panel, label)
-/// - **State**: Active/inactive, name, unique ID
+/// - **Components**: Rendering, collision, and UI behavior attached through `add_component(...)`
+/// - **State**: Enabled/disabled, name, unique ID
+/// - **Hierarchy**: Optional parent/child relationships with inherited transforms
 ///
 /// # Creation and Setup
 ///
@@ -4329,7 +4342,7 @@ impl PyTime {
 /// mesh = MeshComponent("Rectangle")
 /// mesh.set_geometry_rectangle(1.0, 1.0)
 /// mesh.set_fill_color(Color.BLUE)
-/// player.set_mesh_component(mesh)
+/// player.add_component(mesh)
 ///
 /// # Add to engine
 /// engine.add_game_object(player)
@@ -4338,7 +4351,7 @@ impl PyTime {
 /// # Transform Properties
 ///
 /// GameObjects use a 2D transform with position, rotation, and scale:
-/// - **position**: `Vec2` in world coordinates
+/// - **position**: `Vec2` local to the parent (world-space when unparented)
 /// - **rotation**: Angle in **radians** (counter-clockwise)
 /// - **scale**: `Vec2` multiplier (1.0 = original size)
 ///
@@ -4346,16 +4359,19 @@ impl PyTime {
 ///
 /// Attach components to add functionality:
 /// - `MeshComponent` - 2D rendering (rectangles, circles, images)
+/// - `Collider` - Collision and trigger callbacks
 /// - `ButtonComponent` - Clickable UI button
 /// - `PanelComponent` - UI container panel
 /// - `LabelComponent` - UI text label
 ///
-/// # Active State
+/// Parent transforms propagate to children in world rendering and physics.
+///
+/// # Enabled State
 ///
 /// GameObjects can be enabled/disabled:
 /// ```python
-/// player.active = False  # Disable (not rendered, not updated)
-/// player.active = True   # Enable
+/// player.enabled = False  # Disable object, children, and components
+/// player.enabled = True
 /// ```
 ///
 /// # Object Types
@@ -4520,6 +4536,19 @@ impl PyGameObject {
         self.current_object().name().map(|name| name.to_string())
     }
 
+    #[getter]
+    fn object_type(&self) -> String {
+        match self.current_object().get_object_type() {
+            crate::core::game_object::ObjectType::GameObject => "GameObject",
+            crate::core::game_object::ObjectType::UIObject => "UIObject",
+            crate::core::game_object::ObjectType::ParticleSystem => "ParticleSystem",
+            crate::core::game_object::ObjectType::Sound => "Sound",
+            crate::core::game_object::ObjectType::Light => "Light",
+            crate::core::game_object::ObjectType::Camera => "Camera",
+        }
+        .to_string()
+    }
+
     /// Set or change the name of this GameObject.
     ///
     /// Assigns a human-readable name to the object. Names are useful for debugging,
@@ -4553,50 +4582,50 @@ impl PyGameObject {
         }
     }
 
-    /// Check if this GameObject is active.
+    /// Compatibility alias for `enabled`.
     ///
-    /// Active objects are updated and rendered each frame. Inactive objects are ignored
-    /// by the engine until they are activated again.
+    /// Prefer `enabled` in new code. This property remains available for older examples and
+    /// returns the same hierarchy-aware enabled state as `enabled`.
     ///
     /// # Returns
-    /// - `True` - Object is active (updated and rendered)
-    /// - `False` - Object is inactive (dormant)
+    /// - `True` - Object is enabled
+    /// - `False` - Object is disabled
     ///
     /// # Example
     /// ```python
     /// import pyg_engine as pyg
     ///
     /// player = pyg.GameObject("Player")
-    /// print(player.active)  # True (active by default)
+    /// print(player.active)  # True
     ///
-    /// # Deactivate object
+    /// # Disable object through compatibility alias
     /// player.active = False
     /// print(player.active)  # False
     ///
-    /// # Reactivate object
+    /// # Re-enable later
     /// player.active = True
     /// print(player.active)  # True
     /// ```
     ///
     /// # Use Cases
-    /// - **Object pooling**: Deactivate/reactivate objects instead of creating/destroying
-    /// - **Pause mechanics**: Deactivate enemies when game is paused
+    /// - **Object pooling**: Disable/re-enable objects instead of creating/destroying
+    /// - **Pause mechanics**: Disable enemies when the game is paused
     /// - **Conditional rendering**: Hide objects without removing them from the scene
     ///
     /// # See Also
-    /// - `active` (setter) - Set active state
+    /// - `enabled` - Preferred property name in new code
     #[getter]
     fn active(&self) -> bool {
         self.current_object().is_active()
     }
 
-    /// Set whether this GameObject is active.
+    /// Compatibility setter for `enabled`.
     ///
-    /// Controls whether the object is updated and rendered. Inactive objects remain in
-    /// the scene but are skipped during update and render passes.
+    /// Prefer `enabled` in new code. Disabled objects remain in the scene but are skipped
+    /// during update, render, and collision passes, and disabled parents cascade to children.
     ///
     /// # Arguments
-    /// * `active` - `True` to activate, `False` to deactivate
+    /// * `active` - `True` to enable, `False` to disable
     ///
     /// # Example
     /// ```python
@@ -4621,12 +4650,12 @@ impl PyGameObject {
     ///         self.bullets = []
     ///         for i in range(size):
     ///             bullet = pyg.GameObject(f"Bullet_{i}")
-    ///             bullet.active = False  # Start deactivated
+    ///             bullet.active = False  # Compatibility alias for enabled = False
     ///             engine.add_game_object(bullet)
     ///             self.bullets.append(bullet)
     ///
     ///     def spawn(self, position):
-    ///         # Find inactive bullet
+    ///         # Find disabled bullet
     ///         for bullet in self.bullets:
     ///             if not bullet.active:
     ///                 bullet.position = position
@@ -4639,7 +4668,7 @@ impl PyGameObject {
     /// ```
     ///
     /// # See Also
-    /// - `active` (getter) - Check active state
+    /// - `enabled` - Preferred property name in new code
     #[setter]
     fn set_active(&mut self, active: bool) {
         self.inner.set_active(active);
@@ -5075,7 +5104,8 @@ impl PyGameObject {
     /// Set the scale of this GameObject.
     ///
     /// Controls the size of the object relative to its original dimensions.
-    /// Scale is applied to both the mesh geometry and any child components.
+    /// Scale is applied to the object's components and propagates through child objects
+    /// when the object is part of a hierarchy.
     ///
     /// # Arguments
     /// * `scale` - Scale factors as `Vec2`:
@@ -5282,10 +5312,15 @@ impl PyGameObject {
     /// engine.add_game_object(obj)
     /// ```
     ///
+    /// Compatibility helper for mesh attachment.
+    ///
+    /// Prefer `add_component(mesh_component)` in new code so mesh, collider, transform,
+    /// and UI components all follow the same attachment API.
+    ///
     /// # See Also
+    /// - `add_component()` - Canonical component attachment API
     /// - `has_mesh_component()` - Check if mesh exists
     /// - `mesh_component()` - Get the mesh component
-    /// - `set_mesh_component()` - Alternative to add (same behavior)
     /// - `MeshComponent` - Mesh component class
     fn add_mesh_component(&mut self, mesh_component: &PyMeshComponent) {
         self.inner.add_mesh_component(mesh_component.inner.clone());
@@ -5299,8 +5334,10 @@ impl PyGameObject {
 
     /// Set the mesh component for this GameObject.
     ///
-    /// Attaches or replaces the `MeshComponent` for rendering. This is functionally
-    /// identical to `add_mesh_component()`.
+    /// Compatibility helper for attaching or replacing the `MeshComponent`.
+    ///
+    /// This is functionally identical to `add_mesh_component()`. Prefer
+    /// `add_component(mesh_component)` in new code.
     ///
     /// # Arguments
     /// * `mesh_component` - The `MeshComponent` to attach
@@ -5315,11 +5352,12 @@ impl PyGameObject {
     /// mesh.set_geometry_rectangle(64.0, 64.0)
     /// mesh.set_fill_color(pyg.Color.BLUE)
     ///
-    /// obj.set_mesh_component(mesh)  # Same as add_mesh_component()
+    /// obj.add_component(mesh)  # Preferred
     /// ```
     ///
     /// # See Also
-    /// - `add_mesh_component()` - Preferred method (same behavior)
+    /// - `add_component()` - Preferred method in new code
+    /// - `add_mesh_component()` - Compatibility helper with same behavior
     fn set_mesh_component(&mut self, mesh_component: &PyMeshComponent) {
         self.add_mesh_component(mesh_component);
     }
@@ -5881,7 +5919,8 @@ impl PyGameObject {
     /// Set the object type for specialized rendering or behavior.
     ///
     /// Marks the object as a specific type, which affects how the engine handles it.
-    /// Most commonly used to mark objects as UI elements for screen-space rendering.
+    /// Most projects only need the default `"GameObject"` type plus `"UIObject"` for
+    /// objects that carry UI components.
     ///
     /// # Arguments
     /// * `object_type` - Type string (case-sensitive):
@@ -5894,11 +5933,9 @@ impl PyGameObject {
     ///
     /// # UI Objects
     ///
-    /// **UIObject** is the most commonly used type. UI objects:
-    /// - Render in **screen-space** coordinates (pixels from top-left)
-    /// - **Ignore camera** position and viewport
-    /// - Always rendered **on top** of world objects
-    /// - Used for: buttons, panels, labels, menus, HUD elements
+    /// **UIObject** is intended for objects that use UI components such as buttons,
+    /// panels, and labels. Those components render in screen space and ignore the
+    /// world camera.
     ///
     /// # Example
     /// ```python
@@ -5919,7 +5956,7 @@ impl PyGameObject {
     ///
     /// engine = pyg.Engine()
     ///
-    /// # Create UI button
+    /// # Create UI button object
     /// button_obj = pyg.GameObject("Button")
     /// button_obj.set_object_type("UIObject")  # Mark as UI
     ///
@@ -5933,24 +5970,15 @@ impl PyGameObject {
     /// engine.run(title="UI Demo")
     /// ```
     ///
-    /// # Screen-Space vs World-Space
+    /// # Preferred High-Level UI API
     /// ```python
     /// import pyg_engine as pyg
     ///
-    /// # World-space object (affected by camera)
-    /// world_obj = pyg.GameObject("WorldSprite")
-    /// world_obj.position = pyg.Vec2(100.0, 100.0)  # World coordinates
-    /// world_obj.set_mesh_geometry_rectangle(64.0, 64.0)
-    /// world_obj.set_mesh_fill_color(pyg.Color.BLUE)
-    /// # Moves with camera, affected by camera zoom
-    ///
-    /// # Screen-space UI object (ignores camera)
-    /// ui_obj = pyg.GameObject("UIPanel")
-    /// ui_obj.set_object_type("UIObject")
-    /// ui_obj.position = pyg.Vec2(10.0, 10.0)  # Screen pixels from top-left
-    /// ui_obj.set_mesh_geometry_rectangle(200.0, 100.0)
-    /// ui_obj.set_mesh_fill_color(pyg.Color.rgba(0, 0, 0, 128))
-    /// # Always at same screen position, ignores camera
+    /// engine = pyg.Engine()
+    /// panel = pyg.Panel(x=20, y=20, width=220, height=120)
+    /// button = pyg.Button("Play", x=16, y=16, width=120, height=40)
+    /// panel.add_child(button)
+    /// engine.ui.add(panel)
     /// ```
     ///
     /// # See Also
@@ -5969,41 +5997,42 @@ impl PyGameObject {
         self.inner.set_object_type(obj_type);
     }
 
-    /// Add a UI component to this GameObject.
+    /// Add a component to this GameObject.
     ///
-    /// Attaches a UI component (button, panel, or label) to the object. The object
-    /// should typically be marked as a `"UIObject"` for proper screen-space rendering.
+    /// This is the canonical attachment API for runtime components. It accepts mesh,
+    /// transform, collider, and UI component types. If you attach a UI component, the
+    /// object should typically be marked as `"UIObject"` for screen-space rendering.
     ///
     /// # Supported Components
+    /// - `MeshComponent` - 2D rendering
+    /// - `TransformComponent` - Replace the object's local transform
+    /// - `Collider` - Collision / trigger behavior
     /// - `ButtonComponent` - Clickable button with callback
     /// - `PanelComponent` - Rectangular UI container/background
     /// - `LabelComponent` - Text label for UI
     ///
     /// # Arguments
-    /// * `component` - The UI component to attach (ButtonComponent, PanelComponent, or LabelComponent)
+    /// * `component` - The component to attach
     ///
     /// # Returns
     /// - `Ok(())` - Component added successfully
     /// - `Err(TypeError)` - Invalid component type
     ///
-    /// # Example
+    /// # World Component Example
     /// ```python
     /// import pyg_engine as pyg
     ///
-    /// # Create UI object
-    /// ui_obj = pyg.GameObject("UIElement")
-    /// ui_obj.set_object_type("UIObject")
+    /// player = pyg.GameObject("Player")
+    /// mesh = pyg.MeshComponent()
+    /// mesh.set_geometry_rectangle(64.0, 64.0)
+    /// mesh.set_fill_color(pyg.Color.BLUE)
+    /// player.add_component(mesh)
     ///
-    /// # Add button component
-    /// button = pyg.ButtonComponent("ClickMe", 100, 100, 200, 50)
-    /// button.set_text("Click Me!")
-    /// button.set_on_click(lambda: print("Clicked!"))
-    /// ui_obj.add_component(button)
-    ///
-    /// engine.add_game_object(ui_obj)
+    /// collider = pyg.Collider("PlayerCollider")
+    /// player.add_component(collider)
     /// ```
     ///
-    /// # Complete UI Example
+    /// # UI Component Example
     /// ```python
     /// import pyg_engine as pyg
     ///
@@ -6020,9 +6049,8 @@ impl PyGameObject {
     /// # Title label
     /// label_obj = pyg.GameObject("Title")
     /// label_obj.set_object_type("UIObject")
-    /// label = pyg.LabelComponent("TitleText", 100, 70, "Game Menu")
-    /// label.set_font_size(24.0)
-    /// label.set_text_color(pyg.Color.WHITE)
+    /// label = pyg.LabelComponent("Game Menu", 100, 70, 24.0)
+    /// label.set_color(1.0, 1.0, 1.0, 1.0)
     /// label_obj.add_component(label)
     /// engine.add_game_object(label_obj)
     ///
@@ -6057,10 +6085,11 @@ impl PyGameObject {
     /// ```
     ///
     /// # Errors
-    /// Raises `TypeError` if the component is not a valid UI component type:
+    /// Raises `TypeError` if the component is not a supported runtime component type:
     /// ```python
-    /// obj.add_component(mesh)  # TypeError: not a UI component
-    /// obj.add_component(button)  # OK: ButtonComponent
+    /// obj.add_component(mesh)      # OK
+    /// obj.add_component(collider)  # OK
+    /// obj.add_component(button)    # OK
     /// ```
     ///
     /// # See Also
@@ -6183,6 +6212,11 @@ impl PyGameObject {
         }
         removed
     }
+
+    fn remove_component(&mut self, component: &Bound<'_, PyAny>) -> PyResult<bool> {
+        let component_id = component_id_from_py(component)?;
+        Ok(self.remove_component_id(component_id))
+    }
 }
 
 // ========== MeshComponent Bindings ==========
@@ -6269,6 +6303,21 @@ impl PyMeshComponent {
         self.inner.name().to_string()
     }
 
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
+    }
+
     fn set_geometry_rectangle(&mut self, width: f32, height: f32) {
         self.inner
             .set_geometry(MeshGeometry::rectangle(width, height));
@@ -6324,18 +6373,20 @@ impl PyMeshComponent {
 
 /// 2D transform component for position, rotation, and scale.
 ///
-/// `TransformComponent` defines the spatial properties of a GameObject in 2D space.
-/// Every GameObject has a transform that controls where it appears and how it's oriented.
+/// `TransformComponent` defines the local spatial properties of a `GameObject` in 2D space.
+/// Every `GameObject` has one, and parent transforms are composed into world-space for
+/// rendering and physics when the object is part of a hierarchy.
 ///
 /// # Properties
 ///
-/// - **position**: `Vec2` - Location in world coordinates
+/// - **position**: `Vec2` - Location relative to the parent (world-space when unparented)
 /// - **rotation**: `float` - Angle in **radians** (counter-clockwise)
 /// - **scale**: `Vec2` - Size multiplier (1.0 = original size)
 ///
 /// # Coordinate System
 ///
-/// - **World space**: Absolute positions in the game world
+/// - **Local space**: Stored on the object relative to its parent
+/// - **World space**: Computed from the full parent chain at runtime
 /// - **Origin**: Typically center of the screen, but configurable via camera
 /// - **Y-axis**: Typically up is positive, down is negative
 ///
@@ -6448,6 +6499,21 @@ impl PyTransformComponent {
     fn name(&self) -> String {
         self.inner.name().to_string()
     }
+
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
+    }
 }
 
 // ========== Module Functions ==========
@@ -6485,8 +6551,23 @@ impl PyButtonComponent {
         self.inner.text().to_string()
     }
 
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
     fn set_enabled(&mut self, enabled: bool) {
         self.inner.set_enabled(enabled);
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
     }
 
     fn set_position(&mut self, x: f32, y: f32) {
@@ -6963,6 +7044,21 @@ impl PyPanelComponent {
     fn name(&self) -> String {
         self.inner.name().to_string()
     }
+
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
+    }
 }
 
 /// Python wrapper for LabelComponent.
@@ -7021,6 +7117,21 @@ impl PyLabelComponent {
     #[getter]
     fn name(&self) -> String {
         self.inner.name().to_string()
+    }
+
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
     }
 }
 

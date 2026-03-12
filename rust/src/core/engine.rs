@@ -348,7 +348,7 @@ impl Engine {
         self.object_manager
             .read()
             .ok()
-            .and_then(|object_manager| object_manager.get_object_by_id(camera_id).map(|camera| *camera.transform().position()))
+            .and_then(|object_manager| object_manager.world_position(camera_id))
             .unwrap_or_else(|| Vec2::new(0.0, 0.0))
     }
 

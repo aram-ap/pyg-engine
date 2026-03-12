@@ -740,11 +740,18 @@ class UIManager:
 
     def get_id(self, object_id: int) -> Optional[Any]:
         """Get a UI element by runtime id."""
-        return self._engine.objects.get_id(object_id)
+        obj = self._engine.objects.get_id(object_id)
+        if obj is None or getattr(obj, "object_type", None) != "UIObject":
+            return None
+        return obj
 
     def get_name(self, name: str) -> list[Any]:
         """Get UI elements by name."""
-        return self._engine.objects.get_name(name)
+        return [
+            obj
+            for obj in self._engine.objects.get_name(name)
+            if getattr(obj, "object_type", None) == "UIObject"
+        ]
 
     def _add_tree(self, ui_component: Any) -> Optional[int]:
         object_id = self._add_single(ui_component)
@@ -781,6 +788,7 @@ class UIManager:
             button._setup_callback()
 
         button._game_object = GameObject()
+        button._game_object.set_name(button.text or "Button")
         button._game_object.set_object_type("UIObject")
         button._game_object.add_component(button._component)
         button._object_id = self._engine.add_game_object(button._game_object)
@@ -794,6 +802,7 @@ class UIManager:
             return panel._object_id
 
         panel._game_object = GameObject()
+        panel._game_object.set_name("Panel")
         panel._game_object.set_object_type("UIObject")
         panel._game_object.add_component(panel._component)
         panel._object_id = self._engine.add_game_object(panel._game_object)
@@ -809,6 +818,7 @@ class UIManager:
         # Store engine handle instead of engine to avoid borrow checker issues in callbacks
         label._engine = self._engine.get_handle()
         label._game_object = GameObject()
+        label._game_object.set_name(label.text or "Label")
         label._game_object.set_object_type("UIObject")
         label._game_object.add_component(label._component)
         label._object_id = self._engine.add_game_object(label._game_object)
@@ -1996,10 +2006,17 @@ class Engine:
         """Remove a runtime GameObject by id."""
         self._engine.remove_game_object(object_id)
 
+    def _resolve_runtime_object_id(self, game_object_or_id: Any) -> int:
+        object_id = getattr(game_object_or_id, "id", None)
+        if object_id is None:
+            object_id = getattr(game_object_or_id, "_object_id", None)
+        if object_id is None:
+            object_id = game_object_or_id
+        return int(object_id)
+
     def destroy(self, game_object_or_id: Any) -> None:
         """Destroy a runtime object by id or object handle."""
-        object_id = getattr(game_object_or_id, "id", game_object_or_id)
-        self.remove_game_object(int(object_id))
+        self.remove_game_object(self._resolve_runtime_object_id(game_object_or_id))
 
     def set_game_object_position(self, object_id: int, position: Any) -> bool:
         """

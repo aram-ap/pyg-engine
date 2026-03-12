@@ -47,7 +47,15 @@
 
 use super::logging;
 use crate::core::game_object::GameObject;
+use crate::types::vector::Vec2;
 use std::collections::HashMap;
+
+#[derive(Clone, Copy, Debug)]
+pub struct WorldTransform {
+    pub position: Vec2,
+    pub rotation: f32,
+    pub scale: Vec2,
+}
 
 /// Manages the lifecycle and storage of game objects.
 ///
@@ -227,6 +235,39 @@ impl ObjectManager {
             .into_iter()
             .filter_map(|id| self.get_object_clone(id))
             .collect()
+    }
+
+    pub fn world_transform(&self, id: u32) -> Option<WorldTransform> {
+        let object = self.objects.get(&id)?;
+        let local = WorldTransform {
+            position: object.position(),
+            rotation: object.rotation(),
+            scale: object.scale(),
+        };
+
+        let parent_id = object.parent_id();
+        let Some(parent_id) = parent_id else {
+            return Some(local);
+        };
+
+        let parent = self.world_transform(parent_id)?;
+        let scaled_local = local.position.multiply(&parent.scale);
+        let sin_r = parent.rotation.sin();
+        let cos_r = parent.rotation.cos();
+        let rotated_local = Vec2::new(
+            scaled_local.x() * cos_r - scaled_local.y() * sin_r,
+            scaled_local.x() * sin_r + scaled_local.y() * cos_r,
+        );
+
+        Some(WorldTransform {
+            position: parent.position.add(&rotated_local),
+            rotation: parent.rotation + local.rotation,
+            scale: parent.scale.multiply(&local.scale),
+        })
+    }
+
+    pub fn world_position(&self, id: u32) -> Option<Vec2> {
+        self.world_transform(id).map(|transform| transform.position)
     }
 
     /// Get the total number of objects in the manager.

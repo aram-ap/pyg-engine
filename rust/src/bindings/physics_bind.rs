@@ -1,3 +1,4 @@
+use crate::core::component::ComponentTrait;
 use crate::core::physics::*;
 use crate::types::vector::Vec2;
 use pyo3::prelude::*;
@@ -760,6 +761,26 @@ impl PyCollider {
         Self {
             component: ColliderComponent::new(name),
         }
+    }
+
+    #[getter]
+    fn id(&self) -> u32 {
+        self.component.id()
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.component.name().to_string()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.component.is_enabled_self()
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.component.set_enabled_self(enabled);
     }
 
     /// Set the collision shape.
