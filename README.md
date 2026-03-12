@@ -355,4 +355,3 @@ pytest tests/ -v
 ## 📄 License
 
 [MIT License](LICENSE)
-<meta name="google-site-verification" content="08yooCuuTsEVQvdx_mXv8258kUQj9WENtCrPts9LbeI" />
