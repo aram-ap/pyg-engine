@@ -1482,6 +1482,198 @@ impl RenderManager {
         })
     }
 
+    fn build_filled_arc_draw_item(
+        &self,
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        segments: u32,
+        color: Color,
+        draw_order: f32,
+    ) -> Option<DrawItem> {
+        if radius <= 0.0 {
+            return None;
+        }
+
+        let sweep = end_angle - start_angle;
+        if sweep.abs() <= f32::EPSILON {
+            return None;
+        }
+
+        let segments = segments.max(3);
+        let mut vertices = Vec::with_capacity((segments + 2) as usize);
+        let mut indices = Vec::with_capacity((segments * 3) as usize);
+        let color = Self::color_to_array(color);
+
+        let center = self.pixel_to_clip(center_x, center_y);
+        vertices.push(Vertex {
+            position: [center[0], center[1], 0.0],
+            color,
+            tex_coords: [0.5, 0.5],
+        });
+
+        for i in 0..=segments {
+            let t = i as f32 / segments as f32;
+            let angle = start_angle + sweep * t;
+            let px = center_x + radius * angle.cos();
+            let py = center_y + radius * angle.sin();
+            let clip = self.pixel_to_clip(px, py);
+            vertices.push(Vertex {
+                position: [clip[0], clip[1], 0.0],
+                color,
+                tex_coords: [(angle.cos() + 1.0) * 0.5, (angle.sin() + 1.0) * 0.5],
+            });
+        }
+
+        for i in 1..=segments {
+            indices.extend_from_slice(&[0, i, i + 1]);
+        }
+
+        Some(DrawItem {
+            draw_order,
+            texture_path: None,
+            vertices,
+            indices,
+        })
+    }
+
+    fn build_arc_outline_draw_item(
+        &self,
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        thickness: f32,
+        segments: u32,
+        color: Color,
+        draw_order: f32,
+    ) -> Option<DrawItem> {
+        if radius <= 0.0 {
+            return None;
+        }
+
+        let sweep = end_angle - start_angle;
+        if sweep.abs() <= f32::EPSILON {
+            return None;
+        }
+
+        let segments = segments.max(3);
+        let thickness = thickness.max(1.0);
+        let inner = (radius - thickness * 0.5).max(0.0);
+        let outer = radius + thickness * 0.5;
+        let mut vertices = Vec::with_capacity(((segments + 1) * 2) as usize);
+        let mut indices = Vec::with_capacity((segments * 6) as usize);
+        let color = Self::color_to_array(color);
+
+        for i in 0..=segments {
+            let t = i as f32 / segments as f32;
+            let angle = start_angle + sweep * t;
+            let cos_a = angle.cos();
+            let sin_a = angle.sin();
+
+            let outer_clip = self.pixel_to_clip(center_x + outer * cos_a, center_y + outer * sin_a);
+            let inner_clip = self.pixel_to_clip(center_x + inner * cos_a, center_y + inner * sin_a);
+
+            vertices.push(Vertex {
+                position: [outer_clip[0], outer_clip[1], 0.0],
+                color,
+                tex_coords: [1.0, 0.0],
+            });
+            vertices.push(Vertex {
+                position: [inner_clip[0], inner_clip[1], 0.0],
+                color,
+                tex_coords: [0.0, 1.0],
+            });
+        }
+
+        for i in 0..segments {
+            let base = i * 2;
+            indices.extend_from_slice(&[base, base + 1, base + 2, base + 1, base + 3, base + 2]);
+        }
+
+        Some(DrawItem {
+            draw_order,
+            texture_path: None,
+            vertices,
+            indices,
+        })
+    }
+
+    fn build_filled_polygon_draw_item(
+        &self,
+        points: &[Vec2],
+        color: Color,
+        draw_order: f32,
+    ) -> Option<DrawItem> {
+        if points.len() < 3 {
+            return None;
+        }
+
+        let mut vertices = Vec::with_capacity(points.len());
+        let mut indices = Vec::with_capacity((points.len().saturating_sub(2)) * 3);
+        let color = Self::color_to_array(color);
+
+        for point in points {
+            let clip = self.pixel_to_clip(point.x(), point.y());
+            vertices.push(Vertex {
+                position: [clip[0], clip[1], 0.0],
+                color,
+                tex_coords: [0.0, 0.0],
+            });
+        }
+
+        for i in 1..(points.len() - 1) {
+            indices.extend_from_slice(&[0, i as u32, (i + 1) as u32]);
+        }
+
+        Some(DrawItem {
+            draw_order,
+            texture_path: None,
+            vertices,
+            indices,
+        })
+    }
+
+    fn build_mesh_draw_item(
+        &self,
+        vertices: &[crate::core::component::MeshVertex],
+        indices: &[u32],
+        color: Color,
+        texture_path: Option<String>,
+        draw_order: f32,
+    ) -> Option<DrawItem> {
+        if vertices.is_empty() || indices.is_empty() {
+            return None;
+        }
+
+        let vertex_count = vertices.len() as u32;
+        if indices.iter().any(|index| *index >= vertex_count) {
+            return None;
+        }
+
+        let color = Self::color_to_array(color);
+        let mut draw_vertices = Vec::with_capacity(vertices.len());
+
+        for vertex in vertices {
+            let clip = self.pixel_to_clip(vertex.position().x(), vertex.position().y());
+            draw_vertices.push(Vertex {
+                position: [clip[0], clip[1], 0.0],
+                color,
+                tex_coords: [vertex.uv().x(), vertex.uv().y()],
+            });
+        }
+
+        Some(DrawItem {
+            draw_order,
+            texture_path,
+            vertices: draw_vertices,
+            indices: indices.to_vec(),
+        })
+    }
+
     fn collect_direct_draw_items(
         &mut self,
         draw_manager: Option<&DrawManager>,
@@ -1621,6 +1813,76 @@ impl RenderManager {
                         items.push(item);
                     }
                 }
+                DrawCommand::Arc {
+                    center_x,
+                    center_y,
+                    radius,
+                    start_angle,
+                    end_angle,
+                    color,
+                    filled,
+                    thickness,
+                    segments,
+                    draw_order,
+                } => {
+                    let item = if *filled {
+                        self.build_filled_arc_draw_item(
+                            *center_x,
+                            *center_y,
+                            *radius,
+                            *start_angle,
+                            *end_angle,
+                            *segments,
+                            *color,
+                            *draw_order,
+                        )
+                    } else {
+                        self.build_arc_outline_draw_item(
+                            *center_x,
+                            *center_y,
+                            *radius,
+                            *start_angle,
+                            *end_angle,
+                            *thickness,
+                            *segments,
+                            *color,
+                            *draw_order,
+                        )
+                    };
+
+                    if let Some(item) = item {
+                        items.push(item);
+                    }
+                }
+                DrawCommand::Polygon {
+                    points,
+                    color,
+                    filled,
+                    thickness,
+                    draw_order,
+                } => {
+                    if *filled {
+                        if let Some(item) =
+                            self.build_filled_polygon_draw_item(points, *color, *draw_order)
+                        {
+                            items.push(item);
+                        }
+                    } else if points.len() >= 2 {
+                        for i in 0..points.len() {
+                            let start = points[i];
+                            let end = points[(i + 1) % points.len()];
+                            items.push(self.build_line_draw_item(
+                                start.x(),
+                                start.y(),
+                                end.x(),
+                                end.y(),
+                                *thickness,
+                                *color,
+                                *draw_order,
+                            ));
+                        }
+                    }
+                }
                 DrawCommand::GradientRect {
                     x,
                     y,
@@ -1686,6 +1948,23 @@ impl RenderManager {
                         width: *texture_width,
                         height: *texture_height,
                     });
+                }
+                DrawCommand::Mesh {
+                    vertices,
+                    indices,
+                    color,
+                    texture_path,
+                    draw_order,
+                } => {
+                    if let Some(item) = self.build_mesh_draw_item(
+                        vertices,
+                        indices,
+                        *color,
+                        texture_path.clone(),
+                        *draw_order,
+                    ) {
+                        items.push(item);
+                    }
                 }
                 DrawCommand::Text {
                     text,
