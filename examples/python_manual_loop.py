@@ -15,8 +15,8 @@ import pyg_engine as pyg
 
 
 def main() -> None:
-    # Initialize engine with logging
-    engine = pyg.Engine(log_level="INFO")
+    # Initialize engine
+    engine = pyg.Engine()
     
     # Start in manual-loop mode, lets us control the loop manually.
     engine.start_manual(
@@ -28,7 +28,7 @@ def main() -> None:
         show_fps_in_title=True
     )
 
-    engine.log_info("Starting manual loop...")
+    engine.log("Starting manual loop...")
 
     # Create a moving circle
     circle_x = 640.0
@@ -80,7 +80,7 @@ def main() -> None:
         # 4. Render frame
         engine.render()
 
-    engine.log_info("Manual loop finished.")
+    engine.log("Manual loop finished.")
 
 
 if __name__ == "__main__":
