@@ -12,7 +12,7 @@ Controls:
 import random
 from typing import List, Optional, Tuple
 
-from pyg_engine import Color, Engine, Keys
+from pyg_engine import Color, Engine, Keys, Line, Rect, Vec2
 
 GridPos = Tuple[int, int]
 
@@ -158,59 +158,53 @@ def draw_scene(engine: Engine, game: SnakeGame) -> None:
         Color(0.10, 0.07, 0.12, 1.0),
         draw_order=0.0,
     )
-    engine.draw_rectangle(
-        board_x - 3.0,
-        board_y - 3.0,
-        float(board_width + 6),
-        float(board_height + 6),
-        Color(0.90, 0.95, 1.00, 0.25),
+    engine.draw(Rect(
+        position=Vec2(board_x - 3.0, board_y - 3.0),
+        width=float(board_width + 6),
+        height=float(board_height + 6),
+        color=Color(0.90, 0.95, 1.00, 0.25),
         draw_order=1.0,
-    )
-    engine.draw_rectangle(
-        board_x,
-        board_y,
-        float(board_width),
-        float(board_height),
-        Color(0.08, 0.10, 0.13, 0.96),
+    ))
+    engine.draw(Rect(
+        position=Vec2(board_x, board_y),
+        width=float(board_width),
+        height=float(board_height),
+        color=Color(0.08, 0.10, 0.13, 0.96),
         draw_order=1.0,
-    )
+    ))
 
     # Grid lines
     grid_color = Color(0.98, 1.00, 1.00, 0.06)
     for x in range(GRID_WIDTH + 1):
         px = board_x + x * CELL_SIZE
-        engine.draw_line(
-            px,
-            board_y,
-            px,
-            board_y + board_height,
-            grid_color,
+        engine.draw(Line(
+            start=Vec2(px, board_y),
+            end=Vec2(px, board_y + board_height),
+            color=grid_color,
             thickness=1.0,
             draw_order=2.0,
-        )
+        ))
     for y in range(GRID_HEIGHT + 1):
         py = board_y + y * CELL_SIZE
-        engine.draw_line(
-            board_x,
-            py,
-            board_x + board_width,
-            py,
-            grid_color,
+        engine.draw(Line(
+            start=Vec2(board_x, py),
+            end=Vec2(board_x + board_width, py),
+            color=grid_color,
             thickness=1.0,
             draw_order=2.0,
-        )
+        ))
 
     # Food
     if game.food is not None:
         food_x, food_y = game.food
-        engine.draw_rectangle(
-            board_x + food_x * CELL_SIZE + 4.0,
-            board_y + food_y * CELL_SIZE + 4.0,
-            float(CELL_SIZE - 8),
-            float(CELL_SIZE - 8),
-            Color(0.96, 0.28, 0.20, 1.0),
+        engine.draw(Rect(
+            position=Vec2(board_x + food_x * CELL_SIZE + 4.0,
+                          board_y + food_y * CELL_SIZE + 4.0),
+            width=float(CELL_SIZE - 8),
+            height=float(CELL_SIZE - 8),
+            color=Color(0.96, 0.28, 0.20, 1.0),
             draw_order=4.1,
-        )
+        ))
 
     # Snake
     for idx, (seg_x, seg_y) in enumerate(game.snake):
@@ -218,14 +212,14 @@ def draw_scene(engine: Engine, game: SnakeGame) -> None:
         if idx == 0:
             color = Color(0.44, 0.99, 0.58, 1.0)
 
-        engine.draw_rectangle(
-            board_x + seg_x * CELL_SIZE + 2.0,
-            board_y + seg_y * CELL_SIZE + 2.0,
-            float(CELL_SIZE - 4),
-            float(CELL_SIZE - 4),
-            color,
+        engine.draw(Rect(
+            position=Vec2(board_x + seg_x * CELL_SIZE + 2.0,
+            board_y + seg_y * CELL_SIZE + 2.0),
+            width=float(CELL_SIZE - 4),
+            height=float(CELL_SIZE - 4),
+            color=color,
             draw_order=5.3,
-        )
+        ))
 
     # HUD text
     engine.draw_text(
@@ -248,28 +242,28 @@ def draw_scene(engine: Engine, game: SnakeGame) -> None:
     if game.paused and not game.game_over:
         center_x = board_x + board_width * 0.5 - 62.0
         center_y = board_y + board_height * 0.5 - 20.0
-        engine.draw_rectangle(
-            center_x - 24.0,
-            center_y - 10.0,
-            230.0,
-            54.0,
-            Color(0.0, 0.0, 0.0, 0.45),
+        engine.draw(Rect(
+            position=Vec2(center_x - 24.0,
+                center_y - 10.0),
+            width=230.0,
+            height=54.0,
+            color=Color(0.0, 0.0, 0.0, 0.45),
             draw_order=11.0,
-        )
+        ))
         engine.draw_text("PAUSED", center_x, center_y, Color.WHITE, font_size=28.0, draw_order=12.0)
 
     if game.game_over:
         overlay_message = "YOU WIN! Press R to play again" if game.has_won else "GAME OVER! Press R to restart"
         center_x = board_x + board_width * 0.5 - 220.0
         center_y = board_y + board_height * 0.5 - 22.0
-        engine.draw_rectangle(
-            center_x - 16.0,
-            center_y - 16.0,
-            730.0,
-            62.0,
-            Color(0.0, 0.0, 0.0, 0.60),
+        engine.draw(Rect(
+            position=Vec2(center_x - 16.0,
+            center_y - 16.0),
+            width=730.0,
+            height=62.0,
+            color=Color(0.0, 0.0, 0.0, 0.60),
             draw_order=11.0,
-        )
+        ))
         engine.draw_text(
             overlay_message,
             center_x,
