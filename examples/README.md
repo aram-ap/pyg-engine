@@ -82,15 +82,14 @@ cargo run --example draw_primitives_demo --no-default-features
 
 ### python_direct_draw_demo.py
 
-Demonstrates immediate-mode direct draw from Python:
-- `engine.draw_pixel(...)`
-- `engine.draw_line(...)`
-- `engine.draw_rectangle(...)`
-- `engine.draw_circle(...)`
-- `engine.draw_gradient_rect(...)`
-- `engine.draw_image(...)`
-- `engine.draw_image_from_bytes(...)`
-- `engine.add_draw_commands([...])` with `DrawCommand.*(...)` builders
+Demonstrates immediate-mode shape drawing from Python:
+- `engine.draw(Line(...))`
+- `engine.draw(Rect(...))`
+- `engine.draw(Circle(...))`
+- `engine.draw(Arc(...))`
+- `engine.draw(Polygon(...))`
+- `engine.draw(Mesh(...))`
+- `engine.draw([...])` batching
 
 **Run:**
 ```bash
@@ -99,10 +98,10 @@ python examples/python_direct_draw_demo.py
 
 ### python_bulk_draw_demo.py
 
-Demonstrates Phase 2 bulk draw submission API:
-- Build `DrawCommand` objects in Python
-- Submit a whole frame's draw list in one native call via `engine.add_draw_commands(...)`
-- Better Python->Rust call overhead for large dynamic overlays
+Demonstrates batched shape submission:
+- Build `Rect(...)` and `Line(...)` objects in Python
+- Submit a whole frame's draw list in one native call via `engine.draw([...])`
+- Mix shape batches with raw `DrawCommand` objects when needed
 
 **Run:**
 ```bash
@@ -116,7 +115,7 @@ Unified "all systems" rendering showcase:
 - Immediate-mode primitives (pixels/lines/rectangles/circles)
 - Gradient background rendering
 - Path-based image rendering + dynamic RGBA bytes textures
-- Bulk draw submission with `DrawCommand` builders
+- Bulk draw submission with shape objects and `DrawCommand` builders
 - Input-driven interaction and overlay toggles
 
 **Run:**

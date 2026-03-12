@@ -26,6 +26,8 @@ except ImportError as e:
 
 DrawCommand = _RustDrawCommand
 
+from .shapes import to_draw_commands
+
 
 class EngineHandle:
     """
@@ -176,8 +178,12 @@ class EngineHandle:
         self._inner.clear_draw_commands()
 
     def add_draw_commands(self, commands: list[Any]) -> None:
-        """Submit many draw commands via command queue in one call."""
-        self._inner.add_draw_commands(commands)
+        """Submit many draw shapes or draw commands via command queue."""
+        self._inner.add_draw_commands(to_draw_commands(commands))
+
+    def draw(self, drawable: Any) -> None:
+        """Draw one shape or a batch of shapes via the command queue."""
+        self._inner.add_draw_commands(to_draw_commands(drawable))
 
     def draw_pixel(
         self,
@@ -2127,8 +2133,23 @@ class Engine:
         self._engine.clear_draw_commands()
 
     def add_draw_commands(self, commands: list[Any]) -> None:
-        """Submit many draw commands in one call."""
-        self._engine.add_draw_commands(commands)
+        """Submit many draw shapes or draw commands in one call."""
+        self._engine.add_draw_commands(to_draw_commands(commands))
+
+    def draw(self, drawable: Any) -> None:
+        """
+        Draw one shape or a batch of shapes.
+
+        Examples:
+            ```python
+            engine.draw(Circle(position=Vec2(200, 200), radius=40, color=Color.RED))
+            engine.draw([
+                Rect(position=Vec2(20, 20), width=120, height=60, color=Color.BLUE),
+                Line(start=Vec2(0, 0), end=Vec2(100, 100), color=Color.WHITE),
+            ])
+            ```
+        """
+        self._engine.add_draw_commands(to_draw_commands(drawable))
 
     def draw_pixel(
         self,

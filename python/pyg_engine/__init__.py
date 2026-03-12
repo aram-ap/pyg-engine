@@ -5,6 +5,7 @@
 """
 
 from pyg_engine.engine import DrawCommand, Engine, EngineHandle, Input, UpdateContext, UIManager
+from pyg_engine.shapes import Arc, Circle, Line, Mesh, Polygon, Rect
 
 try:
     from pyg_engine.pyg_engine_native import (
@@ -64,6 +65,12 @@ __all__ = [
     "Engine",
     "EngineHandle",
     "DrawCommand",
+    "Line",
+    "Circle",
+    "Rect",
+    "Arc",
+    "Polygon",
+    "Mesh",
     "Input",
     "UpdateContext",
     "Vec2",

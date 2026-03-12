@@ -408,6 +408,70 @@ impl PyDrawCommand {
 
     #[staticmethod]
     #[pyo3(signature = (
+        center_x,
+        center_y,
+        radius,
+        start_angle,
+        end_angle,
+        color,
+        filled=true,
+        thickness=1.0,
+        segments=32,
+        draw_order=0.0
+    ))]
+    fn arc(
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        color: &PyColor,
+        filled: bool,
+        thickness: f32,
+        segments: u32,
+        draw_order: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::Arc {
+                center_x,
+                center_y,
+                radius,
+                start_angle,
+                end_angle,
+                color: color.inner,
+                filled,
+                thickness,
+                segments,
+                draw_order,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (points, color, filled=true, thickness=1.0, draw_order=0.0))]
+    fn polygon(
+        points: Vec<(f32, f32)>,
+        color: &PyColor,
+        filled: bool,
+        thickness: f32,
+        draw_order: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::Polygon {
+                points: points
+                    .into_iter()
+                    .map(|(x, y)| crate::types::vector::Vec2::new(x, y))
+                    .collect(),
+                color: color.inner,
+                filled,
+                thickness,
+                draw_order,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (
         x,
         y,
         width,
@@ -768,6 +832,60 @@ impl PyDrawCommand {
                 rgba: Arc::from(rgba),
                 texture_width,
                 texture_height,
+                draw_order,
+            },
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (
+        vertices,
+        indices,
+        color,
+        texture_path=None,
+        uvs=None,
+        draw_order=0.0
+    ))]
+    fn mesh(
+        vertices: Vec<(f32, f32)>,
+        indices: Vec<u32>,
+        color: &PyColor,
+        texture_path: Option<String>,
+        uvs: Option<Vec<(f32, f32)>>,
+        draw_order: f32,
+    ) -> PyResult<Self> {
+        if vertices.is_empty() {
+            return Err(PyRuntimeError::new_err(
+                "mesh requires at least one vertex",
+            ));
+        }
+
+        let uvs = uvs.unwrap_or_else(|| vec![(0.0, 0.0); vertices.len()]);
+        if uvs.len() != vertices.len() {
+            return Err(PyRuntimeError::new_err(format!(
+                "mesh UV count mismatch: expected {} entries, got {}",
+                vertices.len(),
+                uvs.len()
+            )));
+        }
+
+        let mesh_vertices = vertices
+            .into_iter()
+            .zip(uvs)
+            .map(|((x, y), (u, v))| {
+                crate::core::component::MeshVertex::new(
+                    crate::types::vector::Vec2::new(x, y),
+                    crate::types::vector::Vec2::new(u, v),
+                )
+            })
+            .collect();
+
+        Ok(Self {
+            inner: DrawCommand::Mesh {
+                vertices: mesh_vertices,
+                indices,
+                color: color.inner,
+                texture_path,
                 draw_order,
             },
         })
