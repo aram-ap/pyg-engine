@@ -24,7 +24,7 @@ def create_marker(name: str, position: pyg.Vec2, color: pyg.Color, size: float) 
     mesh = pyg.MeshComponent(f"{name}Mesh")
     mesh.set_geometry_circle(1.0, segments=40)
     mesh.set_fill_color(color)
-    marker.set_mesh_component(mesh)
+    marker.add_component(mesh)
     return marker
 
 
@@ -62,8 +62,12 @@ def main() -> None:
             raise RuntimeError(f"Failed to add marker '{marker.name}'")
 
     orbiter = create_marker("Orbiter", pyg.Vec2(4.0, 0.0), pyg.Color.WHITE, 0.28)
-    if engine.add_game_object(orbiter) is None:
+    orbiter_id = engine.add_game_object(orbiter)
+    if orbiter_id is None:
         raise RuntimeError("Failed to add orbiter marker")
+    runtime_orbiter = engine.objects.get_id(orbiter_id)
+    if runtime_orbiter is None:
+        raise RuntimeError("Failed to resolve orbiter runtime handle")
 
     # Demonstrate custom, rebindable axis setup.
     engine.input.set_axis_keys(
@@ -153,7 +157,7 @@ def main() -> None:
                 engine.set_camera_viewport_size(viewport_width, viewport_height)
 
         t = time.time()
-        orbiter.position = pyg.Vec2(math.cos(t * 0.9) * 7.0, math.sin(t * 1.2) * 3.8)
+        runtime_orbiter.position = pyg.Vec2(math.cos(t * 0.9) * 7.0, math.sin(t * 1.2) * 3.8)
 
         mouse_x, mouse_y = engine.input.mouse_position
         mouse_world = engine.screen_to_world(float(mouse_x), float(mouse_y))
@@ -183,8 +187,9 @@ def main() -> None:
         now = time.perf_counter()
         if now - last_hud_update_time >= hud_update_interval:
             last_hud_update_time = now
+            camera = engine.camera
             camera_line = (
-                f"camera_id={engine.camera_object_id}  camera_pos=({cam.x:.2f}, {cam.y:.2f})"
+                f"camera_id={camera.id if camera else None}  camera_pos=({cam.x:.2f}, {cam.y:.2f})"
             )
             viewport_line = f"viewport_world=({viewport_width:.2f}, {viewport_height:.2f})"
             axes_line = (

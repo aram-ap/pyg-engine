@@ -4355,6 +4355,9 @@ impl PyTime {
 /// - **rotation**: Angle in **radians** (counter-clockwise)
 /// - **scale**: `Vec2` multiplier (1.0 = original size)
 ///
+/// In Python, the direct convenience accessors are `obj.position`, `obj.rotation`,
+/// and `obj.scale`. `TransformComponent` is still the underlying runtime component type.
+///
 /// # Components
 ///
 /// Attach components to add functionality:
