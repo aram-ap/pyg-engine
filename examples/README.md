@@ -146,6 +146,44 @@ Launches both versions together:
 python examples/rendering_showcase_side_by_side.py
 ```
 
+### pyg_engine_fixed_benchmark.py
+
+Deterministic, uncapped stress benchmark for `pyg_engine`:
+- Fixed seeded scene generation
+- High object counts across multiple primitive types
+- Continuous movement and transform updates every frame
+- Per-frame CSV logging + JSON summary
+
+**Run:**
+```bash
+python examples/pyg_engine_fixed_benchmark.py
+```
+
+### pygame_fixed_benchmark.py
+
+Deterministic, uncapped stress benchmark for `pygame` with matching workload:
+- Same fixed seeded scene and object counts
+- Same motion/update logic and render resolution
+- Per-frame CSV logging + JSON summary in the same format
+
+**Run:**
+```bash
+python examples/pygame_fixed_benchmark.py
+```
+
+### fixed_benchmark_side_by_side.py
+
+Launches both fixed benchmarks simultaneously with identical parameters:
+- `pyg_engine_fixed_benchmark.py`
+- `pygame_fixed_benchmark.py`
+
+Both windows can then be arranged side-by-side for visual/perf comparison.
+
+**Run:**
+```bash
+python examples/fixed_benchmark_side_by_side.py
+```
+
 ### visualization_demo.py
 
 Demonstrates Phase 1 visualization APIs:

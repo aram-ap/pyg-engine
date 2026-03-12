@@ -12,6 +12,7 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 
 *   **Modern Rendering**: Powered by **wgpu** for cross-platform, high-performance graphics.
 *   **Rust Core**: The heavy lifting is done in Rust, ensuring speed and memory safety.
+*   **Measured Performance Gain**: In the fixed `1920x1080` benchmark workload, `pyg_engine` runs at about **2.26x** the FPS of `pygame` (see **Benchmarks** below).
 *   **Pythonic API**: Designed to feel natural for Python developers.
 *   **Flexible Drawing**: Easily draw lines, rectangles, circles, and pixels using pixel coordinates.
 *   **Mesh System**: Render textured quads and game objects with a component-based architecture (using normalized coordinates).
@@ -281,6 +282,63 @@ Check the [`examples/`](examples) directory for more complete demonstrations:
 - `snake_demo.py`: Playable Snake game using immediate-mode drawing and keyboard input.
 - `camera_worldspace_demo.py`: Shows object-style camera control along with world-space objects and HUD text.
 - `ui_demo.py`: Demonstrates the UI system, button functions, and text label updates.
+
+## :bar_chart: Benchmarks
+
+PyG Engine includes a fixed, deterministic benchmark suite for 1:1 comparison with `pygame`:
+
+- `examples/pyg_engine_fixed_benchmark.py`
+- `examples/pygame_fixed_benchmark.py`
+- `examples/fixed_benchmark_side_by_side.py`
+- `examples/compare_benchmarks.py`
+
+All benchmark runs use the same seeded scene configuration and workload:
+
+- Resolution: `1920x1080` (default)
+- Duration: `20s`
+- Objects: `2200` rects, `1800` circles, `1000` lines, `600` polygons
+- Motion: all objects continuously update and bounce in bounds
+- Caps: uncapped loops (`vsync=False` for `pyg_engine`, no `Clock.tick(...)` cap in `pygame`)
+- Logging: per-frame CSV + summary JSON
+
+Quick run:
+
+```bash
+python examples/fixed_benchmark_side_by_side.py
+```
+
+Compare latest pair:
+
+```bash
+python examples/compare_benchmarks.py
+```
+
+Compare all paired runs (grouped by resolution):
+
+```bash
+python examples/compare_benchmarks.py --all
+```
+
+### Current Findings (this repo, local machine)
+
+Test machine and display setup:
+
+- GPU: `NVIDIA RTX 3090`
+- CPU: `AMD Ryzen 7 7800X3D`
+- Memory: `64GB DDR5 6400`
+- Both benchmark windows displayed at `1920x1080`
+
+From 3 paired runs at `1920x1080` (`benchmark_logs/fixed_scene_v1`):
+
+- `pyg_engine` avg FPS: **166.51**
+- `pygame` avg FPS: **73.73**
+- Throughput gain: **~2.26x** (**+125.83% FPS**)
+- Avg frame time: **6.07 ms** vs **13.67 ms** (**55.62% lower**)
+- P95 frame time: **6.46 ms** vs **14.37 ms** (**55.02% lower**)
+- Draw submit time: **3.81 ms** vs **7.76 ms** (**50.95% lower**)
+- Present time: **1.01 ms** vs **4.55 ms** (**77.82% lower**)
+
+Results will vary by hardware/driver/OS, but the benchmark harness is fixed so repeated runs are directly comparable on the same machine.
 
 ## :hammer_and_wrench: Development & Testing
 
