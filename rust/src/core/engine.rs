@@ -51,7 +51,7 @@ pub struct Engine {
     pending_camera_background_color: Option<Color>,
 }
 
-pub const VERSION: &str = "1.2.0";
+pub const VERSION: &str = "1.2.7";
 
 impl Engine {
     /// Create a new Engine instance with default logging (console only)
@@ -672,8 +672,12 @@ impl Engine {
         true
     }
 
-    /// Update a runtime GameObject mesh fill color by id.
-    pub fn set_game_object_mesh_fill_color(&mut self, id: u32, color: Option<Color>) -> bool {
+    /// Replace a runtime GameObject mesh component by id.
+    pub fn set_game_object_mesh_component(
+        &mut self,
+        id: u32,
+        mesh_component: crate::core::component::MeshComponent,
+    ) -> bool {
         let updated = {
             let Ok(mut object_manager) = self.object_manager.write() else {
                 return false;
@@ -681,13 +685,39 @@ impl Engine {
             let Some(object) = object_manager.get_object_by_id_mut(id) else {
                 return false;
             };
+            object.add_mesh_component(mesh_component);
+            true
+        };
+        if updated {
+            self.request_render_redraw();
+        }
+        updated
+    }
 
-            if let Some(mesh) = object.mesh_component_mut() {
-                mesh.set_fill_color(color);
-                true
-            } else {
-                false
-            }
+    pub fn set_text_mesh_component(
+        &mut self,
+        object_id: u32,
+        component_id: u32,
+        component: crate::core::component::TextMeshComponent,
+    ) -> bool {
+        let updated = {
+            let Ok(mut object_manager) = self.object_manager.write() else {
+                return false;
+            };
+            let Some(object) = object_manager.get_object_by_id_mut(object_id) else {
+                return false;
+            };
+            let Some(existing) = object.get_component_by_id_mut(component_id) else {
+                return false;
+            };
+            let Some(text_mesh) = existing
+                .as_any_mut()
+                .downcast_mut::<crate::core::component::TextMeshComponent>()
+            else {
+                return false;
+            };
+            *text_mesh = component;
+            true
         };
         if updated {
             self.request_render_redraw();
@@ -1047,8 +1077,15 @@ impl Engine {
                 EngineCommand::SetGameObjectScale { object_id, scale } => {
                     let _ = self.set_game_object_scale(object_id, scale);
                 }
-                EngineCommand::SetGameObjectMeshFillColor { object_id, color } => {
-                    let _ = self.set_game_object_mesh_fill_color(object_id, color);
+                EngineCommand::SetGameObjectMeshComponent { object_id, mesh } => {
+                    let _ = self.set_game_object_mesh_component(object_id, mesh);
+                }
+                EngineCommand::SetTextMeshComponent {
+                    object_id,
+                    component_id,
+                    component,
+                } => {
+                    let _ = self.set_text_mesh_component(object_id, component_id, component);
                 }
                 EngineCommand::AddChild {
                     parent_id,
