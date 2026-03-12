@@ -83,6 +83,15 @@ def main() -> None:
     engine.input.set_action_keys("aspect_fit_both", [pyg.Keys.F4])
     engine.input.set_action_keys("aspect_fill_both", [pyg.Keys.F5])
 
+
+    engine.register_font_family(
+        "inter",
+        regular="assets/fonts/Inter-Regular.ttf",
+        bold="assets/fonts/Inter-Bold.ttf",
+        italic="assets/fonts/Inter-Italic.ttf",
+        bold_italic="assets/fonts/Inter-BoldItalic.ttf",
+    )
+
     engine.log(
         "Camera demo running. Uses input axes: Horizontal/Vertical + CameraZoom."
     )
@@ -214,15 +223,16 @@ def main() -> None:
                     "Worldspace Camera Demo (WASD/Arrows pan, Q/E or wheel zoom, LMB drag pan, ESC quit)",
                     position=pyg.Vec2(18.0, 18.0),
                     color=pyg.Color.WHITE,
-                    font_size=18.0,
+                    font_size=20.0,
                     draw_order=20.0,
+                    font_family="inter",
                 ),
-                pyg.Text(camera_line, position=pyg.Vec2(18.0, 44.0), color=pyg.Color.CYAN, font_size=16.0, draw_order=20.0),
-                pyg.Text(viewport_line, position=pyg.Vec2(18.0, 66.0), color=pyg.Color.rgb(180, 220, 255), font_size=16.0, draw_order=20.0),
-                pyg.Text(axes_line, position=pyg.Vec2(18.0, 88.0), color=pyg.Color.rgb(180, 210, 180), font_size=15.0, draw_order=20.0),
-                pyg.Text(mouse_line, position=pyg.Vec2(18.0, 108.0), color=pyg.Color.rgb(220, 220, 220), font_size=15.0, draw_order=20.0),
-                pyg.Text(origin_line, position=pyg.Vec2(18.0, 128.0), color=pyg.Color.YELLOW, font_size=15.0, draw_order=20.0),
-                pyg.Text(aspect_line, position=pyg.Vec2(18.0, 148.0), color=pyg.Color.rgb(255, 200, 130), font_size=14.0, draw_order=20.0),
+                pyg.Text(camera_line, position=pyg.Vec2(20.0, 44.0), color=pyg.Color.CYAN, font_size=18.0, draw_order=20.0, font_family="inter"),
+                pyg.Text(viewport_line, position=pyg.Vec2(20.0, 66.0), color=pyg.Color.rgb(180, 220, 255), font_size=18.0, draw_order=20.0, font_family="inter"),
+                pyg.Text(axes_line, position=pyg.Vec2(20.0, 88.0), color=pyg.Color.rgb(180, 210, 180), font_size=18.0, draw_order=20.0, font_family="inter"),
+                pyg.Text(mouse_line, position=pyg.Vec2(20.0, 108.0), color=pyg.Color.rgb(220, 220, 220), font_size=18.0, draw_order=20.0, font_family="inter"),
+                pyg.Text(origin_line, position=pyg.Vec2(20.0, 128.0), color=pyg.Color.YELLOW, font_size=18.0, draw_order=20.0, font_family="inter"),
+                pyg.Text(aspect_line, position=pyg.Vec2(20.0, 148.0), color=pyg.Color.rgb(255, 200, 130), font_size=18.0, draw_order=20.0, font_family="inter"),
             ]
         )
 
