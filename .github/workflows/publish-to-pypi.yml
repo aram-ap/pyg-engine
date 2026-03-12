@@ -33,7 +33,9 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.22
+        # Newer cibuildwheel releases fetch virtualenv from a release URL
+        # instead of the GitHub blob/raw URL that can hit rate limits on Windows.
+        uses: pypa/cibuildwheel@v3.1.4
         env:
           # Install Rust in Linux containers (macOS/Windows use host Rust from previous step)
           CIBW_BEFORE_ALL_LINUX: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y"
