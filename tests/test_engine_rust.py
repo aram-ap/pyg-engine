@@ -326,10 +326,10 @@ def test_engine_with_custom_log_level() -> None:
     engine_trace = pyg.Engine(log_level="TRACE")
     
     # All should be valid
-    assert engine_info.version == ""
-    assert engine_warn.version == ""
-    assert engine_debug.version == ""
-    assert engine_trace.version == ""
+    assert engine_info.version == "1.2.7"
+    assert engine_warn.version == "1.2.7"
+    assert engine_debug.version == "1.2.7"
+    assert engine_trace.version == "1.2.7"
 
 
 def test_engine_initialization_variants() -> None:
@@ -338,11 +338,11 @@ def test_engine_initialization_variants() -> None:
     """
     # Default initialization
     engine1 = pyg.Engine()
-    assert engine1.version == ""
+    assert engine1.version == "1.2.7"
     
     # With log level only
     engine2 = pyg.Engine(log_level="DEBUG")
-    assert engine2.version == ""
+    assert engine2.version == "1.2.7"
     
     # With file logging
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -350,7 +350,7 @@ def test_engine_initialization_variants() -> None:
             enable_file_logging=True,
             log_directory=str(tmpdir)
         )
-        assert engine3.version == ""
+        assert engine3.version == "1.2.7"
 
 
 def test_engine_with_invalid_log_level_defaults() -> None:
@@ -359,5 +359,5 @@ def test_engine_with_invalid_log_level_defaults() -> None:
     """
     # Invalid log level should default to INFO without crashing
     engine = pyg.Engine(log_level="INVALID")
-    assert engine.version == ""
+    assert engine.version == "1.2.7"
     engine.log_info("This should work with default INFO level")
