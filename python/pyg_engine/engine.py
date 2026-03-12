@@ -2856,7 +2856,7 @@ class Engine:
         Get the engine version.
 
         Returns:
-            The version string (e.g., "1.3.0").
+            The version string (e.g., "1.3.2").
         """
         return self._engine.version
 

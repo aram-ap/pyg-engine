@@ -55,7 +55,7 @@ pub struct Engine {
     registered_font_families: HashMap<String, FontFamilyDefinition>,
 }
 
-pub const VERSION: &str = "1.3.0";
+pub const VERSION: &str = "1.3.2";
 
 impl Engine {
     /// Create a new Engine instance with default logging (console only)

@@ -3,6 +3,7 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use std::cell::RefCell;
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
 
@@ -1370,7 +1371,10 @@ impl PyEngine {
     /// Poll events from the window system. Returns True if the loop should continue, False if exit requested.
     fn poll_events(&mut self) -> PyResult<bool> {
         if let Some(event_loop) = &mut self.event_loop {
-            let status: PumpStatus = event_loop.pump_app_events(None, &mut self.inner);
+            // Manual mode polling must be non-blocking so animation/render loops
+            // keep advancing even when there is no user input.
+            let status: PumpStatus =
+                event_loop.pump_app_events(Some(Duration::from_millis(0)), &mut self.inner);
             match status {
                 PumpStatus::Continue => Ok(true),
                 PumpStatus::Exit(_) => Ok(false),
