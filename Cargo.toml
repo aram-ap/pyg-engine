@@ -1,6 +1,6 @@
 [package]
 name = "pyg_engine_native"
-version = "1.2.0"
+version = "1.2.6"
 edition = "2024"
 
 [lib]
