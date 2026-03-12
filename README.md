@@ -107,7 +107,51 @@ engine.draw(
 engine.run(title="Direct Draw Demo", show_fps_in_title=True)
 ```
 
-### 3. Using Game Objects & Meshes (World Coordinates)
+### 3. Font Families And Styled Text
+```python
+import pyg_engine as pyg
+
+engine = pyg.Engine()
+engine.register_font_family(
+    "inter",
+    regular="assets/fonts/Inter-Regular.ttf",
+    bold="assets/fonts/Inter-Bold.ttf",
+    italic="assets/fonts/Inter-Italic.ttf",
+    bold_italic="assets/fonts/Inter-BoldItalic.ttf",
+)
+
+engine.draw(
+    pyg.Text(
+        "Family font text",
+        position=pyg.Vec2(32, 48),
+        color=pyg.Color.WHITE,
+        font_size=28.0,
+        font_family="inter",
+        font_weight="bold",
+    )
+)
+
+width, height = engine.measure_text(
+    "Menu Title",
+    font_size=32.0,
+    font_family="inter",
+    font_weight="bold",
+)
+engine.draw_text(
+    "Italic caption",
+    32,
+    96,
+    pyg.Color.WHITE,
+    font_size=20.0,
+    font_family="inter",
+    font_style="italic",
+    kerning=True,
+)
+
+engine.run(title="Font Family Demo")
+```
+
+### 4. Using Game Objects & Meshes (World Coordinates)
 ```python
 import pyg_engine as pyg
 
@@ -139,7 +183,7 @@ runtime_player.enabled = True
 engine.run(title="Game Object Demo")
 ```
 
-### 4. World Text Meshes And Camera Properties
+### 5. World Text Meshes And Camera Properties
 ```python
 import pyg_engine as pyg
 
@@ -149,7 +193,12 @@ label = pyg.GameObject("WorldLabel")
 label.position = pyg.Vec2(0.0, 1.0)
 label.scale = pyg.Vec2(0.004, 0.004)
 
-text_mesh = pyg.TextMeshComponent("Hello from a GameObject", font_size=48.0)
+text_mesh = pyg.TextMeshComponent(
+    "Hello from a GameObject",
+    font_size=48.0,
+    font_family="inter",
+    font_weight="bold",
+)
 text_mesh.color = pyg.Color.WHITE
 label.add_text_mesh_component(text_mesh)
 
@@ -164,7 +213,7 @@ engine.camera.aspect_mode = pyg.CameraAspectMode.FIT_BOTH
 engine.run(title="Text Mesh Demo")
 ```
 
-### 5. Function-Based Update Loop
+### 6. Function-Based Update Loop
 ```python
 import pyg_engine as pyg
 

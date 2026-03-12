@@ -81,6 +81,12 @@ class Button:
         depth: float = 0,
         trigger_on: str = "release",
         repeat_interval_ms: Optional[float] = None,
+        font_size: Optional[float] = None,
+        font_path: Optional[str] = None,
+        font_family: Optional[str] = None,
+        font_weight: Optional[str] = None,
+        font_style: Optional[str] = None,
+        kerning: bool = True,
     ):
         """
         Create a new button.
@@ -113,6 +119,17 @@ class Button:
         self._component.set_trigger_on(trigger_on)
         if repeat_interval_ms is not None:
             self._component.set_repeat_interval(repeat_interval_ms)
+        if font_size is not None:
+            self._component.set_font_size(font_size)
+        if font_path is not None:
+            self._component.set_font_path(font_path)
+        if font_family is not None:
+            self._component.set_font_family(font_family)
+        if font_weight is not None:
+            self._component.set_font_weight(font_weight)
+        if font_style is not None:
+            self._component.set_font_style(font_style)
+        self._component.set_kerning(kerning)
 
     def add_to_engine(self, engine) -> int:
         """
@@ -295,6 +312,30 @@ class Button:
             ```
         """
         self._component.set_repeat_interval(interval_ms)
+
+    def set_font_size(self, size: float):
+        """Set the button label font size in pixels."""
+        self._component.set_font_size(size)
+
+    def set_font_path(self, font_path: Optional[str]):
+        """Set a direct TTF/OTF file for the button label."""
+        self._component.set_font_path(font_path)
+
+    def set_font_family(self, font_family: Optional[str]):
+        """Set the registered font family for the button label."""
+        self._component.set_font_family(font_family)
+
+    def set_font_weight(self, font_weight: str):
+        """Set the button label font weight (`regular` or `bold`)."""
+        self._component.set_font_weight(font_weight)
+
+    def set_font_style(self, font_style: str):
+        """Set the button label font style (`normal` or `italic`)."""
+        self._component.set_font_style(font_style)
+
+    def set_kerning(self, kerning: bool):
+        """Enable or disable kerning for the button label."""
+        self._component.set_kerning(kerning)
 
 
 class Panel:
@@ -586,6 +627,11 @@ class Label:
         font_size: float = 14,
         align: str = "left",
         depth: float = 0,
+        font_path: Optional[str] = None,
+        font_family: Optional[str] = None,
+        font_weight: Optional[str] = None,
+        font_style: Optional[str] = None,
+        kerning: bool = True,
     ):
         """
         Create a new label.
@@ -607,6 +653,15 @@ class Label:
         self._enabled = True
         self._component.set_align(align)
         self._component.set_depth(depth)
+        if font_path is not None:
+            self._component.set_font_path(font_path)
+        if font_family is not None:
+            self._component.set_font_family(font_family)
+        if font_weight is not None:
+            self._component.set_font_weight(font_weight)
+        if font_style is not None:
+            self._component.set_font_style(font_style)
+        self._component.set_kerning(kerning)
 
     def add_to_engine(self, engine) -> int:
         """
@@ -726,6 +781,26 @@ class Label:
             ```
         """
         self._component.set_font_size(size)
+
+    def set_font_path(self, font_path: Optional[str]):
+        """Set a direct TTF/OTF file for this label."""
+        self._component.set_font_path(font_path)
+
+    def set_font_family(self, font_family: Optional[str]):
+        """Set the registered font family for this label."""
+        self._component.set_font_family(font_family)
+
+    def set_font_weight(self, font_weight: str):
+        """Set the label font weight (`regular` or `bold`)."""
+        self._component.set_font_weight(font_weight)
+
+    def set_font_style(self, font_style: str):
+        """Set the label font style (`normal` or `italic`)."""
+        self._component.set_font_style(font_style)
+
+    def set_kerning(self, kerning: bool):
+        """Enable or disable kerning for this label."""
+        self._component.set_kerning(kerning)
 
     def set_color(self, r: float, g: float, b: float, a: float = 1.0):
         """

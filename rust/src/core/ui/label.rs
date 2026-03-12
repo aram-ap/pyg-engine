@@ -4,23 +4,10 @@ use super::style::UIStyle;
 use super::layout::UILayoutComponent;
 use crate::core::component::{ComponentTrait, next_component_id};
 use crate::core::draw_manager::DrawManager;
+use crate::core::text::{FontStyle, FontWeight, TextAlign, VerticalTextAlign};
 use crate::core::time::Time;
 use crate::types::color::Color;
 use std::any::Any;
-
-/// Text alignment for labels
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TextAlign {
-    Left,
-    Center,
-    Right,
-}
-
-impl Default for TextAlign {
-    fn default() -> Self {
-        TextAlign::Left
-    }
-}
 
 /// Label UI component for displaying text
 #[derive(Debug, Clone)]
@@ -99,7 +86,27 @@ impl LabelComponent {
     }
 
     pub fn set_font_size(&mut self, size: f32) {
-        self.style.font_size = size;
+        self.style.set_font_size(size);
+    }
+
+    pub fn set_font_path(&mut self, font_path: Option<String>) {
+        self.style.set_font_path(font_path);
+    }
+
+    pub fn set_font_family(&mut self, font_family: Option<String>) {
+        self.style.set_font_family(font_family);
+    }
+
+    pub fn set_font_weight(&mut self, font_weight: FontWeight) {
+        self.style.set_font_weight(font_weight);
+    }
+
+    pub fn set_font_style(&mut self, font_style: FontStyle) {
+        self.style.set_font_style(font_style);
+    }
+
+    pub fn set_kerning(&mut self, kerning: bool) {
+        self.style.set_kerning(kerning);
     }
 
     pub fn set_color(&mut self, color: [f32; 4]) {
@@ -124,7 +131,7 @@ impl LabelComponent {
 
     /// Estimate text width using font8x8 metrics (8px base glyph width).
     fn estimate_text_width(&self) -> f32 {
-        let scale = (self.style.font_size / 8.0).max(1.0).round();
+        let scale = (self.style.font_size() / 8.0).max(1.0).round();
         let glyph_width = 8.0 * scale;
         self.text.len() as f32 * glyph_width
     }
@@ -229,13 +236,16 @@ impl UIComponentTrait for LabelComponent {
 
         draw_manager.draw_text_with_options(
             self.text.clone(),
-            text_x,
-            text_y,
-            self.style.font_size,
+            x,
+            y,
+            self.style.text_style.clone(),
             text_color,
-            None,
-            0.0,
-            0.0,
+            crate::core::text::TextLayoutOptions {
+                width: Some(self.bounds.width),
+                height: Some(self.bounds.height),
+                horizontal_align: self.text_align,
+                vertical_align: VerticalTextAlign::Top,
+            },
             self.depth + 0.01,
         );
     }

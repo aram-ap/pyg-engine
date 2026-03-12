@@ -2,7 +2,6 @@ use crossbeam_channel::Sender;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use std::cell::RefCell;
-use std::path::Path;
 use std::sync::{Arc, RwLock};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
@@ -19,11 +18,14 @@ use crate::core::game_object::GameObject as RustGameObject;
 use crate::core::input_manager::{MouseAxisBinding, MouseAxisType};
 use crate::core::object_manager::ObjectManager;
 use crate::core::render_manager::CameraAspectMode;
+use crate::core::text::{
+    FontFamilyDefinition, FontStyle, FontWeight, TextAlign, TextLayoutOptions, TextStyle,
+};
 use crate::core::time::Time as RustTime;
 use crate::core::ui::{Rect, UIComponentTrait};
 use crate::core::ui::button::ButtonComponent;
 use crate::core::ui::panel::PanelComponent;
-use crate::core::ui::label::{LabelComponent, TextAlign};
+use crate::core::ui::label::LabelComponent;
 use crate::core::window_manager::{FullscreenMode, WindowConfig, load_window_icon_from_path};
 
 // Import bindings from separate modules
@@ -69,6 +71,53 @@ fn parse_camera_aspect_mode(mode_name: &str) -> Option<CameraAspectMode> {
         "fillboth" | "fill" | "cover" => Some(CameraAspectMode::FillBoth),
         _ => None,
     }
+}
+
+fn parse_font_weight(value: Option<&str>) -> PyResult<FontWeight> {
+    let Some(value) = value else {
+        return Ok(FontWeight::Regular);
+    };
+    FontWeight::parse(value).ok_or_else(|| {
+        PyRuntimeError::new_err(format!(
+            "Invalid font_weight '{value}'. Expected 'regular' or 'bold'."
+        ))
+    })
+}
+
+fn parse_font_style(value: Option<&str>) -> PyResult<FontStyle> {
+    let Some(value) = value else {
+        return Ok(FontStyle::Normal);
+    };
+    FontStyle::parse(value).ok_or_else(|| {
+        PyRuntimeError::new_err(format!(
+            "Invalid font_style '{value}'. Expected 'normal' or 'italic'."
+        ))
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_text_style(
+    font_size: f32,
+    font_path: Option<String>,
+    font_family: Option<String>,
+    font_weight: Option<&str>,
+    font_style: Option<&str>,
+    letter_spacing: f32,
+    line_spacing: f32,
+    kerning: bool,
+) -> PyResult<TextStyle> {
+    let mut style = TextStyle::new(font_size.max(1.0));
+    if let Some(font_path) = font_path {
+        style.font.set_path(Some(font_path));
+    } else {
+        style.font.set_family(font_family);
+    }
+    style.font.set_weight(parse_font_weight(font_weight)?);
+    style.font.set_style(parse_font_style(font_style)?);
+    style.letter_spacing = letter_spacing;
+    style.line_spacing = line_spacing;
+    style.kerning = kerning;
+    Ok(style)
 }
 
 #[derive(Clone)]
@@ -1112,8 +1161,12 @@ impl PyDrawCommand {
         color,
         font_size=24.0,
         font_path=None,
+        font_family=None,
+        font_weight=None,
+        font_style=None,
         letter_spacing=0.0,
         line_spacing=0.0,
+        kerning=true,
         draw_order=0.0
     ))]
     fn text(
@@ -1123,23 +1176,35 @@ impl PyDrawCommand {
         color: &PyColor,
         font_size: f32,
         font_path: Option<String>,
+        font_family: Option<String>,
+        font_weight: Option<&str>,
+        font_style: Option<&str>,
         letter_spacing: f32,
         line_spacing: f32,
+        kerning: bool,
         draw_order: f32,
-    ) -> Self {
-        Self {
+    ) -> PyResult<Self> {
+        let style = build_text_style(
+            font_size,
+            font_path,
+            font_family,
+            font_weight,
+            font_style,
+            letter_spacing,
+            line_spacing,
+            kerning,
+        )?;
+        Ok(Self {
             inner: DrawCommand::Text {
                 text,
                 x,
                 y,
-                font_size,
+                style,
                 color: color.inner,
-                font_path,
-                letter_spacing,
-                line_spacing,
+                layout: TextLayoutOptions::default(),
                 draw_order,
             },
-        }
+        })
     }
 }
 
@@ -1153,6 +1218,7 @@ pub struct PyEngine {
 impl PyEngine {
     #[allow(clippy::too_many_arguments)]
     fn build_window_config(
+        &self,
         title: String,
         width: u32,
         height: u32,
@@ -1179,7 +1245,8 @@ impl PyEngine {
         }
 
         if let Some(icon_path_value) = icon_path {
-            let icon = load_window_icon_from_path(Path::new(&icon_path_value))
+            let resolved_icon_path = self.inner.resolve_source_path(&icon_path_value);
+            let icon = load_window_icon_from_path(&resolved_icon_path)
                 .map_err(PyRuntimeError::new_err)?;
             config = config.with_icon(icon);
         }
@@ -1221,6 +1288,11 @@ impl PyEngine {
         }
     }
 
+    fn set_source_root(&mut self, source_root: Option<String>) {
+        self.inner
+            .set_source_root(source_root.map(std::path::PathBuf::from));
+    }
+
     /// Initialize the engine with window configuration without starting the loop.
     #[pyo3(signature = (
         title="PyG Engine".to_string(),
@@ -1249,7 +1321,7 @@ impl PyEngine {
         min_width: Option<u32>,
         min_height: Option<u32>,
     ) -> PyResult<()> {
-        let config = Self::build_window_config(
+        let config = self.build_window_config(
             title,
             width,
             height,
@@ -1331,8 +1403,8 @@ impl PyEngine {
     /// In manual mode this can update an already-created window at runtime.
     /// In initialized-but-not-yet-resumed mode this updates pending window config.
     fn set_window_icon(&mut self, icon_path: String) -> PyResult<()> {
-        let icon =
-            load_window_icon_from_path(Path::new(&icon_path)).map_err(PyRuntimeError::new_err)?;
+        let resolved_icon_path = self.inner.resolve_source_path(&icon_path);
+        let icon = load_window_icon_from_path(&resolved_icon_path).map_err(PyRuntimeError::new_err)?;
         self.inner.set_window_icon(icon);
         Ok(())
     }
@@ -1370,7 +1442,7 @@ impl PyEngine {
         min_width: Option<u32>,
         min_height: Option<u32>,
     ) -> PyResult<()> {
-        let config = Self::build_window_config(
+        let config = self.build_window_config(
             title,
             width,
             height,
@@ -2237,8 +2309,12 @@ impl PyEngine {
         color,
         font_size=24.0,
         font_path=None,
+        font_family=None,
+        font_weight=None,
+        font_style=None,
         letter_spacing=0.0,
         line_spacing=0.0,
+        kerning=true,
         draw_order=0.0
     ))]
     fn draw_text(
@@ -2249,21 +2325,91 @@ impl PyEngine {
         color: &PyColor,
         font_size: f32,
         font_path: Option<String>,
+        font_family: Option<String>,
+        font_weight: Option<&str>,
+        font_style: Option<&str>,
         letter_spacing: f32,
         line_spacing: f32,
+        kerning: bool,
         draw_order: f32,
-    ) {
+    ) -> PyResult<()> {
+        let style = build_text_style(
+            font_size,
+            font_path,
+            font_family,
+            font_weight,
+            font_style,
+            letter_spacing,
+            line_spacing,
+            kerning,
+        )?;
         self.inner.draw_text_with_options(
             text,
             x,
             y,
-            font_size,
+            style,
             color.inner,
-            font_path,
-            letter_spacing,
-            line_spacing,
+            TextLayoutOptions::default(),
             draw_order,
         );
+        Ok(())
+    }
+
+    #[pyo3(signature = (
+        family,
+        regular=None,
+        bold=None,
+        italic=None,
+        bold_italic=None
+    ))]
+    fn register_font_family(
+        &mut self,
+        family: String,
+        regular: Option<String>,
+        bold: Option<String>,
+        italic: Option<String>,
+        bold_italic: Option<String>,
+    ) -> bool {
+        self.inner.register_font_family(
+            family,
+            FontFamilyDefinition::new(regular, bold, italic, bold_italic),
+        )
+    }
+
+    #[pyo3(signature = (
+        text,
+        font_size=24.0,
+        font_path=None,
+        font_family=None,
+        font_weight=None,
+        font_style=None,
+        letter_spacing=0.0,
+        line_spacing=0.0,
+        kerning=true
+    ))]
+    fn measure_text(
+        &mut self,
+        text: String,
+        font_size: f32,
+        font_path: Option<String>,
+        font_family: Option<String>,
+        font_weight: Option<&str>,
+        font_style: Option<&str>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        kerning: bool,
+    ) -> PyResult<(f32, f32)> {
+        let style = build_text_style(
+            font_size,
+            font_path,
+            font_family,
+            font_weight,
+            font_style,
+            letter_spacing,
+            line_spacing,
+            kerning,
+        )?;
+        Ok(self.inner.measure_text(&text, style))
     }
 
     /// Update a UI label's text at runtime by object ID.
@@ -4144,8 +4290,12 @@ impl PyEngineHandle {
         color,
         font_size=24.0,
         font_path=None,
+        font_family=None,
+        font_weight=None,
+        font_style=None,
         letter_spacing=0.0,
         line_spacing=0.0,
+        kerning=true,
         draw_order=0.0
     ))]
     fn draw_text(
@@ -4156,20 +4306,54 @@ impl PyEngineHandle {
         color: &PyColor,
         font_size: f32,
         font_path: Option<String>,
+        font_family: Option<String>,
+        font_weight: Option<&str>,
+        font_style: Option<&str>,
         letter_spacing: f32,
         line_spacing: f32,
+        kerning: bool,
         draw_order: f32,
-    ) {
+    ) -> PyResult<()> {
+        let style = build_text_style(
+            font_size,
+            font_path,
+            font_family,
+            font_weight,
+            font_style,
+            letter_spacing,
+            line_spacing,
+            kerning,
+        )?;
         let _ = self.sender.send(EngineCommand::DrawText {
             text,
             x,
             y,
-            font_size,
+            style,
             color: color.inner,
-            font_path,
-            letter_spacing,
-            line_spacing,
+            layout: TextLayoutOptions::default(),
             draw_order,
+        });
+        Ok(())
+    }
+
+    #[pyo3(signature = (
+        family,
+        regular=None,
+        bold=None,
+        italic=None,
+        bold_italic=None
+    ))]
+    fn register_font_family(
+        &self,
+        family: String,
+        regular: Option<String>,
+        bold: Option<String>,
+        italic: Option<String>,
+        bold_italic: Option<String>,
+    ) {
+        let _ = self.sender.send(EngineCommand::RegisterFontFamily {
+            family,
+            definition: FontFamilyDefinition::new(regular, bold, italic, bold_italic),
         });
     }
 
@@ -6586,14 +6770,48 @@ impl PyTextMeshComponent {
 #[pymethods]
 impl PyTextMeshComponent {
     #[new]
-    #[pyo3(signature = (text="", font_size=24.0, name=None))]
-    fn new(text: &str, font_size: f32, name: Option<String>) -> Self {
-        Self {
-            inner: TextMeshComponent::new(name.unwrap_or_else(|| "Text Mesh".to_string()))
-                .with_text(text)
-                .with_font_size(font_size),
+    #[pyo3(signature = (
+        text="",
+        font_size=24.0,
+        name=None,
+        font_path=None,
+        font_family=None,
+        font_weight=None,
+        font_style=None,
+        letter_spacing=0.0,
+        line_spacing=0.0,
+        kerning=true
+    ))]
+    #[allow(clippy::too_many_arguments)]
+    fn new(
+        text: &str,
+        font_size: f32,
+        name: Option<String>,
+        font_path: Option<String>,
+        font_family: Option<String>,
+        font_weight: Option<&str>,
+        font_style: Option<&str>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        kerning: bool,
+    ) -> PyResult<Self> {
+        let text_style = build_text_style(
+            font_size,
+            font_path,
+            font_family,
+            font_weight,
+            font_style,
+            letter_spacing,
+            line_spacing,
+            kerning,
+        )?;
+        let mut component =
+            TextMeshComponent::new(name.unwrap_or_else(|| "Text Mesh".to_string())).with_text(text);
+        component.set_text_style(text_style);
+        Ok(Self {
+            inner: component,
             runtime_binding: RefCell::new(None),
-        }
+        })
     }
 
     #[getter]
@@ -6649,6 +6867,52 @@ impl PyTextMeshComponent {
     #[setter]
     fn set_font_path(&mut self, font_path: Option<String>) {
         self.inner.set_font_path(font_path);
+        self.sync_runtime();
+    }
+
+    #[getter]
+    fn font_family(&self) -> Option<String> {
+        self.inner.font_family().map(|family| family.to_string())
+    }
+
+    #[setter]
+    fn set_font_family(&mut self, font_family: Option<String>) {
+        self.inner.set_font_family(font_family);
+        self.sync_runtime();
+    }
+
+    #[getter]
+    fn font_weight(&self) -> String {
+        self.inner.font_weight().as_str().to_string()
+    }
+
+    #[setter]
+    fn set_font_weight(&mut self, font_weight: &str) -> PyResult<()> {
+        self.inner.set_font_weight(parse_font_weight(Some(font_weight))?);
+        self.sync_runtime();
+        Ok(())
+    }
+
+    #[getter]
+    fn font_style(&self) -> String {
+        self.inner.font_style().as_str().to_string()
+    }
+
+    #[setter]
+    fn set_font_style(&mut self, font_style: &str) -> PyResult<()> {
+        self.inner.set_font_style(parse_font_style(Some(font_style))?);
+        self.sync_runtime();
+        Ok(())
+    }
+
+    #[getter]
+    fn kerning(&self) -> bool {
+        self.inner.kerning()
+    }
+
+    #[setter]
+    fn set_kerning(&mut self, kerning: bool) {
+        self.inner.set_kerning(kerning);
         self.sync_runtime();
     }
 
@@ -6906,6 +7170,32 @@ impl PyButtonComponent {
     fn set_size(&mut self, width: f32, height: f32) {
         let bounds = self.inner.bounds();
         self.inner.set_bounds(Rect::new(bounds.x, bounds.y, width, height));
+    }
+
+    fn set_font_size(&mut self, font_size: f32) {
+        self.inner.set_font_size(font_size);
+    }
+
+    fn set_font_path(&mut self, font_path: Option<String>) {
+        self.inner.set_font_path(font_path);
+    }
+
+    fn set_font_family(&mut self, font_family: Option<String>) {
+        self.inner.set_font_family(font_family);
+    }
+
+    fn set_font_weight(&mut self, font_weight: &str) -> PyResult<()> {
+        self.inner.set_font_weight(parse_font_weight(Some(font_weight))?);
+        Ok(())
+    }
+
+    fn set_font_style(&mut self, font_style: &str) -> PyResult<()> {
+        self.inner.set_font_style(parse_font_style(Some(font_style))?);
+        Ok(())
+    }
+
+    fn set_kerning(&mut self, kerning: bool) {
+        self.inner.set_kerning(kerning);
     }
 
     fn set_depth(&mut self, depth: f32) {
@@ -7421,6 +7711,28 @@ impl PyLabelComponent {
 
     fn set_font_size(&mut self, size: f32) {
         self.inner.set_font_size(size);
+    }
+
+    fn set_font_path(&mut self, font_path: Option<String>) {
+        self.inner.set_font_path(font_path);
+    }
+
+    fn set_font_family(&mut self, font_family: Option<String>) {
+        self.inner.set_font_family(font_family);
+    }
+
+    fn set_font_weight(&mut self, font_weight: &str) -> PyResult<()> {
+        self.inner.set_font_weight(parse_font_weight(Some(font_weight))?);
+        Ok(())
+    }
+
+    fn set_font_style(&mut self, font_style: &str) -> PyResult<()> {
+        self.inner.set_font_style(parse_font_style(Some(font_style))?);
+        Ok(())
+    }
+
+    fn set_kerning(&mut self, kerning: bool) {
+        self.inner.set_kerning(kerning);
     }
 
     fn set_color(&mut self, r: f32, g: f32, b: f32, a: f32) {

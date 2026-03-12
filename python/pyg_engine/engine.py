@@ -7,6 +7,7 @@ with comprehensive logging capabilities.
 
 import inspect
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
@@ -28,6 +29,21 @@ except ImportError as e:
 DrawCommand = _RustDrawCommand
 
 from .shapes import to_draw_commands
+
+
+_PACKAGE_ROOT = Path(__file__).resolve().parent
+
+
+def _detect_source_root() -> Path:
+    for frame_info in inspect.stack()[1:]:
+        filename = frame_info.filename
+        if not filename or filename.startswith("<"):
+            continue
+        resolved = Path(filename).resolve()
+        if _PACKAGE_ROOT in resolved.parents or resolved == _PACKAGE_ROOT:
+            continue
+        return resolved.parent
+    return Path.cwd()
 
 
 class EngineHandle:
@@ -524,8 +540,12 @@ class EngineHandle:
         color: Any,
         font_size: float = 24.0,
         font_path: Optional[str] = None,
+        font_family: Optional[str] = None,
+        font_weight: Optional[str] = None,
+        font_style: Optional[str] = None,
         letter_spacing: float = 0.0,
         line_spacing: float = 0.0,
+        kerning: bool = True,
         draw_order: float = 0.0,
     ) -> None:
         """
@@ -533,7 +553,8 @@ class EngineHandle:
 
         This is thread-safe and can be called from background threads.
         By default, uses the engine's built-in open-source font.
-        Provide `font_path` to use a custom TTF/OTF font file.
+        Provide `font_path` for a one-off TTF/OTF file, or `font_family`
+        plus `font_weight` / `font_style` after registering a family.
 
         Args:
             text: The text string to display.
@@ -581,9 +602,31 @@ class EngineHandle:
             color,
             font_size=font_size,
             font_path=font_path,
+            font_family=font_family,
+            font_weight=font_weight,
+            font_style=font_style,
             letter_spacing=letter_spacing,
             line_spacing=line_spacing,
+            kerning=kerning,
             draw_order=draw_order,
+        )
+
+    def register_font_family(
+        self,
+        family: str,
+        *,
+        regular: Optional[str] = None,
+        bold: Optional[str] = None,
+        italic: Optional[str] = None,
+        bold_italic: Optional[str] = None,
+    ) -> None:
+        """Register a reusable font family for later `draw_text()` calls."""
+        self._inner.register_font_family(
+            family,
+            regular=regular,
+            bold=bold,
+            italic=italic,
+            bold_italic=bold_italic,
         )
 
     def update_ui_label_text(self, object_id: int, text: str) -> None:
@@ -1698,6 +1741,7 @@ class Engine:
         enable_file_logging: bool = False,
         log_directory: Optional[str] = None,
         log_level: Optional[str] = None,
+        source_root: Optional[str] = None,
     ) -> None:
         """
         Initialize a new Engine instance with optional logging configuration.
@@ -1732,6 +1776,8 @@ class Engine:
             log_directory=log_directory,
             log_level=log_level,
         )
+        detected_source_root = Path(source_root).expanduser() if source_root else _detect_source_root()
+        self._engine.set_source_root(str(detected_source_root.resolve()))
         self._input = Input(self)
         self._ui = UIManager(self)
         self._objects = EngineObjects(self)
@@ -2708,8 +2754,12 @@ class Engine:
         color: Any,
         font_size: float = 24.0,
         font_path: Optional[str] = None,
+        font_family: Optional[str] = None,
+        font_weight: Optional[str] = None,
+        font_style: Optional[str] = None,
         letter_spacing: float = 0.0,
         line_spacing: float = 0.0,
+        kerning: bool = True,
         draw_order: float = 0.0,
     ) -> None:
         """
@@ -2727,9 +2777,57 @@ class Engine:
             color,
             font_size=font_size,
             font_path=font_path,
+            font_family=font_family,
+            font_weight=font_weight,
+            font_style=font_style,
             letter_spacing=letter_spacing,
             line_spacing=line_spacing,
+            kerning=kerning,
             draw_order=draw_order,
+        )
+
+    def register_font_family(
+        self,
+        family: str,
+        *,
+        regular: Optional[str] = None,
+        bold: Optional[str] = None,
+        italic: Optional[str] = None,
+        bold_italic: Optional[str] = None,
+    ) -> None:
+        """Register a reusable font family for text rendering and UI."""
+        self._engine.register_font_family(
+            family,
+            regular=regular,
+            bold=bold,
+            italic=italic,
+            bold_italic=bold_italic,
+        )
+
+    def measure_text(
+        self,
+        text: str,
+        *,
+        font_size: float = 24.0,
+        font_path: Optional[str] = None,
+        font_family: Optional[str] = None,
+        font_weight: Optional[str] = None,
+        font_style: Optional[str] = None,
+        letter_spacing: float = 0.0,
+        line_spacing: float = 0.0,
+        kerning: bool = True,
+    ) -> tuple[float, float]:
+        """Measure text width and height using the current font system."""
+        return self._engine.measure_text(
+            text,
+            font_size=font_size,
+            font_path=font_path,
+            font_family=font_family,
+            font_weight=font_weight,
+            font_style=font_style,
+            letter_spacing=letter_spacing,
+            line_spacing=line_spacing,
+            kerning=kerning,
         )
 
     def update_ui_label_text(self, object_id: int, text: str) -> None:
@@ -2758,7 +2856,7 @@ class Engine:
         Get the engine version.
 
         Returns:
-            The version string (e.g., "1.2.7").
+            The version string (e.g., "1.3.0").
         """
         return self._engine.version
 

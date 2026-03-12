@@ -56,6 +56,7 @@
 //! - [`RenderManager`](crate::core::render_manager::RenderManager) - Processes draw commands
 
 use crate::core::component::MeshVertex;
+use crate::core::text::{FontDescriptor, TextAlign, TextLayoutOptions, TextStyle, VerticalTextAlign};
 use crate::types::vector::Vec2;
 use crate::types::Color;
 use std::sync::Arc;
@@ -290,21 +291,17 @@ pub enum DrawCommand {
     /// # Fields
     /// - `text`: String to render (supports newlines `\n`)
     /// - `x`, `y`: Top-left position in screen pixels
-    /// - `font_size`: Font size in pixels
+    /// - `style`: Font/style configuration
     /// - `color`: Text color
-    /// - `font_path`: Optional path to TTF font file (uses default if `None`)
-    /// - `letter_spacing`: Extra spacing between characters in pixels
-    /// - `line_spacing`: Extra spacing between lines in pixels
+    /// - `layout`: Optional layout bounds and alignment
     /// - `draw_order`: Rendering layer (higher = on top)
     Text {
         text: String,
         x: f32,
         y: f32,
-        font_size: f32,
+        style: TextStyle,
         color: Color,
-        font_path: Option<String>,
-        letter_spacing: f32,
-        line_spacing: f32,
+        layout: TextLayoutOptions,
         draw_order: f32,
     },
 }
@@ -448,10 +445,18 @@ impl DrawManager {
                     *height *= scale;
                     *thickness *= scale;
                 }
-                DrawCommand::Text { x, y, font_size, .. } => {
+                DrawCommand::Text { x, y, style, layout, .. } => {
                     *x *= scale;
                     *y *= scale;
-                    *font_size *= scale;
+                    style.font_size *= scale;
+                    style.letter_spacing *= scale;
+                    style.line_spacing *= scale;
+                    if let Some(width) = &mut layout.width {
+                        *width *= scale;
+                    }
+                    if let Some(height) = &mut layout.height {
+                        *height *= scale;
+                    }
                 }
                 DrawCommand::Line { start_x, start_y, end_x, end_y, thickness, .. } => {
                     *start_x *= scale;
@@ -788,11 +793,40 @@ impl DrawManager {
     }
 
     pub fn draw_text(&mut self, text: String, x: f32, y: f32, color: Color) {
-        self.draw_text_with_options(text, x, y, 24.0, color, None, 0.0, 0.0, 0.0);
+        self.draw_text_with_options(
+            text,
+            x,
+            y,
+            TextStyle::default(),
+            color,
+            TextLayoutOptions::default(),
+            0.0,
+        );
+    }
+
+    pub fn draw_text_with_options(
+        &mut self,
+        text: String,
+        x: f32,
+        y: f32,
+        style: TextStyle,
+        color: Color,
+        layout: TextLayoutOptions,
+        draw_order: f32,
+    ) {
+        self.push_command(DrawCommand::Text {
+            text,
+            x,
+            y,
+            style,
+            color,
+            layout,
+            draw_order,
+        });
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_text_with_options(
+    pub fn draw_text_legacy(
         &mut self,
         text: String,
         x: f32,
@@ -804,16 +838,51 @@ impl DrawManager {
         line_spacing: f32,
         draw_order: f32,
     ) {
-        self.push_command(DrawCommand::Text {
+        let mut style = TextStyle::new(font_size);
+        style.font = match font_path {
+            Some(path) => FontDescriptor::from_path(path),
+            None => FontDescriptor::default_font(),
+        };
+        style.letter_spacing = letter_spacing;
+        style.line_spacing = line_spacing;
+        self.draw_text_with_options(
             text,
             x,
             y,
-            font_size,
+            style,
             color,
-            font_path,
-            letter_spacing,
-            line_spacing,
+            TextLayoutOptions::default(),
             draw_order,
-        });
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_text_in_box(
+        &mut self,
+        text: String,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        style: TextStyle,
+        color: Color,
+        horizontal_align: TextAlign,
+        vertical_align: VerticalTextAlign,
+        draw_order: f32,
+    ) {
+        self.draw_text_with_options(
+            text,
+            x,
+            y,
+            style,
+            color,
+            TextLayoutOptions {
+                width: Some(width),
+                height: Some(height),
+                horizontal_align,
+                vertical_align,
+            },
+            draw_order,
+        );
     }
 }

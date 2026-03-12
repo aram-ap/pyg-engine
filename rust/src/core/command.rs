@@ -3,6 +3,7 @@ use super::game_object::GameObject;
 use super::render_manager::CameraAspectMode;
 use crate::core::component::ComponentTrait;
 use crate::core::component::{MeshComponent, TextMeshComponent};
+use crate::core::text::{FontFamilyDefinition, TextLayoutOptions, TextStyle};
 use crate::types::Color;
 use crate::types::vector::Vec2;
 use std::sync::Arc;
@@ -173,12 +174,16 @@ pub enum EngineCommand {
         text: String,
         x: f32,
         y: f32,
-        font_size: f32,
+        style: TextStyle,
         color: Color,
-        font_path: Option<String>,
-        letter_spacing: f32,
-        line_spacing: f32,
+        layout: TextLayoutOptions,
         draw_order: f32,
+    },
+
+    /// Register a named font family and its style variants.
+    RegisterFontFamily {
+        family: String,
+        definition: FontFamilyDefinition,
     },
 
     /// Log a message at TRACE level

@@ -7,12 +7,14 @@ use super::logging;
 use super::object_manager::ObjectManager;
 use super::physics::CollisionWorld;
 use super::render_manager::{CameraAspectMode, RenderManager};
+use super::text::{FontFamilyDefinition, TextLayoutOptions, TextStyle};
 use super::time::Time;
 use super::ui_manager::UIManager;
 use super::window_manager::{WindowConfig, WindowManager};
 use crate::types::Color;
 use crate::types::vector::Vec2;
 use crossbeam_channel::{Receiver, Sender, unbounded};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
@@ -49,9 +51,11 @@ pub struct Engine {
     pending_camera_viewport_size: Option<Vec2>,
     pending_camera_aspect_mode: CameraAspectMode,
     pending_camera_background_color: Option<Color>,
+    source_root: Option<PathBuf>,
+    registered_font_families: HashMap<String, FontFamilyDefinition>,
 }
 
-pub const VERSION: &str = "1.2.7";
+pub const VERSION: &str = "1.3.0";
 
 impl Engine {
     /// Create a new Engine instance with default logging (console only)
@@ -81,6 +85,8 @@ impl Engine {
             pending_camera_viewport_size: None,
             pending_camera_aspect_mode: CameraAspectMode::default(),
             pending_camera_background_color: None,
+            source_root: None,
+            registered_font_families: HashMap::new(),
         };
         engine.ensure_active_camera_object();
         engine
@@ -135,6 +141,8 @@ impl Engine {
             pending_camera_viewport_size: None,
             pending_camera_aspect_mode: CameraAspectMode::default(),
             pending_camera_background_color: None,
+            source_root: None,
+            registered_font_families: HashMap::new(),
         };
         engine.ensure_active_camera_object();
         engine
@@ -147,6 +155,24 @@ impl Engine {
 
     pub fn get_object_manager_handle(&self) -> Arc<RwLock<ObjectManager>> {
         Arc::clone(&self.object_manager)
+    }
+
+    pub fn set_source_root(&mut self, source_root: Option<PathBuf>) {
+        self.source_root = source_root;
+        if let Some(render_manager) = &mut self.render_manager {
+            render_manager.set_source_root(self.source_root.clone());
+        }
+    }
+
+    pub fn resolve_source_path(&self, path: &str) -> PathBuf {
+        let path_buf = PathBuf::from(path);
+        if path_buf.is_absolute() {
+            return path_buf;
+        }
+        if let Some(source_root) = &self.source_root {
+            return source_root.join(path_buf);
+        }
+        path_buf
     }
 
     /// Set the window configuration for the engine
@@ -1004,8 +1030,30 @@ impl Engine {
     }
 
     /// Draw text with optional custom font path and spacing controls.
-    #[allow(clippy::too_many_arguments)]
     pub fn draw_text_with_options(
+        &mut self,
+        text: String,
+        x: f32,
+        y: f32,
+        style: TextStyle,
+        color: Color,
+        layout: TextLayoutOptions,
+        draw_order: f32,
+    ) {
+        self.draw_manager.draw_text_with_options(
+            text,
+            x,
+            y,
+            style,
+            color,
+            layout,
+            draw_order,
+        );
+        self.request_render_redraw();
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_text_legacy(
         &mut self,
         text: String,
         x: f32,
@@ -1017,7 +1065,7 @@ impl Engine {
         line_spacing: f32,
         draw_order: f32,
     ) {
-        self.draw_manager.draw_text_with_options(
+        self.draw_manager.draw_text_legacy(
             text,
             x,
             y,
@@ -1029,6 +1077,45 @@ impl Engine {
             draw_order,
         );
         self.request_render_redraw();
+    }
+
+    pub fn register_font_family(
+        &mut self,
+        family: String,
+        definition: FontFamilyDefinition,
+    ) -> bool {
+        let registered = if let Some(render_manager) = &mut self.render_manager {
+            render_manager.register_font_family(family.clone(), definition.clone())
+        } else {
+            !definition.is_empty()
+        };
+
+        if registered {
+            self.registered_font_families.insert(family, definition);
+            self.request_render_redraw();
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn measure_text(&mut self, text: &str, style: TextStyle) -> (f32, f32) {
+        if let Some(render_manager) = &mut self.render_manager {
+            return render_manager.measure_text(text, &style);
+        }
+
+        // Before the renderer exists, provide a conservative fallback using the
+        // built-in bitmap font metrics so UI code can still size simple text.
+        let lines: Vec<&str> = text.split('\n').collect();
+        let max_chars = lines.iter().map(|line| line.chars().count()).max().unwrap_or(0) as f32;
+        let line_count = lines.len().max(1) as f32;
+        let scale = (style.font_size.max(1.0) / 8.0).max(1.0).round();
+        let glyph_width = 8.0 * scale + style.letter_spacing;
+        let glyph_height = 8.0 * scale + style.line_spacing;
+        (
+            (max_chars * glyph_width).max(0.0),
+            (line_count * glyph_height).max(style.font_size.max(1.0)),
+        )
     }
 
     /// Push a fully-custom direct draw command.
@@ -1243,24 +1330,23 @@ impl Engine {
                     text,
                     x,
                     y,
-                    font_size,
+                    style,
                     color,
-                    font_path,
-                    letter_spacing,
-                    line_spacing,
+                    layout,
                     draw_order,
                 } => {
                     self.draw_text_with_options(
                         text,
                         x,
                         y,
-                        font_size,
+                        style,
                         color,
-                        font_path,
-                        letter_spacing,
-                        line_spacing,
+                        layout,
                         draw_order,
                     );
+                }
+                EngineCommand::RegisterFontFamily { family, definition } => {
+                    let _ = self.register_font_family(family, definition);
                 }
                 EngineCommand::UpdateUILabelText { object_id, text } => {
                     if let Ok(mut object_manager) = self.object_manager.write() {
@@ -1573,6 +1659,13 @@ impl ApplicationHandler for Engine {
                             Ok(render_manager) => {
                                 logging::log_info("Render manager initialized successfully");
                                 self.render_manager = Some(render_manager);
+
+                                if let Some(render_manager) = &mut self.render_manager {
+                                    for (family, definition) in self.registered_font_families.clone() {
+                                        render_manager.register_font_family(family, definition);
+                                    }
+                                    render_manager.set_source_root(self.source_root.clone());
+                                }
 
                                 // Initialize UI manager with window size and scale factor
                                 let window_size = window_manager.size();

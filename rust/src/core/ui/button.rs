@@ -4,6 +4,7 @@ use super::style::StyleSet;
 use super::layout::UILayoutComponent;
 use crate::core::component::{ComponentTrait, next_component_id};
 use crate::core::draw_manager::DrawManager;
+use crate::core::text::{FontStyle, FontWeight, TextAlign, TextLayoutOptions, VerticalTextAlign};
 use crate::core::time::Time;
 use crate::types::color::Color;
 use std::any::Any;
@@ -294,6 +295,78 @@ impl ButtonComponent {
         self.style = style;
     }
 
+    pub fn set_font_size(&mut self, font_size: f32) {
+        for state in [
+            StyleState::Normal,
+            StyleState::Hovered,
+            StyleState::Pressed,
+            StyleState::Focused,
+            StyleState::Disabled,
+        ] {
+            self.style.get_style_mut(state).set_font_size(font_size);
+        }
+    }
+
+    pub fn set_font_path(&mut self, font_path: Option<String>) {
+        for state in [
+            StyleState::Normal,
+            StyleState::Hovered,
+            StyleState::Pressed,
+            StyleState::Focused,
+            StyleState::Disabled,
+        ] {
+            self.style.get_style_mut(state).set_font_path(font_path.clone());
+        }
+    }
+
+    pub fn set_font_family(&mut self, font_family: Option<String>) {
+        for state in [
+            StyleState::Normal,
+            StyleState::Hovered,
+            StyleState::Pressed,
+            StyleState::Focused,
+            StyleState::Disabled,
+        ] {
+            self.style.get_style_mut(state).set_font_family(font_family.clone());
+        }
+    }
+
+    pub fn set_font_weight(&mut self, font_weight: FontWeight) {
+        for state in [
+            StyleState::Normal,
+            StyleState::Hovered,
+            StyleState::Pressed,
+            StyleState::Focused,
+            StyleState::Disabled,
+        ] {
+            self.style.get_style_mut(state).set_font_weight(font_weight);
+        }
+    }
+
+    pub fn set_font_style(&mut self, font_style: FontStyle) {
+        for state in [
+            StyleState::Normal,
+            StyleState::Hovered,
+            StyleState::Pressed,
+            StyleState::Focused,
+            StyleState::Disabled,
+        ] {
+            self.style.get_style_mut(state).set_font_style(font_style);
+        }
+    }
+
+    pub fn set_kerning(&mut self, kerning: bool) {
+        for state in [
+            StyleState::Normal,
+            StyleState::Hovered,
+            StyleState::Pressed,
+            StyleState::Focused,
+            StyleState::Disabled,
+        ] {
+            self.style.get_style_mut(state).set_kerning(kerning);
+        }
+    }
+
     pub fn set_on_click<F>(&mut self, callback: F)
     where
         F: FnMut() + Send + Sync + 'static,
@@ -535,14 +608,6 @@ impl UIComponentTrait for ButtonComponent {
 
         // Draw text (centered)
         if !self.label.is_empty() {
-            // Estimate text width using font8x8 metrics (24px default font size, 8px base glyph)
-            let font_size = 14.0_f32; // Default button font size
-            let scale = (font_size / 8.0).max(1.0).round();
-            let glyph_width = 8.0 * scale;
-            let glyph_height = 8.0 * scale;
-            let text_width = self.label.len() as f32 * glyph_width;
-            let text_x = x + (self.bounds.width - text_width) / 2.0;
-            let text_y = y + (self.bounds.height - glyph_height) / 2.0;
             let text_color = Color::new(
                 style.text_color[0],
                 style.text_color[1],
@@ -552,13 +617,16 @@ impl UIComponentTrait for ButtonComponent {
 
             draw_manager.draw_text_with_options(
                 self.label.clone(),
-                text_x,
-                text_y,
-                font_size,
+                x,
+                y,
+                style.text_style.clone(),
                 text_color,
-                None,
-                0.0,
-                0.0,
+                TextLayoutOptions {
+                    width: Some(self.bounds.width),
+                    height: Some(self.bounds.height),
+                    horizontal_align: TextAlign::Center,
+                    vertical_align: VerticalTextAlign::Center,
+                },
                 self.depth + 0.01,
             );
         }

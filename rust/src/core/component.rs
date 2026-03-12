@@ -1,4 +1,5 @@
 use super::time::Time;
+use super::text::{FontDescriptor, FontStyle, FontWeight, TextStyle};
 use crate::types::color::Color;
 use crate::types::vector::Vec2;
 use std::any::Any;
@@ -438,10 +439,7 @@ pub struct TextMeshComponent {
     name: String,
     text: String,
     color: Color,
-    font_size: f32,
-    font_path: Option<String>,
-    letter_spacing: f32,
-    line_spacing: f32,
+    text_style: TextStyle,
     visible: bool,
     draw_order: f32,
     enabled_self: bool,
@@ -455,10 +453,7 @@ impl ComponentTrait for TextMeshComponent {
             name,
             text: String::new(),
             color: Color::WHITE,
-            font_size: 24.0,
-            font_path: None,
-            letter_spacing: 0.0,
-            line_spacing: 0.0,
+            text_style: TextStyle::new(24.0),
             visible: true,
             draw_order: 0.0,
             enabled_self: true,
@@ -534,22 +529,42 @@ impl TextMeshComponent {
     }
 
     pub fn with_font_size(mut self, font_size: f32) -> Self {
-        self.font_size = font_size.max(1.0);
+        self.text_style.font_size = font_size.max(1.0);
         self
     }
 
     pub fn with_font_path(mut self, font_path: Option<String>) -> Self {
-        self.font_path = font_path;
+        self.text_style.font.set_path(font_path);
+        self
+    }
+
+    pub fn with_font_family(mut self, font_family: Option<String>) -> Self {
+        self.text_style.font.set_family(font_family);
+        self
+    }
+
+    pub fn with_font_weight(mut self, font_weight: FontWeight) -> Self {
+        self.text_style.font.set_weight(font_weight);
+        self
+    }
+
+    pub fn with_font_style(mut self, font_style: FontStyle) -> Self {
+        self.text_style.font.set_style(font_style);
+        self
+    }
+
+    pub fn with_kerning(mut self, kerning: bool) -> Self {
+        self.text_style.kerning = kerning;
         self
     }
 
     pub fn with_letter_spacing(mut self, letter_spacing: f32) -> Self {
-        self.letter_spacing = letter_spacing;
+        self.text_style.letter_spacing = letter_spacing;
         self
     }
 
     pub fn with_line_spacing(mut self, line_spacing: f32) -> Self {
-        self.line_spacing = line_spacing;
+        self.text_style.line_spacing = line_spacing;
         self
     }
 
@@ -575,35 +590,80 @@ impl TextMeshComponent {
     }
 
     pub fn font_size(&self) -> f32 {
-        self.font_size
+        self.text_style.font_size
     }
 
     pub fn set_font_size(&mut self, font_size: f32) {
-        self.font_size = font_size.max(1.0);
+        self.text_style.font_size = font_size.max(1.0);
     }
 
     pub fn font_path(&self) -> Option<&str> {
-        self.font_path.as_deref()
+        self.text_style.font.path()
     }
 
     pub fn set_font_path(&mut self, font_path: Option<String>) {
-        self.font_path = font_path;
+        self.text_style.font.set_path(font_path);
+    }
+
+    pub fn font_family(&self) -> Option<&str> {
+        self.text_style.font.family()
+    }
+
+    pub fn set_font_family(&mut self, font_family: Option<String>) {
+        self.text_style.font.set_family(font_family);
+    }
+
+    pub fn font_weight(&self) -> FontWeight {
+        self.text_style.font.weight()
+    }
+
+    pub fn set_font_weight(&mut self, font_weight: FontWeight) {
+        self.text_style.font.set_weight(font_weight);
+    }
+
+    pub fn font_style(&self) -> FontStyle {
+        self.text_style.font.style()
+    }
+
+    pub fn set_font_style(&mut self, font_style: FontStyle) {
+        self.text_style.font.set_style(font_style);
+    }
+
+    pub fn kerning(&self) -> bool {
+        self.text_style.kerning
+    }
+
+    pub fn set_kerning(&mut self, kerning: bool) {
+        self.text_style.kerning = kerning;
     }
 
     pub fn letter_spacing(&self) -> f32 {
-        self.letter_spacing
+        self.text_style.letter_spacing
     }
 
     pub fn set_letter_spacing(&mut self, letter_spacing: f32) {
-        self.letter_spacing = letter_spacing;
+        self.text_style.letter_spacing = letter_spacing;
     }
 
     pub fn line_spacing(&self) -> f32 {
-        self.line_spacing
+        self.text_style.line_spacing
     }
 
     pub fn set_line_spacing(&mut self, line_spacing: f32) {
-        self.line_spacing = line_spacing;
+        self.text_style.line_spacing = line_spacing;
+    }
+
+    pub fn text_style(&self) -> &TextStyle {
+        &self.text_style
+    }
+
+    pub fn set_text_style(&mut self, text_style: TextStyle) {
+        self.text_style = text_style;
+        self.text_style.font_size = self.text_style.font_size.max(1.0);
+    }
+
+    pub fn font_descriptor(&self) -> &FontDescriptor {
+        &self.text_style.font
     }
 
     pub fn visible(&self) -> bool {

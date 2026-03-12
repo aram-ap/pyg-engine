@@ -173,8 +173,12 @@ class Text:
     color: Any
     font_size: float = 24.0
     font_path: str | None = None
+    font_family: str | None = None
+    font_weight: str | None = None
+    font_style: str | None = None
     letter_spacing: float = 0.0
     line_spacing: float = 0.0
+    kerning: bool = True
     draw_order: float = 0.0
 
     def to_draw_command(self) -> Any:
@@ -186,8 +190,12 @@ class Text:
             self.color,
             font_size=self.font_size,
             font_path=self.font_path,
+            font_family=self.font_family,
+            font_weight=self.font_weight,
+            font_style=self.font_style,
             letter_spacing=self.letter_spacing,
             line_spacing=self.line_spacing,
+            kerning=self.kerning,
             draw_order=self.draw_order,
         )
 

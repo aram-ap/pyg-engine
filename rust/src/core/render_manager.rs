@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, hash_map::DefaultHasher};
 use std::f32::consts::TAU;
 use std::hash::{Hash, Hasher};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use font8x8::{BASIC_FONTS, UnicodeFonts};
@@ -14,6 +15,10 @@ use winit::window::Window;
 
 use super::geometry::Vertex;
 use super::logging;
+use super::text::{
+    FontDescriptor, FontFamilyDefinition, TextAlign, TextLayoutOptions, TextStyle,
+    VerticalTextAlign, normalize_font_family_key, normalize_font_path,
+};
 use crate::core::component::ComponentTrait;
 use crate::core::draw_manager::{DrawCommand, DrawManager};
 use crate::core::object_manager::ObjectManager;
@@ -60,6 +65,44 @@ struct RasterizedText {
     rgba: Vec<u8>,
     width: u32,
     height: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct GlyphCacheKey {
+    font_cache_key: String,
+    glyph: char,
+    font_size_bits: u32,
+}
+
+#[derive(Clone)]
+struct CachedGlyph {
+    metrics: fontdue::Metrics,
+    bitmap: Arc<[u8]>,
+    glyph_index: u16,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct TextLayoutCacheKey {
+    font_cache_key: String,
+    text: String,
+    font_size_bits: u32,
+    letter_spacing_bits: u32,
+    line_spacing_bits: u32,
+    kerning: bool,
+}
+
+#[derive(Clone)]
+struct PositionedGlyph {
+    x: i32,
+    y: i32,
+    glyph_key: GlyphCacheKey,
+}
+
+#[derive(Clone)]
+struct CachedTextLayout {
+    width: u32,
+    height: u32,
+    glyphs: Vec<PositionedGlyph>,
 }
 
 struct PooledBuffer {
@@ -142,12 +185,16 @@ pub struct RenderManager {
     default_texture: CachedTexture,
     texture_cache: HashMap<String, Option<CachedTextureEntry>>,
     texture_data_signature_cache: HashMap<String, u64>,
+    font_registry: HashMap<String, FontFamilyDefinition>,
     font_cache: HashMap<String, Option<Font>>,
+    glyph_cache: HashMap<GlyphCacheKey, Option<CachedGlyph>>,
+    layout_cache: HashMap<TextLayoutCacheKey, CachedTextLayout>,
     vertex_buffer_pool: Vec<PooledBuffer>,
     index_buffer_pool: Vec<PooledBuffer>,
     active_camera_object_id: Option<u32>,
     camera_viewport_size: Option<Vec2>,
     camera_aspect_mode: CameraAspectMode,
+    source_root: Option<PathBuf>,
     current_frame: u64,
     texture_ttl_frames: u64,
 }
@@ -348,12 +395,16 @@ impl RenderManager {
             default_texture,
             texture_cache: HashMap::new(),
             texture_data_signature_cache: HashMap::new(),
+            font_registry: HashMap::new(),
             font_cache: HashMap::new(),
+            glyph_cache: HashMap::new(),
+            layout_cache: HashMap::new(),
             vertex_buffer_pool: Vec::new(),
             index_buffer_pool: Vec::new(),
             active_camera_object_id: None,
             camera_viewport_size: None,
             camera_aspect_mode: CameraAspectMode::default(),
+            source_root: None,
             current_frame: 0,
             texture_ttl_frames: 180, // Clean up textures unused for 180 frames (~3 seconds at 60fps)
         })
@@ -434,11 +485,12 @@ impl RenderManager {
     }
 
     fn load_texture_from_path(&self, texture_path: &str) -> Result<CachedTexture, String> {
-        let bytes = std::fs::read(texture_path)
-            .map_err(|e| format!("failed to read texture '{}': {e}", texture_path))?;
+        let resolved_path = self.resolve_source_path(texture_path);
+        let bytes = std::fs::read(&resolved_path)
+            .map_err(|e| format!("failed to read texture '{}': {e}", resolved_path))?;
 
         let img = image::load_from_memory(&bytes)
-            .map_err(|e| format!("failed to decode texture '{}': {e}", texture_path))?;
+            .map_err(|e| format!("failed to decode texture '{}': {e}", resolved_path))?;
         let rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
 
@@ -449,7 +501,7 @@ impl RenderManager {
             rgba.as_raw(),
             width,
             height,
-            texture_path,
+            &resolved_path,
         ))
     }
 
@@ -609,7 +661,13 @@ impl RenderManager {
 
     fn texture_bind_group_for(&mut self, texture_path: Option<&str>) -> wgpu::BindGroup {
         if let Some(path) = texture_path {
-            if !self.texture_cache.contains_key(path) {
+            if let Some(Some(entry)) = self.texture_cache.get_mut(path) {
+                entry.last_used_frame = self.current_frame;
+                return entry.cached_texture.bind_group.clone();
+            }
+
+            let resolved_path = self.resolve_source_path(path);
+            if !self.texture_cache.contains_key(&resolved_path) {
                 let loaded = match self.load_texture_from_path(path) {
                     Ok(cached_texture) => Some(CachedTextureEntry {
                         cached_texture,
@@ -620,10 +678,10 @@ impl RenderManager {
                         None
                     }
                 };
-                self.texture_cache.insert(path.to_string(), loaded);
+                self.texture_cache.insert(resolved_path.clone(), loaded);
             }
 
-            if let Some(Some(entry)) = self.texture_cache.get_mut(path) {
+            if let Some(Some(entry)) = self.texture_cache.get_mut(&resolved_path) {
                 entry.last_used_frame = self.current_frame;
                 return entry.cached_texture.bind_group.clone();
             }
@@ -948,49 +1006,157 @@ impl RenderManager {
         (value.clamp(0.0, 1.0) * 255.0).round() as u8
     }
 
-    fn build_text_texture_key(
-        text: &str,
-        font_path: Option<&str>,
-        font_size: f32,
-        color: Color,
-        letter_spacing: f32,
-        line_spacing: f32,
-    ) -> String {
+    fn build_text_texture_key(text: &str, style: &TextStyle, color: Color) -> String {
         let mut hasher = DefaultHasher::new();
         text.hash(&mut hasher);
-        font_path.unwrap_or(DEFAULT_FONT_NAME).hash(&mut hasher);
-        hash_f32(&mut hasher, font_size);
+        style.font.cache_key().hash(&mut hasher);
+        hash_f32(&mut hasher, style.font_size);
         hash_color(&mut hasher, &color);
-        hash_f32(&mut hasher, letter_spacing);
-        hash_f32(&mut hasher, line_spacing);
+        hash_f32(&mut hasher, style.letter_spacing);
+        hash_f32(&mut hasher, style.line_spacing);
+        style.kerning.hash(&mut hasher);
         format!("__pyg_text_{:016x}", hasher.finish())
     }
 
+    fn build_text_layout_cache_key(
+        text: &str,
+        style: &TextStyle,
+        font_cache_key: &str,
+    ) -> TextLayoutCacheKey {
+        TextLayoutCacheKey {
+            font_cache_key: font_cache_key.to_string(),
+            text: text.to_string(),
+            font_size_bits: style.font_size.to_bits(),
+            letter_spacing_bits: style.letter_spacing.to_bits(),
+            line_spacing_bits: style.line_spacing.to_bits(),
+            kerning: style.kerning,
+        }
+    }
+
+    fn clear_resolved_asset_caches(&mut self) {
+        self.font_cache.clear();
+        self.glyph_cache.clear();
+        self.layout_cache.clear();
+        self.texture_cache.clear();
+        self.texture_data_signature_cache.clear();
+    }
+
+    pub fn set_source_root(&mut self, source_root: Option<PathBuf>) {
+        let normalized = source_root.map(|path| {
+            if path.is_absolute() {
+                path
+            } else {
+                std::env::current_dir()
+                    .unwrap_or_else(|_| PathBuf::from("."))
+                    .join(path)
+            }
+        });
+        if self.source_root != normalized {
+            self.source_root = normalized;
+            self.clear_resolved_asset_caches();
+            self.request_redraw();
+        }
+    }
+
+    pub fn register_font_family(
+        &mut self,
+        family: impl Into<String>,
+        definition: FontFamilyDefinition,
+    ) -> bool {
+        if definition.is_empty() {
+            return false;
+        }
+
+        let key = normalize_font_family_key(&family.into());
+        self.font_registry.insert(key, definition);
+        self.layout_cache.clear();
+        self.request_redraw();
+        true
+    }
+
+    pub fn font_family_definition(&self, family: &str) -> Option<&FontFamilyDefinition> {
+        self.font_registry.get(&normalize_font_family_key(family))
+    }
+
+    fn is_supported_font_path(font_path: &str) -> bool {
+        let extension = std::path::Path::new(font_path)
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .map(|extension| extension.to_ascii_lowercase());
+        matches!(extension.as_deref(), Some("ttf") | Some("otf"))
+    }
+
+    fn resolve_source_path(&self, path: &str) -> String {
+        let input = Path::new(path);
+        if input.is_absolute() {
+            return normalize_font_path(path);
+        }
+        if let Some(source_root) = &self.source_root {
+            return normalize_font_path(&source_root.join(input).to_string_lossy());
+        }
+        normalize_font_path(path)
+    }
+
     fn load_font_from_path(&mut self, font_path: &str) -> Option<&Font> {
-        if !self.font_cache.contains_key(font_path) {
-            let loaded = match std::fs::read(font_path) {
-                Ok(bytes) => match Font::from_bytes(bytes, fontdue::FontSettings::default()) {
-                    Ok(font) => Some(font),
+        let resolved_path = self.resolve_source_path(font_path);
+        if !self.font_cache.contains_key(&resolved_path) {
+            let loaded = if !Self::is_supported_font_path(font_path) {
+                logging::log_warn(&format!(
+                    "Unsupported font '{font_path}'. Expected a .ttf or .otf file. Falling back to built-in font."
+                ));
+                None
+            } else {
+                match std::fs::read(&resolved_path) {
+                    Ok(bytes) => match Font::from_bytes(bytes, fontdue::FontSettings::default()) {
+                        Ok(font) => Some(font),
+                        Err(err) => {
+                            logging::log_warn(&format!(
+                                "Failed to decode font '{resolved_path}': {err}. Falling back to built-in font."
+                            ));
+                            None
+                        }
+                    },
                     Err(err) => {
                         logging::log_warn(&format!(
-                            "Failed to decode font '{font_path}': {err}. Falling back to built-in font."
+                            "Failed to read font '{resolved_path}': {err}. Falling back to built-in font."
                         ));
                         None
                     }
-                },
-                Err(err) => {
-                    logging::log_warn(&format!(
-                        "Failed to read font '{font_path}': {err}. Falling back to built-in font."
-                    ));
-                    None
                 }
             };
-            self.font_cache.insert(font_path.to_string(), loaded);
+            self.font_cache.insert(resolved_path.clone(), loaded);
         }
 
         self.font_cache
-            .get(font_path)
+            .get(&resolved_path)
             .and_then(|font| font.as_ref())
+    }
+
+    fn resolve_font_path(&self, descriptor: &FontDescriptor) -> Option<String> {
+        if let Some(path) = descriptor.path() {
+            return Some(self.resolve_source_path(path));
+        }
+
+        let family_key = descriptor.family_key()?;
+        let family = self.font_registry.get(&family_key)?;
+        family
+            .resolve(descriptor.weight(), descriptor.style())
+            .map(|path| self.resolve_source_path(path))
+    }
+
+    fn resolved_font_cache_key(&self, descriptor: &FontDescriptor, resolved_path: &str) -> String {
+        if descriptor.path().is_some() {
+            format!("path:{}", normalize_font_path(resolved_path))
+        } else if let Some(family) = descriptor.family_key() {
+            format!(
+                "family:{}:{}:{}",
+                family,
+                descriptor.weight().as_str(),
+                descriptor.style().as_str()
+            )
+        } else {
+            DEFAULT_FONT_NAME.to_string()
+        }
     }
 
     fn rasterize_text_font8x8(
@@ -1093,43 +1259,61 @@ impl RenderManager {
         })
     }
 
-    fn rasterize_text_fontdue(
-        font: &Font,
-        text: &str,
+    fn load_cached_glyph(
+        &mut self,
+        font_path: &str,
+        font_cache_key: &str,
+        glyph: char,
         font_size: f32,
-        color: Color,
-        letter_spacing: f32,
-        line_spacing: f32,
-    ) -> Option<RasterizedText> {
+    ) -> Option<CachedGlyph> {
+        let key = GlyphCacheKey {
+            font_cache_key: font_cache_key.to_string(),
+            glyph,
+            font_size_bits: font_size.to_bits(),
+        };
+        if !self.glyph_cache.contains_key(&key) {
+            let loaded = self.load_font_from_path(font_path).map(|font| CachedGlyph {
+                metrics: font.metrics(glyph, font_size),
+                bitmap: Arc::from(font.rasterize(glyph, font_size).1),
+                glyph_index: font.lookup_glyph_index(glyph),
+            });
+            self.glyph_cache.insert(key.clone(), loaded);
+        }
+        self.glyph_cache.get(&key).and_then(|glyph| glyph.clone())
+    }
+
+    fn build_fontdue_text_layout(
+        &mut self,
+        font_path: &str,
+        font_cache_key: &str,
+        text: &str,
+        style: &TextStyle,
+    ) -> Option<CachedTextLayout> {
         if text.is_empty() {
             return None;
         }
 
-        let font_size = font_size.max(1.0);
-        let letter_spacing = letter_spacing.max(-(font_size * 0.95));
-        let line_spacing = line_spacing.max(-(font_size * 0.95));
-        let line_metrics = font.horizontal_line_metrics(font_size);
-        let ascent = line_metrics
-            .map(|metrics| metrics.ascent)
-            .unwrap_or(font_size * 0.8);
-        let base_line_height = line_metrics
-            .map(|metrics| metrics.new_line_size)
-            .unwrap_or(font_size * 1.2)
-            .max(1.0);
+        let font_size = style.font_size.max(1.0);
+        let letter_spacing = style.letter_spacing.max(-(font_size * 0.95));
+        let line_spacing = style.line_spacing.max(-(font_size * 0.95));
+        let (ascent, base_line_height, tab_advance) = {
+            let font = self.load_font_from_path(font_path)?;
+            let line_metrics = font.horizontal_line_metrics(font_size);
+            let ascent = line_metrics
+                .map(|metrics| metrics.ascent)
+                .unwrap_or(font_size * 0.8);
+            let base_line_height = line_metrics
+                .map(|metrics| metrics.new_line_size)
+                .unwrap_or(font_size * 1.2)
+                .max(1.0);
+            let (space_metrics, _) = font.rasterize(' ', font_size);
+            let tab_advance = (space_metrics.advance_width.max(font_size * 0.25)) * 4.0;
+            (ascent, base_line_height, tab_advance)
+        };
         let line_stride = (base_line_height + line_spacing).max(1.0);
         let lines: Vec<&str> = text.split('\n').collect();
-        let (space_metrics, _) = font.rasterize(' ', font_size);
-        let tab_advance = (space_metrics.advance_width.max(font_size * 0.25)) * 4.0;
 
-        struct GlyphBitmap {
-            x: i32,
-            y: i32,
-            width: usize,
-            height: usize,
-            bitmap: Vec<u8>,
-        }
-
-        let mut glyphs: Vec<GlyphBitmap> = Vec::new();
+        let mut glyphs = Vec::new();
         let mut min_x = 0i32;
         let mut min_y = 0i32;
         let mut max_x = 0i32;
@@ -1141,19 +1325,32 @@ impl RenderManager {
             let baseline_y = ascent + line_index as f32 * line_stride;
             let chars: Vec<char> = line.chars().collect();
             let mut pen_x = 0.0f32;
+            let mut previous_char: Option<char> = None;
 
             for (char_index, ch) in chars.iter().enumerate() {
                 if *ch == '\t' {
                     pen_x += tab_advance;
+                    previous_char = None;
                 } else {
-                    let (metrics, bitmap) = font.rasterize(*ch, font_size);
+                    let glyph =
+                        self.load_cached_glyph(font_path, font_cache_key, *ch, font_size)?;
+                    if style.kerning
+                        && let Some(previous) = previous_char
+                        && let Some(font) = self.load_font_from_path(font_path)
+                    {
+                        pen_x += font
+                            .horizontal_kern(previous, *ch, font_size)
+                            .unwrap_or(0.0);
+                    }
 
-                    if metrics.width > 0 && metrics.height > 0 {
-                        let glyph_x = (pen_x + metrics.xmin as f32).floor() as i32;
-                        let glyph_y = (baseline_y - metrics.ymin as f32 - metrics.height as f32)
+                    if glyph.metrics.width > 0 && glyph.metrics.height > 0 {
+                        let glyph_x = (pen_x + glyph.metrics.xmin as f32).floor() as i32;
+                        let glyph_y = (baseline_y
+                            - glyph.metrics.ymin as f32
+                            - glyph.metrics.height as f32)
                             .floor() as i32;
-                        let glyph_right = glyph_x + metrics.width as i32;
-                        let glyph_bottom = glyph_y + metrics.height as i32;
+                        let glyph_right = glyph_x + glyph.metrics.width as i32;
+                        let glyph_bottom = glyph_y + glyph.metrics.height as i32;
 
                         if !has_visible_glyph {
                             min_x = glyph_x;
@@ -1168,16 +1365,19 @@ impl RenderManager {
                             max_y = max_y.max(glyph_bottom);
                         }
 
-                        glyphs.push(GlyphBitmap {
+                        glyphs.push(PositionedGlyph {
                             x: glyph_x,
                             y: glyph_y,
-                            width: metrics.width,
-                            height: metrics.height,
-                            bitmap,
+                            glyph_key: GlyphCacheKey {
+                                font_cache_key: font_cache_key.to_string(),
+                                glyph: *ch,
+                                font_size_bits: font_size.to_bits(),
+                            },
                         });
                     }
 
-                    pen_x += metrics.advance_width.max(font_size * 0.25);
+                    pen_x += glyph.metrics.advance_width.max(font_size * 0.25);
+                    previous_char = Some(*ch);
                 }
 
                 if char_index + 1 < chars.len() {
@@ -1202,32 +1402,75 @@ impl RenderManager {
             )
         };
 
-        let mut rgba = vec![0u8; (width as usize) * (height as usize) * 4];
+        if has_visible_glyph && (min_x != 0 || min_y != 0) {
+            for glyph in &mut glyphs {
+                glyph.x -= min_x;
+                glyph.y -= min_y;
+            }
+        }
+
+        Some(CachedTextLayout {
+            width,
+            height,
+            glyphs,
+        })
+    }
+
+    fn cached_text_layout(
+        &mut self,
+        text: &str,
+        style: &TextStyle,
+        font_path: &str,
+        font_cache_key: &str,
+    ) -> Option<CachedTextLayout> {
+        let key = Self::build_text_layout_cache_key(text, style, font_cache_key);
+        if !self.layout_cache.contains_key(&key) {
+            let layout = self.build_fontdue_text_layout(font_path, font_cache_key, text, style)?;
+            self.layout_cache.insert(key.clone(), layout);
+        }
+        self.layout_cache.get(&key).cloned()
+    }
+
+    fn rasterize_text_fontdue(
+        &mut self,
+        font_path: &str,
+        font_cache_key: &str,
+        text: &str,
+        style: &TextStyle,
+        color: Color,
+    ) -> Option<RasterizedText> {
+        let layout = self.cached_text_layout(text, style, font_path, font_cache_key)?;
+        let mut rgba = vec![0u8; (layout.width as usize) * (layout.height as usize) * 4];
 
         let r = Self::color_component_to_u8(color.r());
         let g = Self::color_component_to_u8(color.g());
         let b = Self::color_component_to_u8(color.b());
         let alpha_scale = color.a().clamp(0.0, 1.0);
 
-        for glyph in glyphs {
-            let origin_x = glyph.x - min_x;
-            let origin_y = glyph.y - min_y;
+        for positioned in &layout.glyphs {
+            let Some(glyph) = self
+                .glyph_cache
+                .get(&positioned.glyph_key)
+                .and_then(|entry| entry.clone())
+            else {
+                continue;
+            };
 
-            for gy in 0..glyph.height {
-                for gx in 0..glyph.width {
-                    let x = origin_x + gx as i32;
-                    let y = origin_y + gy as i32;
-                    if x < 0 || y < 0 || x >= width as i32 || y >= height as i32 {
+            for gy in 0..glyph.metrics.height {
+                for gx in 0..glyph.metrics.width {
+                    let x = positioned.x + gx as i32;
+                    let y = positioned.y + gy as i32;
+                    if x < 0 || y < 0 || x >= layout.width as i32 || y >= layout.height as i32 {
                         continue;
                     }
 
-                    let coverage = glyph.bitmap[gy * glyph.width + gx] as f32 / 255.0;
+                    let coverage = glyph.bitmap[gy * glyph.metrics.width + gx] as f32 / 255.0;
                     let alpha = (coverage * alpha_scale * 255.0).round() as u8;
                     if alpha == 0 {
                         continue;
                     }
 
-                    let idx = ((y as usize) * (width as usize) + (x as usize)) * 4;
+                    let idx = ((y as usize) * (layout.width as usize) + (x as usize)) * 4;
                     rgba[idx] = r;
                     rgba[idx + 1] = g;
                     rgba[idx + 2] = b;
@@ -1238,37 +1481,96 @@ impl RenderManager {
 
         Some(RasterizedText {
             rgba,
-            width,
-            height,
+            width: layout.width,
+            height: layout.height,
         })
+    }
+
+    fn text_dimensions_from_style(
+        &mut self,
+        text: &str,
+        style: &TextStyle,
+    ) -> Option<(u32, u32)> {
+        if let Some(font_path) = self.resolve_font_path(&style.font) {
+            let font_cache_key = self.resolved_font_cache_key(&style.font, &font_path);
+            if let Some(layout) = self.cached_text_layout(text, style, &font_path, &font_cache_key) {
+                return Some((layout.width, layout.height));
+            }
+        }
+
+        Self::rasterize_text_font8x8(
+            text,
+            style.font_size.max(1.0),
+            Color::WHITE,
+            style.letter_spacing,
+            style.line_spacing,
+        )
+        .map(|rasterized| (rasterized.width, rasterized.height))
+    }
+
+    pub fn measure_text(&mut self, text: &str, style: &TextStyle) -> (f32, f32) {
+        self.text_dimensions_from_style(text, style)
+            .map(|(width, height)| (width as f32, height as f32))
+            .unwrap_or((0.0, 0.0))
     }
 
     fn rasterize_text(
         &mut self,
         text: &str,
-        font_size: f32,
+        style: &TextStyle,
         color: Color,
-        font_path: Option<&str>,
-        letter_spacing: f32,
-        line_spacing: f32,
     ) -> Option<RasterizedText> {
-        let font_size = font_size.max(1.0);
-        if let Some(path) = font_path
-            && let Some(font) = self.load_font_from_path(path)
-        {
-            if let Some(rasterized) = Self::rasterize_text_fontdue(
-                font,
-                text,
-                font_size,
-                color,
-                letter_spacing,
-                line_spacing,
-            ) {
+        if let Some(font_path) = self.resolve_font_path(&style.font) {
+            let font_cache_key = self.resolved_font_cache_key(&style.font, &font_path);
+            if self.load_font_from_path(&font_path).is_some()
+                && let Some(rasterized) = self.rasterize_text_fontdue(
+                    &font_path,
+                    &font_cache_key,
+                    text,
+                    style,
+                    color,
+                )
+            {
                 return Some(rasterized);
             }
         }
 
-        Self::rasterize_text_font8x8(text, font_size, color, letter_spacing, line_spacing)
+        Self::rasterize_text_font8x8(
+            text,
+            style.font_size.max(1.0),
+            color,
+            style.letter_spacing,
+            style.line_spacing,
+        )
+    }
+
+    fn aligned_text_position(
+        x: f32,
+        y: f32,
+        text_width: f32,
+        text_height: f32,
+        layout: &TextLayoutOptions,
+    ) -> (f32, f32) {
+        let offset_x = match layout.horizontal_align {
+            TextAlign::Left => 0.0,
+            TextAlign::Center => layout
+                .width
+                .map(|width| (width - text_width) * 0.5)
+                .unwrap_or(0.0),
+            TextAlign::Right => layout.width.map(|width| width - text_width).unwrap_or(0.0),
+        };
+        let offset_y = match layout.vertical_align {
+            VerticalTextAlign::Top => 0.0,
+            VerticalTextAlign::Center => layout
+                .height
+                .map(|height| (height - text_height) * 0.5)
+                .unwrap_or(0.0),
+            VerticalTextAlign::Bottom => layout
+                .height
+                .map(|height| height - text_height)
+                .unwrap_or(0.0),
+        };
+        (x + offset_x, y + offset_y)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1277,26 +1579,16 @@ impl RenderManager {
         text: &str,
         x: f32,
         y: f32,
-        font_size: f32,
+        style: &TextStyle,
         color: Color,
-        font_path: Option<&str>,
-        letter_spacing: f32,
-        line_spacing: f32,
+        layout: &TextLayoutOptions,
         draw_order: f32,
     ) -> Option<(DrawItem, Option<PendingTextureUpload>)> {
         if text.is_empty() {
             return None;
         }
 
-        let font_size = font_size.max(1.0);
-        let texture_key = Self::build_text_texture_key(
-            text,
-            font_path,
-            font_size,
-            color,
-            letter_spacing,
-            line_spacing,
-        );
+        let texture_key = Self::build_text_texture_key(text, style, color);
 
         // Fast path: skip CPU rasterization when this text texture is already cached.
         let cached_dimensions = if let Some(Some(entry)) = self.texture_cache.get_mut(&texture_key) {
@@ -1307,9 +1599,11 @@ impl RenderManager {
         };
 
         if let Some((width, height)) = cached_dimensions {
+            let (text_x, text_y) =
+                Self::aligned_text_position(x, y, width as f32, height as f32, layout);
             let item = self.build_image_rect_draw_item(
-                x,
-                y,
+                text_x,
+                text_y,
                 width as f32,
                 height as f32,
                 texture_key,
@@ -1318,17 +1612,17 @@ impl RenderManager {
             return Some((item, None));
         }
 
-        let rasterized = self.rasterize_text(
-            text,
-            font_size,
-            color,
-            font_path,
-            letter_spacing,
-            line_spacing,
-        )?;
-        let item = self.build_image_rect_draw_item(
+        let rasterized = self.rasterize_text(text, style, color)?;
+        let (text_x, text_y) = Self::aligned_text_position(
             x,
             y,
+            rasterized.width as f32,
+            rasterized.height as f32,
+            layout,
+        );
+        let item = self.build_image_rect_draw_item(
+            text_x,
+            text_y,
             rasterized.width as f32,
             rasterized.height as f32,
             texture_key.clone(),
@@ -1351,11 +1645,8 @@ impl RenderManager {
         position: Vec2,
         rotation: f32,
         scale: Vec2,
-        font_size: f32,
+        style: &TextStyle,
         color: Color,
-        font_path: Option<&str>,
-        letter_spacing: f32,
-        line_spacing: f32,
         camera_position: Vec2,
         draw_order: f32,
     ) -> Option<(DrawItem, Option<PendingTextureUpload>)> {
@@ -1363,15 +1654,7 @@ impl RenderManager {
             return None;
         }
 
-        let font_size = font_size.max(1.0);
-        let texture_key = Self::build_text_texture_key(
-            text,
-            font_path,
-            font_size,
-            color,
-            letter_spacing,
-            line_spacing,
-        );
+        let texture_key = Self::build_text_texture_key(text, style, color);
 
         let cached_dimensions = if let Some(Some(entry)) = self.texture_cache.get_mut(&texture_key) {
             entry.last_used_frame = self.current_frame;
@@ -1383,14 +1666,7 @@ impl RenderManager {
         let (width, height, upload) = if let Some((width, height)) = cached_dimensions {
             (width as f32, height as f32, None)
         } else {
-            let rasterized = self.rasterize_text(
-                text,
-                font_size,
-                color,
-                font_path,
-                letter_spacing,
-                line_spacing,
-            )?;
+            let rasterized = self.rasterize_text(text, style, color)?;
             let upload = PendingTextureUpload {
                 key: texture_key.clone(),
                 rgba: Arc::from(rasterized.rgba),
@@ -1759,7 +2035,7 @@ impl RenderManager {
 
         Some(DrawItem {
             draw_order,
-            texture_path,
+            texture_path: texture_path.map(|path| self.resolve_source_path(&path)),
             vertices: draw_vertices,
             indices: indices.to_vec(),
         })
@@ -2010,7 +2286,7 @@ impl RenderManager {
                         *y,
                         *width,
                         *height,
-                        texture_path.clone(),
+                        self.resolve_source_path(texture_path),
                         *draw_order,
                     ));
                 }
@@ -2061,22 +2337,18 @@ impl RenderManager {
                     text,
                     x,
                     y,
-                    font_size,
+                    style,
                     color,
-                    font_path,
-                    letter_spacing,
-                    line_spacing,
+                    layout,
                     draw_order,
                 } => {
                     if let Some((item, upload)) = self.build_text_draw_item(
                         text,
                         *x,
                         *y,
-                        *font_size,
+                        style,
                         *color,
-                        font_path.as_deref(),
-                        *letter_spacing,
-                        *line_spacing,
+                        layout,
                         *draw_order,
                     ) {
                         items.push(item);
@@ -2162,7 +2434,7 @@ impl RenderManager {
 
             items.push(DrawItem {
                 draw_order: mesh.draw_order(),
-                texture_path: mesh.image_path().map(|p| p.to_string()),
+                texture_path: mesh.image_path().map(|p| self.resolve_source_path(p)),
                 vertices,
                 indices: mesh.geometry().indices().to_vec(),
             });
@@ -2214,11 +2486,8 @@ impl RenderManager {
                     world_transform.position,
                     world_transform.rotation,
                     world_transform.scale,
-                    text_mesh.font_size(),
+                    text_mesh.text_style(),
                     text_mesh.color(),
-                    text_mesh.font_path(),
-                    text_mesh.letter_spacing(),
-                    text_mesh.line_spacing(),
                     camera_position,
                     text_mesh.draw_order(),
                 ) {
