@@ -34,8 +34,10 @@ from pyg_engine import (
     Engine,
     GameObject,
     Keys,
+    Mesh,
     MeshComponent,
     MouseButton,
+    Text,
     Vec2,
 )
 
@@ -77,7 +79,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     panel.position = Vec2(-0.45, 0.02)
     panel.scale = Vec2(0.95, 0.78)
     panel_mesh = MeshComponent("MeshPanelMesh")
-    panel_mesh.set_geometry_rectangle(1.25, 1.05)
+    panel_mesh.set_geometry(Mesh.Rect(1.25, 1.05))
     panel_mesh.set_fill_color(Color(0.10, 0.11, 0.16, 0.92))
     panel_mesh.draw_order = -0.6
     panel.add_component(panel_mesh)
@@ -88,7 +90,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     textured.scale = Vec2(0.28, 0.46)
     textured.rotation = -0.07
     textured_mesh = MeshComponent("MeshTexturedMesh")
-    textured_mesh.set_geometry_rectangle(1.0, 1.0)
+    textured_mesh.set_geometry(Mesh.Rect(1.0, 1.0))
     textured_mesh.set_fill_color(Color.WHITE)
     textured_mesh.set_image_path("images/1_lower-res.png")
     textured_mesh.draw_order = 1.10
@@ -100,7 +102,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     solid.scale = Vec2(0.26, 0.30)
     solid.rotation = 0.38
     solid_mesh = MeshComponent("MeshSolidMesh")
-    solid_mesh.set_geometry_rectangle(1.0, 1.0)
+    solid_mesh.set_geometry(Mesh.Rect(1.0, 1.0))
     solid_mesh.set_fill_color(Color(0.95, 0.50, 0.16, 0.95))
     solid_mesh.draw_order = 2.25
     solid.add_component(solid_mesh)
@@ -110,7 +112,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     accent.position = Vec2(-0.31, -0.28)
     accent.scale = Vec2(0.42, 0.10)
     accent_mesh = MeshComponent("MeshAccentMesh")
-    accent_mesh.set_geometry_rectangle(1.0, 1.0)
+    accent_mesh.set_geometry(Mesh.Rect(1.0, 1.0))
     accent_mesh.set_fill_color(Color(0.15, 0.85, 0.90, 0.85))
     accent_mesh.draw_order = 3.30
     accent.add_component(accent_mesh)
@@ -448,25 +450,26 @@ def main() -> None:
             f"bulk={'on' if show_bulk else 'off'}  primitives={'on' if show_primitives else 'off'}  "
             f"dynamic={'on' if show_dynamic_texture else 'off'}"
         )
-        engine.draw_text(
-            hud_text,
-            30.0,
-            display_height * 0.70,
-            Color(0.98, 0.99, 1.0, 0.90),
-            font_size=16.0,
-            letter_spacing=1.0,
-            line_spacing=4.0,
-            draw_order=19.15,
-        )
-
-        engine.draw_text(
-            "PyG Text Rendering",
-            display_width * 0.66,
-            display_height * 0.93,
-            Color(0.90, 0.96, 1.0, 0.95),
-            font_size=20.0,
-            letter_spacing=1.5,
-            draw_order=19.16,
+        engine.draw(
+            [
+                Text(
+                    hud_text,
+                    position=Vec2(30.0, display_height * 0.70),
+                    color=Color(0.98, 0.99, 1.0, 0.90),
+                    font_size=16.0,
+                    letter_spacing=1.0,
+                    line_spacing=4.0,
+                    draw_order=19.15,
+                ),
+                Text(
+                    "PyG Text Rendering",
+                    position=Vec2(display_width * 0.66, display_height * 0.93),
+                    color=Color(0.90, 0.96, 1.0, 0.95),
+                    font_size=20.0,
+                    letter_spacing=1.5,
+                    draw_order=19.16,
+                ),
+            ]
         )
 
         engine.update()

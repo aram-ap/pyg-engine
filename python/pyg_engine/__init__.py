@@ -5,7 +5,7 @@
 """
 
 from pyg_engine.engine import DrawCommand, Engine, EngineHandle, Input, UpdateContext, UIManager
-from pyg_engine.shapes import Arc, Circle, Line, Mesh, Polygon, Rect
+from pyg_engine.shapes import Arc, Circle, Line, Mesh, Polygon, Rect, Text
 
 try:
     from pyg_engine.pyg_engine_native import (
@@ -14,7 +14,9 @@ try:
         Color,
         Time,
         GameObject,
+        MeshGeometry,
         MeshComponent,
+        TextMeshComponent,
         TransformComponent,
         ButtonComponent,
         PanelComponent,
@@ -37,6 +39,8 @@ except ImportError:
     Time = None  # type: ignore
     GameObject = None  # type: ignore
     MeshComponent = None  # type: ignore
+    MeshGeometry = None  # type: ignore
+    TextMeshComponent = None  # type: ignore
     TransformComponent = None  # type: ignore
     ButtonComponent = None  # type: ignore
     PanelComponent = None  # type: ignore
@@ -71,6 +75,7 @@ __all__ = [
     "Arc",
     "Polygon",
     "Mesh",
+    "Text",
     "Input",
     "UpdateContext",
     "Vec2",
@@ -78,8 +83,10 @@ __all__ = [
     "Color",
     "Time",
     "GameObject",
+    "MeshGeometry",
     "UIManager",
     "MeshComponent",
+    "TextMeshComponent",
     "TransformComponent",
     "ButtonComponent",
     "PanelComponent",

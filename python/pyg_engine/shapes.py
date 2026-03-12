@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
 from .pyg_engine_native import DrawCommand as _RustDrawCommand
+from .pyg_engine_native import MeshGeometry as _RustMeshGeometry
 
 
 PointLike = Any
@@ -149,6 +150,44 @@ class Mesh:
             self.color,
             texture_path=self.texture_path,
             uvs=None if self.uvs is None else [_xy(uv) for uv in self.uvs],
+            draw_order=self.draw_order,
+        )
+
+    @staticmethod
+    def rect(width: float, height: float) -> Any:
+        return _RustMeshGeometry.rectangle(width, height)
+
+    Rect = rect
+
+    @staticmethod
+    def circle(radius: float, segments: int = 32) -> Any:
+        return _RustMeshGeometry.circle(radius, segments)
+
+    Circle = circle
+
+
+@dataclass(slots=True)
+class Text:
+    text: str
+    position: PointLike
+    color: Any
+    font_size: float = 24.0
+    font_path: str | None = None
+    letter_spacing: float = 0.0
+    line_spacing: float = 0.0
+    draw_order: float = 0.0
+
+    def to_draw_command(self) -> Any:
+        x, y = _xy(self.position)
+        return _RustDrawCommand.text(
+            self.text,
+            x,
+            y,
+            self.color,
+            font_size=self.font_size,
+            font_path=self.font_path,
+            letter_spacing=self.letter_spacing,
+            line_spacing=self.line_spacing,
             draw_order=self.draw_order,
         )
 

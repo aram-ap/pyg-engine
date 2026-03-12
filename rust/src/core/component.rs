@@ -432,6 +432,197 @@ impl MeshComponent {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct TextMeshComponent {
+    component_id: u32,
+    name: String,
+    text: String,
+    color: Color,
+    font_size: f32,
+    font_path: Option<String>,
+    letter_spacing: f32,
+    line_spacing: f32,
+    visible: bool,
+    draw_order: f32,
+    enabled_self: bool,
+    enabled_in_hierarchy: bool,
+}
+
+impl ComponentTrait for TextMeshComponent {
+    fn new(name: String) -> Self {
+        Self {
+            component_id: next_component_id(),
+            name,
+            text: String::new(),
+            color: Color::WHITE,
+            font_size: 24.0,
+            font_path: None,
+            letter_spacing: 0.0,
+            line_spacing: 0.0,
+            visible: true,
+            draw_order: 0.0,
+            enabled_self: true,
+            enabled_in_hierarchy: true,
+        }
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn id(&self) -> u32 {
+        self.component_id
+    }
+
+    fn component_type(&self) -> &'static str {
+        "TextMesh"
+    }
+
+    fn is_enabled_self(&self) -> bool {
+        self.enabled_self
+    }
+
+    fn set_enabled_self(&mut self, enabled: bool) {
+        self.enabled_self = enabled;
+    }
+
+    fn is_enabled_in_hierarchy(&self) -> bool {
+        self.enabled_in_hierarchy
+    }
+
+    fn set_enabled_in_hierarchy(&mut self, enabled: bool) {
+        self.enabled_in_hierarchy = enabled;
+    }
+
+    fn update(&self, _time: &Time) {}
+    fn fixed_update(&self, _time: &Time, _fixed_time: f32) {}
+    fn on_start(&self) {}
+    fn on_destroy(&self) {}
+    fn on_enable(&self) {}
+    fn on_disable(&self) {}
+
+    fn clone_component(&self) -> Box<dyn ComponentTrait> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}
+
+impl TextMeshComponent {
+    pub fn new(name: impl Into<String>) -> Self {
+        <Self as ComponentTrait>::new(name.into())
+    }
+
+    pub fn with_text(mut self, text: impl Into<String>) -> Self {
+        self.text = text.into();
+        self
+    }
+
+    pub fn with_color(mut self, color: Color) -> Self {
+        self.color = color;
+        self
+    }
+
+    pub fn with_font_size(mut self, font_size: f32) -> Self {
+        self.font_size = font_size.max(1.0);
+        self
+    }
+
+    pub fn with_font_path(mut self, font_path: Option<String>) -> Self {
+        self.font_path = font_path;
+        self
+    }
+
+    pub fn with_letter_spacing(mut self, letter_spacing: f32) -> Self {
+        self.letter_spacing = letter_spacing;
+        self
+    }
+
+    pub fn with_line_spacing(mut self, line_spacing: f32) -> Self {
+        self.line_spacing = line_spacing;
+        self
+    }
+
+    pub fn with_draw_order(mut self, draw_order: f32) -> Self {
+        self.draw_order = draw_order;
+        self
+    }
+
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    pub fn set_text(&mut self, text: impl Into<String>) {
+        self.text = text.into();
+    }
+
+    pub fn color(&self) -> Color {
+        self.color
+    }
+
+    pub fn set_color(&mut self, color: Color) {
+        self.color = color;
+    }
+
+    pub fn font_size(&self) -> f32 {
+        self.font_size
+    }
+
+    pub fn set_font_size(&mut self, font_size: f32) {
+        self.font_size = font_size.max(1.0);
+    }
+
+    pub fn font_path(&self) -> Option<&str> {
+        self.font_path.as_deref()
+    }
+
+    pub fn set_font_path(&mut self, font_path: Option<String>) {
+        self.font_path = font_path;
+    }
+
+    pub fn letter_spacing(&self) -> f32 {
+        self.letter_spacing
+    }
+
+    pub fn set_letter_spacing(&mut self, letter_spacing: f32) {
+        self.letter_spacing = letter_spacing;
+    }
+
+    pub fn line_spacing(&self) -> f32 {
+        self.line_spacing
+    }
+
+    pub fn set_line_spacing(&mut self, line_spacing: f32) {
+        self.line_spacing = line_spacing;
+    }
+
+    pub fn visible(&self) -> bool {
+        self.visible
+    }
+
+    pub fn set_visible(&mut self, visible: bool) {
+        self.visible = visible;
+    }
+
+    pub fn draw_order(&self) -> f32 {
+        self.draw_order
+    }
+
+    pub fn set_draw_order(&mut self, draw_order: f32) {
+        self.draw_order = draw_order;
+    }
+}
+
 #[derive(Debug)]
 pub struct SpriteComponent {
     component_id: u32,

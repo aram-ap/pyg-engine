@@ -22,7 +22,7 @@ def create_marker(name: str, position: pyg.Vec2, color: pyg.Color, size: float) 
     marker.scale = pyg.Vec2(size, size)
 
     mesh = pyg.MeshComponent(f"{name}Mesh")
-    mesh.set_geometry_circle(1.0, segments=40)
+    mesh.set_geometry(pyg.Mesh.Circle(1.0, segments=40))
     mesh.set_fill_color(color)
     marker.add_component(mesh)
     return marker
@@ -43,11 +43,11 @@ def main() -> None:
     # Camera viewport is measured in world units visible across the screen.
     viewport_width = 24.0
     viewport_height = 13.5
-    engine.set_camera_viewport_size(viewport_width, viewport_height)
+    engine.camera.viewport_size = pyg.Vec2(viewport_width, viewport_height)
     camera_aspect_mode = pyg.CameraAspectMode.FIT_BOTH
-    engine.set_camera_aspect_mode(camera_aspect_mode)
-    engine.set_camera_position(pyg.Vec2(0.0, 0.0))
-    engine.set_camera_background_color(pyg.Color.rgb(16, 22, 30))
+    engine.camera.aspect_mode = camera_aspect_mode
+    engine.camera.position = pyg.Vec2(0.0, 0.0)
+    engine.camera.background_color = pyg.Color.rgb(16, 22, 30)
 
     # Place world markers around the origin.
     markers = [
@@ -107,7 +107,7 @@ def main() -> None:
 
         dt = max(engine.delta_time, 0.0)
         # Get camera position and input axes.
-        cam = engine.get_camera_position()
+        cam = engine.camera.position.to_vec2()
         move_x = engine.input.axis("Horizontal")
         move_y = engine.input.axis("Vertical")
         zoom_axis = engine.input.axis("CameraZoom")
@@ -116,19 +116,19 @@ def main() -> None:
         # Aspect mode controls
         if engine.input.action_pressed("aspect_stretch"):
             camera_aspect_mode = pyg.CameraAspectMode.STRETCH
-            engine.set_camera_aspect_mode(camera_aspect_mode)
+            engine.camera.aspect_mode = camera_aspect_mode
         elif engine.input.action_pressed("aspect_match_horizontal"):
             camera_aspect_mode = pyg.CameraAspectMode.MATCH_HORIZONTAL
-            engine.set_camera_aspect_mode(camera_aspect_mode)
+            engine.camera.aspect_mode = camera_aspect_mode
         elif engine.input.action_pressed("aspect_match_vertical"):
             camera_aspect_mode = pyg.CameraAspectMode.MATCH_VERTICAL
-            engine.set_camera_aspect_mode(camera_aspect_mode)
+            engine.camera.aspect_mode = camera_aspect_mode
         elif engine.input.action_pressed("aspect_fit_both"):
             camera_aspect_mode = pyg.CameraAspectMode.FIT_BOTH
-            engine.set_camera_aspect_mode(camera_aspect_mode)
+            engine.camera.aspect_mode = camera_aspect_mode
         elif engine.input.action_pressed("aspect_fill_both"):
             camera_aspect_mode = pyg.CameraAspectMode.FILL_BOTH
-            engine.set_camera_aspect_mode(camera_aspect_mode)
+            engine.camera.aspect_mode = camera_aspect_mode
 
         if move_x != 0.0 or move_y != 0.0:
             length = math.sqrt(move_x * move_x + move_y * move_y)
@@ -138,7 +138,7 @@ def main() -> None:
                 cam.x + move_x * camera_speed * dt,
                 cam.y + move_y * camera_speed * dt,
             )
-            engine.set_camera_position(cam)
+            engine.camera.position = cam
 
         # Continuous viewport zoom driven by custom input axis.
         if zoom_axis != 0.0:
@@ -146,7 +146,7 @@ def main() -> None:
             if zoom_scale > 0.0:
                 viewport_width = min(96.0, max(6.0, viewport_width * zoom_scale))
                 viewport_height = min(54.0, max(3.5, viewport_height * zoom_scale))
-                engine.set_camera_viewport_size(viewport_width, viewport_height)
+                engine.camera.viewport_size = pyg.Vec2(viewport_width, viewport_height)
 
         # Mouse wheel zoom: scroll up zooms in, scroll down zooms out.
         if wheel_y != 0.0:
@@ -154,7 +154,7 @@ def main() -> None:
             if wheel_scale > 0.0:
                 viewport_width = min(96.0, max(6.0, viewport_width * wheel_scale))
                 viewport_height = min(54.0, max(3.5, viewport_height * wheel_scale))
-                engine.set_camera_viewport_size(viewport_width, viewport_height)
+                engine.camera.viewport_size = pyg.Vec2(viewport_width, viewport_height)
 
         t = time.time()
         runtime_orbiter.position = pyg.Vec2(math.cos(t * 0.9) * 7.0, math.sin(t * 1.2) * 3.8)
@@ -172,7 +172,7 @@ def main() -> None:
                 drag_dy = last_drag_world.y - mouse_world.y
                 if drag_dx != 0.0 or drag_dy != 0.0:
                     cam = pyg.Vec2(cam.x + drag_dx, cam.y + drag_dy)
-                    engine.set_camera_position(cam)
+                    engine.camera.position = cam
                     mouse_world = engine.screen_to_world(float(mouse_x), float(mouse_y))
                 last_drag_world = mouse_world
         else:
@@ -182,8 +182,7 @@ def main() -> None:
         # Get mouse-world position on screen.
         origin_screen_x, origin_screen_y = engine.world_to_screen(pyg.Vec2(0.0, 0.0))
 
-        # Update HUD text. Throttling to avoid excessive updates as text drawing is expensive.
-        # Note: draw_text() only updates if the text has changed, hence this if statement.
+        # Update HUD strings. Throttling avoids rebuilding text drawables every frame.
         now = time.perf_counter()
         if now - last_hud_update_time >= hud_update_interval:
             last_hud_update_time = now
@@ -209,61 +208,22 @@ def main() -> None:
 
         # Draw HUD text.
         engine.clear_draw_commands()
-        engine.draw_text(
-            "Worldspace Camera Demo (WASD/Arrows pan, Q/E or wheel zoom, LMB drag pan, ESC quit)",
-            18.0,
-            18.0,
-            pyg.Color.WHITE,
-            font_size=18.0,
-            draw_order=20.0,
-        )
-        engine.draw_text(
-            camera_line,
-            18.0,
-            44.0,
-            pyg.Color.CYAN,
-            font_size=16.0,
-            draw_order=20.0,
-        )
-        engine.draw_text(
-            viewport_line,
-            18.0,
-            66.0,
-            pyg.Color.rgb(180, 220, 255),
-            font_size=16.0,
-            draw_order=20.0,
-        )
-        engine.draw_text(
-            axes_line,
-            18.0,
-            88.0,
-            pyg.Color.rgb(180, 210, 180),
-            font_size=15.0,
-            draw_order=20.0,
-        )
-        engine.draw_text(
-            mouse_line,
-            18.0,
-            108.0,
-            pyg.Color.rgb(220, 220, 220),
-            font_size=15.0,
-            draw_order=20.0,
-        )
-        engine.draw_text(
-            origin_line,
-            18.0,
-            128.0,
-            pyg.Color.YELLOW,
-            font_size=15.0,
-            draw_order=20.0,
-        )
-        engine.draw_text(
-            aspect_line,
-            18.0,
-            148.0,
-            pyg.Color.rgb(255, 200, 130),
-            font_size=14.0,
-            draw_order=20.0,
+        engine.draw(
+            [
+                pyg.Text(
+                    "Worldspace Camera Demo (WASD/Arrows pan, Q/E or wheel zoom, LMB drag pan, ESC quit)",
+                    position=pyg.Vec2(18.0, 18.0),
+                    color=pyg.Color.WHITE,
+                    font_size=18.0,
+                    draw_order=20.0,
+                ),
+                pyg.Text(camera_line, position=pyg.Vec2(18.0, 44.0), color=pyg.Color.CYAN, font_size=16.0, draw_order=20.0),
+                pyg.Text(viewport_line, position=pyg.Vec2(18.0, 66.0), color=pyg.Color.rgb(180, 220, 255), font_size=16.0, draw_order=20.0),
+                pyg.Text(axes_line, position=pyg.Vec2(18.0, 88.0), color=pyg.Color.rgb(180, 210, 180), font_size=15.0, draw_order=20.0),
+                pyg.Text(mouse_line, position=pyg.Vec2(18.0, 108.0), color=pyg.Color.rgb(220, 220, 220), font_size=15.0, draw_order=20.0),
+                pyg.Text(origin_line, position=pyg.Vec2(18.0, 128.0), color=pyg.Color.YELLOW, font_size=15.0, draw_order=20.0),
+                pyg.Text(aspect_line, position=pyg.Vec2(18.0, 148.0), color=pyg.Color.rgb(255, 200, 130), font_size=14.0, draw_order=20.0),
+            ]
         )
 
         engine.update()

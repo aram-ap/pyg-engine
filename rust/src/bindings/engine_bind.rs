@@ -10,7 +10,9 @@ use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
 use crate::core::logging;
 
 use crate::core::command::EngineCommand;
-use crate::core::component::{ComponentTrait, MeshComponent, MeshGeometry, TransformComponent};
+use crate::core::component::{
+    ComponentTrait, MeshComponent, MeshGeometry, TextMeshComponent, TransformComponent,
+};
 use crate::core::draw_manager::DrawCommand;
 use crate::core::engine::Engine as RustEngine;
 use crate::core::game_object::GameObject as RustGameObject;
@@ -30,6 +32,7 @@ use super::input_bind::{PyKeys, PyMouseButton, parse_key, parse_mouse_button};
 use super::physics_bind::PyCollider;
 use super::vector_bind::{PyVec2, PyVec3};
 use crate::core::physics::collider::ColliderComponent;
+use crate::types::vector::Vec2;
 
 // ========== Engine Bindings ==========
 
@@ -68,7 +71,18 @@ fn parse_camera_aspect_mode(mode_name: &str) -> Option<CameraAspectMode> {
     }
 }
 
-fn component_to_pyobject(py: Python<'_>, component: &dyn ComponentTrait) -> PyResult<Py<PyAny>> {
+#[derive(Clone)]
+struct ComponentRuntimeBinding {
+    sender: Sender<EngineCommand>,
+    object_id: u32,
+    component_id: u32,
+}
+
+fn component_to_pyobject(
+    py: Python<'_>,
+    component: &dyn ComponentTrait,
+    binding: Option<ComponentRuntimeBinding>,
+) -> PyResult<Py<PyAny>> {
     if let Some(transform) = component.as_any().downcast_ref::<TransformComponent>() {
         return Ok(Py::new(
             py,
@@ -79,7 +93,14 @@ fn component_to_pyobject(py: Python<'_>, component: &dyn ComponentTrait) -> PyRe
         .into_any());
     }
     if let Some(mesh) = component.as_any().downcast_ref::<MeshComponent>() {
-        return Ok(Py::new(py, PyMeshComponent { inner: mesh.clone() })?.into_any());
+        return Ok(Py::new(
+            py,
+            PyMeshComponent {
+                inner: mesh.clone(),
+                runtime_binding: RefCell::new(binding.clone()),
+            },
+        )?
+        .into_any());
     }
     if let Some(button) = component.as_any().downcast_ref::<ButtonComponent>() {
         return Ok(Py::new(py, PyButtonComponent { inner: button.clone() })?.into_any());
@@ -89,6 +110,16 @@ fn component_to_pyobject(py: Python<'_>, component: &dyn ComponentTrait) -> PyRe
     }
     if let Some(label) = component.as_any().downcast_ref::<LabelComponent>() {
         return Ok(Py::new(py, PyLabelComponent { inner: label.clone() })?.into_any());
+    }
+    if let Some(text_mesh) = component.as_any().downcast_ref::<TextMeshComponent>() {
+        return Ok(Py::new(
+            py,
+            PyTextMeshComponent {
+                inner: text_mesh.clone(),
+                runtime_binding: RefCell::new(binding),
+            },
+        )?
+        .into_any());
     }
     if let Some(collider) = component.as_any().downcast_ref::<ColliderComponent>() {
         return Ok(Py::new(
@@ -4412,6 +4443,18 @@ impl PyGameObject {
             .expect("mesh component should exist")
     }
 
+    fn sync_runtime_mesh_component(&self) {
+        let current_mesh = self.current_object().mesh_component().cloned();
+        if let Some(binding) = self.runtime_binding.borrow().as_ref()
+            && let Some(mesh) = current_mesh
+        {
+            let _ = binding.sender.send(EngineCommand::SetGameObjectMeshComponent {
+                object_id: binding.object_id,
+                mesh,
+            });
+        }
+    }
+
     fn to_runtime_game_object(&self) -> RustGameObject {
         self.inner.clone()
     }
@@ -4456,6 +4499,17 @@ impl PyGameObject {
                 objects,
             })),
         }
+    }
+
+    fn component_binding(&self, component: &dyn ComponentTrait) -> Option<ComponentRuntimeBinding> {
+        self.runtime_binding
+            .borrow()
+            .as_ref()
+            .map(|binding| ComponentRuntimeBinding {
+                sender: binding.sender.clone(),
+                object_id: binding.object_id,
+                component_id: component.id(),
+            })
     }
 }
 
@@ -5419,7 +5473,10 @@ impl PyGameObject {
         let removed = self
             .inner
             .remove_mesh_component()
-            .map(|inner| PyMeshComponent { inner });
+            .map(|inner| PyMeshComponent {
+                inner,
+                runtime_binding: RefCell::new(None),
+            });
         if let Some(binding) = self.runtime_binding.borrow().as_ref()
             && let Some(mesh) = self.current_object().mesh_component()
         {
@@ -5486,10 +5543,30 @@ impl PyGameObject {
     /// - `remove_mesh_component()` - Remove and get mesh
     /// - GameObject mesh methods: `set_mesh_visible()`, `set_mesh_fill_color()`, etc.
     fn mesh_component(&self) -> Option<PyMeshComponent> {
-        self.current_object()
-            .mesh_component()
-            .cloned()
-            .map(|inner| PyMeshComponent { inner })
+        let object = self.current_object();
+        object.mesh_component().cloned().map(|inner| PyMeshComponent {
+            runtime_binding: RefCell::new(
+                object
+                    .mesh_component()
+                    .and_then(|component| self.component_binding(component)),
+            ),
+            inner,
+        })
+    }
+
+    fn add_text_mesh_component(&mut self, text_mesh_component: &PyTextMeshComponent) {
+        self.inner
+            .add_component(Box::new(text_mesh_component.inner.clone()));
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::AddComponent {
+                object_id: binding.object_id,
+                component: Box::new(text_mesh_component.inner.clone()),
+            });
+        }
+    }
+
+    fn text_mesh_component(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
+        self.get_component_type(py, "TextMesh")
     }
 
     /// Set the mesh geometry to a rectangle.
@@ -5531,6 +5608,7 @@ impl PyGameObject {
     fn set_mesh_geometry_rectangle(&mut self, width: f32, height: f32) {
         let mesh = self.ensure_mesh_component();
         mesh.set_geometry(MeshGeometry::rectangle(width, height));
+        self.sync_runtime_mesh_component();
     }
 
     /// Set the mesh geometry to a circle.
@@ -5582,6 +5660,7 @@ impl PyGameObject {
     fn set_mesh_geometry_circle(&mut self, radius: f32, segments: u32) {
         let mesh = self.ensure_mesh_component();
         mesh.set_geometry(MeshGeometry::circle(radius, segments));
+        self.sync_runtime_mesh_component();
     }
 
     /// Set the fill color of the mesh.
@@ -5631,15 +5710,18 @@ impl PyGameObject {
     /// - `set_mesh_image_path()` - Set texture image
     /// - `Color` - Color class with creation methods
     fn set_mesh_fill_color(&mut self, color: Option<PyColor>) {
-        let mesh = self.ensure_mesh_component();
         let color_inner = color.map(|c| c.inner);
-        mesh.set_fill_color(color_inner);
+        let updated_mesh = {
+            let mesh = self.ensure_mesh_component();
+            mesh.set_fill_color(color_inner);
+            mesh.clone()
+        };
 
         // Update runtime object if it exists
         if let Some(binding) = self.runtime_binding.borrow().as_ref() {
-            let _ = binding.sender.send(EngineCommand::SetGameObjectMeshFillColor {
+            let _ = binding.sender.send(EngineCommand::SetGameObjectMeshComponent {
                 object_id: binding.object_id,
-                color: color_inner,
+                mesh: updated_mesh,
             });
         }
     }
@@ -5727,6 +5809,7 @@ impl PyGameObject {
     fn set_mesh_image_path(&mut self, image_path: Option<String>) {
         let mesh = self.ensure_mesh_component();
         mesh.set_image_path(image_path);
+        self.sync_runtime_mesh_component();
     }
 
     /// Get the image/texture path of the mesh.
@@ -5806,6 +5889,7 @@ impl PyGameObject {
     fn set_mesh_visible(&mut self, visible: bool) {
         let mesh = self.ensure_mesh_component();
         mesh.set_visible(visible);
+        self.sync_runtime_mesh_component();
     }
 
     /// Get the visibility state of the mesh.
@@ -5890,6 +5974,7 @@ impl PyGameObject {
     fn set_mesh_draw_order(&mut self, draw_order: f32) {
         let mesh = self.ensure_mesh_component();
         mesh.set_draw_order(draw_order);
+        self.sync_runtime_mesh_component();
     }
 
     /// Get the draw order (z-index) of the mesh.
@@ -6111,13 +6196,15 @@ impl PyGameObject {
                 Box::new(label.inner.clone())
             } else if let Ok(mesh) = component.extract::<PyRef<PyMeshComponent>>() {
                 Box::new(mesh.inner.clone())
+            } else if let Ok(text_mesh) = component.extract::<PyRef<PyTextMeshComponent>>() {
+                Box::new(text_mesh.inner.clone())
             } else if let Ok(transform) = component.extract::<PyRef<PyTransformComponent>>() {
                 Box::new(transform.inner.clone())
             } else if let Ok(collider) = component.extract::<PyRef<PyCollider>>() {
                 Box::new(collider.component.clone())
             } else {
                 return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                    "Component must be MeshComponent, TransformComponent, ButtonComponent, PanelComponent, LabelComponent, or Collider",
+                    "Component must be MeshComponent, TextMeshComponent, TransformComponent, ButtonComponent, PanelComponent, LabelComponent, or Collider",
                 ));
             };
 
@@ -6133,16 +6220,18 @@ impl PyGameObject {
     }
 
     fn get_component_name(&self, py: Python<'_>, name: &str) -> PyResult<Option<Py<PyAny>>> {
-        self.current_object()
+        let object = self.current_object();
+        object
             .get_component_by_name(name)
-            .map(|component| component_to_pyobject(py, component))
+            .map(|component| component_to_pyobject(py, component, self.component_binding(component)))
             .transpose()
     }
 
     fn get_component_id(&self, py: Python<'_>, component_id: u32) -> PyResult<Option<Py<PyAny>>> {
-        self.current_object()
+        let object = self.current_object();
+        object
             .get_component_by_id(component_id)
-            .map(|component| component_to_pyobject(py, component))
+            .map(|component| component_to_pyobject(py, component, self.component_binding(component)))
             .transpose()
     }
 
@@ -6154,7 +6243,8 @@ impl PyGameObject {
         let object = self.current_object();
         for component in object.all_components() {
             if component.component_type() == component_type {
-                return component_to_pyobject(py, component).map(Some);
+                return component_to_pyobject(py, component, self.component_binding(component))
+                    .map(Some);
             }
         }
         Ok(None)
@@ -6170,7 +6260,7 @@ impl PyGameObject {
             .all_components()
             .into_iter()
             .filter(|component| component.component_type() == component_type)
-            .map(|component| component_to_pyobject(py, component))
+            .map(|component| component_to_pyobject(py, component, self.component_binding(component)))
             .collect()
     }
 
@@ -6219,6 +6309,82 @@ impl PyGameObject {
     fn remove_component(&mut self, component: &Bound<'_, PyAny>) -> PyResult<bool> {
         let component_id = component_id_from_py(component)?;
         Ok(self.remove_component_id(component_id))
+    }
+}
+
+// ========== MeshGeometry Bindings ==========
+
+#[pyclass(name = "MeshGeometry")]
+#[derive(Clone)]
+pub struct PyMeshGeometry {
+    inner: MeshGeometry,
+}
+
+#[pymethods]
+impl PyMeshGeometry {
+    #[new]
+    #[pyo3(signature = (vertices=None, indices=None, uvs=None))]
+    fn new(
+        vertices: Option<Vec<(f32, f32)>>,
+        indices: Option<Vec<u32>>,
+        uvs: Option<Vec<(f32, f32)>>,
+    ) -> PyResult<Self> {
+        let vertices = vertices.unwrap_or_default();
+        let indices = indices.unwrap_or_default();
+        let uvs = uvs.unwrap_or_else(|| vec![(0.0, 0.0); vertices.len()]);
+
+        if uvs.len() != vertices.len() {
+            return Err(PyRuntimeError::new_err(
+                "uvs must have the same length as vertices",
+            ));
+        }
+
+        let mesh_vertices = vertices
+            .into_iter()
+            .zip(uvs)
+            .map(|((x, y), (u, v))| {
+                crate::core::component::MeshVertex::new(Vec2::new(x, y), Vec2::new(u, v))
+            })
+            .collect();
+
+        Ok(Self {
+            inner: MeshGeometry::new(mesh_vertices, indices),
+        })
+    }
+
+    #[staticmethod]
+    fn rectangle(width: f32, height: f32) -> Self {
+        Self {
+            inner: MeshGeometry::rectangle(width, height),
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (radius, segments=32))]
+    fn circle(radius: f32, segments: u32) -> Self {
+        Self {
+            inner: MeshGeometry::circle(radius, segments),
+        }
+    }
+
+    fn vertices(&self) -> Vec<(f32, f32)> {
+        self.inner
+            .vertices()
+            .iter()
+            .map(|vertex| (vertex.position().x(), vertex.position().y()))
+            .collect()
+    }
+
+    fn uvs(&self) -> Vec<(f32, f32)> {
+        self.inner
+            .vertices()
+            .iter()
+            .map(|vertex| (vertex.uv().x(), vertex.uv().y()))
+            .collect()
+    }
+
+    fn indices(&self) -> Vec<u32> {
+        self.inner.indices().to_vec()
     }
 }
 
@@ -6285,10 +6451,22 @@ impl PyGameObject {
 /// # See Also
 /// - `examples/python_mesh_demo.py` - Complete mesh examples
 /// - `examples/python_game_object_transform_demo.py` - Transform + rendering
-#[pyclass(name = "MeshComponent")]
+#[pyclass(name = "MeshComponent", unsendable)]
 #[derive(Clone)]
 pub struct PyMeshComponent {
     inner: MeshComponent,
+    runtime_binding: RefCell<Option<ComponentRuntimeBinding>>,
+}
+
+impl PyMeshComponent {
+    fn sync_runtime(&self) {
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::SetGameObjectMeshComponent {
+                object_id: binding.object_id,
+                mesh: self.inner.clone(),
+            });
+        }
+    }
 }
 
 #[pymethods]
@@ -6298,6 +6476,7 @@ impl PyMeshComponent {
     fn new(name: Option<String>) -> Self {
         Self {
             inner: MeshComponent::new(name.unwrap_or_else(|| "Mesh Renderer".to_string())),
+            runtime_binding: RefCell::new(None),
         }
     }
 
@@ -6321,19 +6500,29 @@ impl PyMeshComponent {
         self.inner.set_enabled_self(enabled);
     }
 
+    fn geometry(&self) -> PyMeshGeometry {
+        PyMeshGeometry {
+            inner: self.inner.geometry().clone(),
+        }
+    }
+
+    fn set_geometry(&mut self, geometry: &PyMeshGeometry) {
+        self.inner.set_geometry(geometry.inner.clone());
+        self.sync_runtime();
+    }
+
     fn set_geometry_rectangle(&mut self, width: f32, height: f32) {
-        self.inner
-            .set_geometry(MeshGeometry::rectangle(width, height));
+        self.set_geometry(&PyMeshGeometry::rectangle(width, height));
     }
 
     #[pyo3(signature = (radius, segments=32))]
     fn set_geometry_circle(&mut self, radius: f32, segments: u32) {
-        self.inner
-            .set_geometry(MeshGeometry::circle(radius, segments));
+        self.set_geometry(&PyMeshGeometry::circle(radius, segments));
     }
 
     fn set_fill_color(&mut self, color: Option<PyColor>) {
         self.inner.set_fill_color(color.map(|c| c.inner));
+        self.sync_runtime();
     }
 
     fn fill_color(&self) -> Option<PyColor> {
@@ -6345,6 +6534,7 @@ impl PyMeshComponent {
 
     fn set_image_path(&mut self, image_path: Option<String>) {
         self.inner.set_image_path(image_path);
+        self.sync_runtime();
     }
 
     fn image_path(&self) -> Option<String> {
@@ -6359,6 +6549,7 @@ impl PyMeshComponent {
     #[setter]
     fn set_visible(&mut self, visible: bool) {
         self.inner.set_visible(visible);
+        self.sync_runtime();
     }
 
     #[getter]
@@ -6369,6 +6560,140 @@ impl PyMeshComponent {
     #[setter]
     fn set_draw_order(&mut self, draw_order: f32) {
         self.inner.set_draw_order(draw_order);
+        self.sync_runtime();
+    }
+}
+
+#[pyclass(name = "TextMeshComponent", unsendable)]
+#[derive(Clone)]
+pub struct PyTextMeshComponent {
+    inner: TextMeshComponent,
+    runtime_binding: RefCell<Option<ComponentRuntimeBinding>>,
+}
+
+impl PyTextMeshComponent {
+    fn sync_runtime(&self) {
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::SetTextMeshComponent {
+                object_id: binding.object_id,
+                component_id: binding.component_id,
+                component: self.inner.clone(),
+            });
+        }
+    }
+}
+
+#[pymethods]
+impl PyTextMeshComponent {
+    #[new]
+    #[pyo3(signature = (text="", font_size=24.0, name=None))]
+    fn new(text: &str, font_size: f32, name: Option<String>) -> Self {
+        Self {
+            inner: TextMeshComponent::new(name.unwrap_or_else(|| "Text Mesh".to_string()))
+                .with_text(text)
+                .with_font_size(font_size),
+            runtime_binding: RefCell::new(None),
+        }
+    }
+
+    #[getter]
+    fn name(&self) -> String {
+        self.inner.name().to_string()
+    }
+
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn text(&self) -> String {
+        self.inner.text().to_string()
+    }
+
+    #[setter]
+    fn set_text(&mut self, text: String) {
+        self.inner.set_text(text);
+        self.sync_runtime();
+    }
+
+    #[getter]
+    fn color(&self) -> PyColor {
+        PyColor {
+            inner: self.inner.color(),
+        }
+    }
+
+    #[setter]
+    fn set_color(&mut self, color: PyColor) {
+        self.inner.set_color(color.inner);
+        self.sync_runtime();
+    }
+
+    #[getter]
+    fn font_size(&self) -> f32 {
+        self.inner.font_size()
+    }
+
+    #[setter]
+    fn set_font_size(&mut self, font_size: f32) {
+        self.inner.set_font_size(font_size);
+        self.sync_runtime();
+    }
+
+    #[getter]
+    fn font_path(&self) -> Option<String> {
+        self.inner.font_path().map(|path| path.to_string())
+    }
+
+    #[setter]
+    fn set_font_path(&mut self, font_path: Option<String>) {
+        self.inner.set_font_path(font_path);
+        self.sync_runtime();
+    }
+
+    #[getter]
+    fn letter_spacing(&self) -> f32 {
+        self.inner.letter_spacing()
+    }
+
+    #[setter]
+    fn set_letter_spacing(&mut self, letter_spacing: f32) {
+        self.inner.set_letter_spacing(letter_spacing);
+        self.sync_runtime();
+    }
+
+    #[getter]
+    fn line_spacing(&self) -> f32 {
+        self.inner.line_spacing()
+    }
+
+    #[setter]
+    fn set_line_spacing(&mut self, line_spacing: f32) {
+        self.inner.set_line_spacing(line_spacing);
+        self.sync_runtime();
+    }
+
+    #[getter]
+    fn visible(&self) -> bool {
+        self.inner.visible()
+    }
+
+    #[setter]
+    fn set_visible(&mut self, visible: bool) {
+        self.inner.set_visible(visible);
+        self.sync_runtime();
+    }
+
+    #[getter]
+    fn draw_order(&self) -> f32 {
+        self.inner.draw_order()
+    }
+
+    #[setter]
+    fn set_draw_order(&mut self, draw_order: f32) {
+        self.inner.set_draw_order(draw_order);
+        self.sync_runtime();
     }
 }
 
@@ -7152,7 +7477,9 @@ fn pyg_engine_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyColor>()?;
     m.add_class::<PyTime>()?;
     m.add_class::<PyGameObject>()?;
+    m.add_class::<PyMeshGeometry>()?;
     m.add_class::<PyMeshComponent>()?;
+    m.add_class::<PyTextMeshComponent>()?;
     m.add_class::<PyTransformComponent>()?;
     m.add_class::<PyButtonComponent>()?;
     m.add_class::<PyPanelComponent>()?;

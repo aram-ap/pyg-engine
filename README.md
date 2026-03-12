@@ -93,8 +93,15 @@ engine.draw([
     ),
 ])
 
-# Draw text (built-in font by default)
-engine.draw_text("Hello PyG", 32, 48, pyg.Color.WHITE, font_size=28.0)
+# Draw text as a shape object
+engine.draw(
+    pyg.Text(
+        "Hello PyG",
+        position=pyg.Vec2(32, 48),
+        color=pyg.Color.WHITE,
+        font_size=28.0,
+    )
+)
 
 # Start the application
 engine.run(title="Direct Draw Demo", show_fps_in_title=True)
@@ -111,7 +118,7 @@ player = pyg.GameObject("Player")
 
 # Add components through the shared component API
 mesh = pyg.MeshComponent("PlayerSprite")
-mesh.set_geometry_rectangle(1.0, 1.0)  # 1 world unit wide and tall
+mesh.set_geometry(pyg.Mesh.Rect(1.0, 1.0))  # 1 world unit wide and tall
 mesh.set_fill_color(pyg.Color.RED)
 player.add_component(mesh)
 
@@ -124,13 +131,40 @@ player_id = engine.add_game_object(player)
 # Runtime lookup + lifecycle helpers
 runtime_player = engine.objects.get_id(player_id)
 camera = engine.camera
+camera.position = pyg.Vec2(0.0, 0.0)
+camera.viewport_size = pyg.Vec2(8.0, 4.5)
 runtime_player.enabled = True
 # engine.destroy(runtime_player)
 
 engine.run(title="Game Object Demo")
 ```
 
-### 4. Function-Based Update Loop
+### 4. World Text Meshes And Camera Properties
+```python
+import pyg_engine as pyg
+
+engine = pyg.Engine()
+
+label = pyg.GameObject("WorldLabel")
+label.position = pyg.Vec2(0.0, 1.0)
+label.scale = pyg.Vec2(0.004, 0.004)
+
+text_mesh = pyg.TextMeshComponent("Hello from a GameObject", font_size=48.0)
+text_mesh.color = pyg.Color.WHITE
+label.add_text_mesh_component(text_mesh)
+
+engine.add_game_object(label)
+
+# Camera behaves like an object-focused API
+engine.camera.position = pyg.Vec2(0.0, 0.0)
+engine.camera.position.x = 1.5
+engine.camera.viewport_size = pyg.Vec2(10.0, 5.625)
+engine.camera.aspect_mode = pyg.CameraAspectMode.FIT_BOTH
+
+engine.run(title="Text Mesh Demo")
+```
+
+### 5. Function-Based Update Loop
 ```python
 import pyg_engine as pyg
 
@@ -191,12 +225,12 @@ raises `RuntimeError`.
 Check the [`examples/`](examples) directory for more complete demonstrations:
 
 - `python_direct_draw_demo.py`: Shows the new `engine.draw(...)` shape API.
-- `python_mesh_demo.py`: Demonstrates the GameObject and Mesh system.
+- `python_mesh_demo.py`: Demonstrates GameObjects, object-based mesh geometry, and world text meshes.
 - `python_threading_demo.py`: **Advanced**: Spawns a background thread that safely updates the UI using `engine.get_handle()`.
 - `python_manual_loop.py`: Shows how to control the game loop manually (`start_manual` -> poll -> update -> render).
 - `python_function_update_demo.py`: Shows callback-based loop control via `engine.run(update=...)`.
 - `python_snake_demo.py`: Playable Snake game using immediate-mode drawing and keyboard input.
-- `python_camera_worldspace_demo.py`: Shows how to move objects and use the camera system along with other mouse and keyboard controls.
+- `python_camera_worldspace_demo.py`: Shows object-style camera control along with world-space objects and HUD text.
 - `ui_demo.py`: Demonstrates the UI system, button functions, and text label updates.
 
 ## :hammer_and_wrench: Development & Testing

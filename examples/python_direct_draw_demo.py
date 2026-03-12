@@ -101,7 +101,14 @@ def populate_direct_draw_scene(engine: pyg.Engine) -> None:
         ]
     )
 
-    engine.draw_text("engine.draw(shape)", 24, 52, pyg.Color.WHITE, font_size=28.0)
+    engine.draw(
+        pyg.Text(
+            "engine.draw(shape)",
+            position=pyg.Vec2(24, 52),
+            color=pyg.Color.WHITE,
+            font_size=28.0,
+        )
+    )
 
 
 def main() -> None:

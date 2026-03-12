@@ -12,7 +12,7 @@ Controls:
 import random
 from typing import List, Optional, Tuple
 
-from pyg_engine import Color, Engine, Keys, Line, Rect, Vec2
+from pyg_engine import Color, Engine, Keys, Line, Rect, Text, Vec2
 
 GridPos = Tuple[int, int]
 
@@ -222,21 +222,23 @@ def draw_scene(engine: Engine, game: SnakeGame) -> None:
         ))
 
     # HUD text
-    engine.draw_text(
-        f"Snake  |  Score: {game.score}  |  Length: {len(game.snake)}",
-        22.0,
-        18.0,
-        Color(0.95, 0.99, 1.00, 0.97),
-        font_size=30.0,
-        draw_order=10.0,
-    )
-    engine.draw_text(
-        "Move: WASD/Arrows   Pause: Space/P   Restart: R   Quit: Esc",
-        22.0,
-        52.0,
-        Color(0.82, 0.90, 0.96, 0.95),
-        font_size=16.0,
-        draw_order=10.0,
+    engine.draw(
+        [
+            Text(
+                f"Snake  |  Score: {game.score}  |  Length: {len(game.snake)}",
+                position=Vec2(22.0, 18.0),
+                color=Color(0.95, 0.99, 1.00, 0.97),
+                font_size=30.0,
+                draw_order=10.0,
+            ),
+            Text(
+                "Move: WASD/Arrows   Pause: Space/P   Restart: R   Quit: Esc",
+                position=Vec2(22.0, 52.0),
+                color=Color(0.82, 0.90, 0.96, 0.95),
+                font_size=16.0,
+                draw_order=10.0,
+            ),
+        ]
     )
 
     if game.paused and not game.game_over:
@@ -250,7 +252,15 @@ def draw_scene(engine: Engine, game: SnakeGame) -> None:
             color=Color(0.0, 0.0, 0.0, 0.45),
             draw_order=11.0,
         ))
-        engine.draw_text("PAUSED", center_x, center_y, Color.WHITE, font_size=28.0, draw_order=12.0)
+        engine.draw(
+            Text(
+                "PAUSED",
+                position=Vec2(center_x, center_y),
+                color=Color.WHITE,
+                font_size=28.0,
+                draw_order=12.0,
+            )
+        )
 
     if game.game_over:
         overlay_message = "YOU WIN! Press R to play again" if game.has_won else "GAME OVER! Press R to restart"
@@ -264,13 +274,14 @@ def draw_scene(engine: Engine, game: SnakeGame) -> None:
             color=Color(0.0, 0.0, 0.0, 0.60),
             draw_order=11.0,
         ))
-        engine.draw_text(
-            overlay_message,
-            center_x,
-            center_y,
-            Color(1.0, 0.98, 0.90, 1.0),
-            font_size=26.0,
-            draw_order=12.0,
+        engine.draw(
+            Text(
+                overlay_message,
+                position=Vec2(center_x, center_y),
+                color=Color(1.0, 0.98, 0.90, 1.0),
+                font_size=26.0,
+                draw_order=12.0,
+            )
         )
 
 

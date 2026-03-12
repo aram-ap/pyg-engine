@@ -26,7 +26,7 @@ def create_background() -> pyg.GameObject:
     bg.scale = pyg.Vec2(1.0, 1.0)
 
     mesh = pyg.MeshComponent("BackgroundMesh")
-    mesh.set_geometry_rectangle(1.8, 1.2)
+    mesh.set_geometry(pyg.Mesh.Rect(1.8, 1.2))
     mesh.set_fill_color(pyg.Color.rgb(20, 24, 32))
     mesh.draw_order = -0.8
     bg.add_component(mesh)
@@ -40,7 +40,7 @@ def create_solid_quad() -> pyg.GameObject:
     quad.rotation = 0.3
 
     mesh = pyg.MeshComponent("SolidQuadMesh")
-    mesh.set_geometry_rectangle(1.0, 1.0)
+    mesh.set_geometry(pyg.Mesh.Rect(1.0, 1.0))
     mesh.set_fill_color(pyg.Color.ORANGE)
     mesh.draw_order = 1.1
     quad.add_component(mesh)
@@ -54,7 +54,7 @@ def create_textured_quad(use_texture: bool = True) -> pyg.GameObject:
     quad.rotation = -0.2
 
     mesh = pyg.MeshComponent("TexturedQuadMesh")
-    mesh.set_geometry_rectangle(1.0, 1.0)
+    mesh.set_geometry(pyg.Mesh.Rect(1.0, 1.0))
     if use_texture:
         # Loading and decoding image assets can add startup latency.
         mesh.set_fill_color(pyg.Color.WHITE)
@@ -64,6 +64,18 @@ def create_textured_quad(use_texture: bool = True) -> pyg.GameObject:
     mesh.draw_order = 2.3
     quad.add_component(mesh)
     return quad
+
+
+def create_text_mesh_label() -> pyg.GameObject:
+    label = pyg.GameObject("WorldText")
+    label.position = pyg.Vec2(0.0, 0.45)
+    label.scale = pyg.Vec2(0.0045, 0.0045)
+
+    text_mesh = pyg.TextMeshComponent("Object-Based Text", font_size=42.0)
+    text_mesh.color = pyg.Color.WHITE
+    text_mesh.draw_order = 3.4
+    label.add_text_mesh_component(text_mesh)
+    return label
 
 
 def main() -> None:
@@ -81,11 +93,11 @@ def main() -> None:
     args = parser.parse_args()
 
     engine = pyg.Engine(log_level="INFO")
-
-    engine.set_camera_viewport_size(3.2, 1.8)
+    engine.camera.viewport_size = pyg.Vec2(3.2, 1.8)
     engine.add_game_object(create_background())
     solid_id = engine.add_game_object(create_solid_quad())
     engine.add_game_object(create_textured_quad(use_texture=not args.no_texture))
+    engine.add_game_object(create_text_mesh_label())
 
     if solid_id is not None:
         solid_quad = engine.objects.get_id(solid_id)

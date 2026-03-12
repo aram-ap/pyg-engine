@@ -31,7 +31,7 @@ class Player:
 
         # Create mesh
         mesh = pyg.MeshComponent("PlayerMesh")
-        mesh.set_geometry_circle(radius)
+        mesh.set_geometry(pyg.Mesh.Circle(radius))
         mesh.set_fill_color(pyg.Color.rgb(100, 200, 255))  # Blue
         mesh.draw_order = 2.0
         self.obj.add_component(mesh)
@@ -87,7 +87,7 @@ class CircleObstacle:
 
         # Create mesh
         mesh = pyg.MeshComponent("CircleObstacleMesh")
-        mesh.set_geometry_circle(radius)
+        mesh.set_geometry(pyg.Mesh.Circle(radius))
         mesh.set_fill_color(color)
         mesh.draw_order = 1.0
         self.obj.add_component(mesh)
@@ -110,7 +110,7 @@ class BoxObstacle:
 
         # Create mesh
         mesh = pyg.MeshComponent("BoxObstacleMesh")
-        mesh.set_geometry_rectangle(1.0, 1.0)
+        mesh.set_geometry(pyg.Mesh.Rect(1.0, 1.0))
         mesh.set_fill_color(color)
         mesh.draw_order = 1.0
         self.obj.add_component(mesh)
@@ -141,7 +141,7 @@ def main():
     )
 
     # Set camera
-    engine.set_camera_viewport_size(16.0, 9.0)
+    engine.camera.viewport_size = pyg.Vec2(16.0, 9.0)
 
     print("Creating scene...")
 
@@ -204,51 +204,61 @@ def main():
         engine.clear_draw_commands()
 
         # Instructions
-        engine.draw_text(
-            "Move with Arrow Keys or WASD",
-            24.0, 24.0,
-            pyg.Color.WHITE,
-            font_size=20.0,
-            draw_order=10.0,
+        engine.draw(
+            pyg.Text(
+                "Move with Arrow Keys or WASD",
+                position=pyg.Vec2(24.0, 24.0),
+                color=pyg.Color.WHITE,
+                font_size=20.0,
+                draw_order=10.0,
+            )
         )
 
         # Collision status
         status_text = "COLLIDING!" if player.is_colliding else "Clear"
         status_color = pyg.Color.rgb(255, 100, 100) if player.is_colliding else pyg.Color.rgb(100, 255, 100)
 
-        engine.draw_text(
-            f"Status: {status_text}",
-            24.0, 56.0,
-            status_color,
-            font_size=18.0,
-            draw_order=10.0,
+        engine.draw(
+            pyg.Text(
+                f"Status: {status_text}",
+                position=pyg.Vec2(24.0, 56.0),
+                color=status_color,
+                font_size=18.0,
+                draw_order=10.0,
+            )
         )
 
         # Position info
-        engine.draw_text(
-            f"Position: ({player.obj.position.x:.2f}, {player.obj.position.y:.2f})",
-            24.0, 88.0,
-            pyg.Color.rgb(200, 200, 200),
-            font_size=16.0,
-            draw_order=10.0,
+        engine.draw(
+            pyg.Text(
+                f"Position: ({player.obj.position.x:.2f}, {player.obj.position.y:.2f})",
+                position=pyg.Vec2(24.0, 88.0),
+                color=pyg.Color.rgb(200, 200, 200),
+                font_size=16.0,
+                draw_order=10.0,
+            )
         )
 
         # Collision system info
-        engine.draw_text(
-            "Built-in Collision System: Active with Python Callbacks!",
-            24.0, 120.0,
-            pyg.Color.rgb(100, 255, 100),
-            font_size=14.0,
-            draw_order=10.0,
+        engine.draw(
+            pyg.Text(
+                "Built-in Collision System: Active with Python Callbacks!",
+                position=pyg.Vec2(24.0, 120.0),
+                color=pyg.Color.rgb(100, 255, 100),
+                font_size=14.0,
+                draw_order=10.0,
+            )
         )
 
         # ESC hint
-        engine.draw_text(
-            "ESC to quit",
-            24.0, 680.0,
-            pyg.Color.rgb(120, 120, 120),
-            font_size=14.0,
-            draw_order=10.0,
+        engine.draw(
+            pyg.Text(
+                "ESC to quit",
+                position=pyg.Vec2(24.0, 680.0),
+                color=pyg.Color.rgb(120, 120, 120),
+                font_size=14.0,
+                draw_order=10.0,
+            )
         )
 
         # Update and render

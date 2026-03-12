@@ -23,7 +23,7 @@ def create_circle_hierarchy() -> tuple[pyg.GameObject, pyg.GameObject]:
     circle.scale = pyg.Vec2(0.22, 0.22)
 
     mesh = pyg.MeshComponent("MovingCircleMesh")
-    mesh.set_geometry_circle(1.0, segments=48)
+    mesh.set_geometry(pyg.Mesh.Circle(1.0, segments=48))
     mesh.set_fill_color(pyg.Color.CYAN)
     mesh.draw_order = 2.2
     circle.add_component(mesh)
@@ -71,29 +71,30 @@ def main() -> None:
         runtime_parent.rotation = t * 0.8
 
         engine.clear_draw_commands()
-        engine.draw_text(
-            "Parent transform drives a child circle through hierarchy propagation.",
-            24.0,
-            24.0,
-            pyg.Color.WHITE,
-            font_size=21.0,
-            draw_order=11.0,
-        )
-        engine.draw_text(
-            f"parent_pos=({pos_x:.2f}, {pos_y:.2f})  child_local=({runtime_circle.position.x:.2f}, {runtime_circle.position.y:.2f})",
-            24.0,
-            56.0,
-            pyg.Color.CYAN,
-            font_size=18.0,
-            draw_order=11.0,
-        )
-        engine.draw_text(
-            "The child keeps a local offset while render/physics use the composed world transform.",
-            24.0,
-            84.0,
-            pyg.Color.rgb(180, 180, 190),
-            font_size=16.0,
-            draw_order=11.0,
+        engine.draw(
+            [
+                pyg.Text(
+                    "Parent transform drives a child circle through hierarchy propagation.",
+                    position=pyg.Vec2(24.0, 24.0),
+                    color=pyg.Color.WHITE,
+                    font_size=21.0,
+                    draw_order=11.0,
+                ),
+                pyg.Text(
+                    f"parent_pos=({pos_x:.2f}, {pos_y:.2f})  child_local=({runtime_circle.position.x:.2f}, {runtime_circle.position.y:.2f})",
+                    position=pyg.Vec2(24.0, 56.0),
+                    color=pyg.Color.CYAN,
+                    font_size=18.0,
+                    draw_order=11.0,
+                ),
+                pyg.Text(
+                    "The child keeps a local offset while render/physics use the composed world transform.",
+                    position=pyg.Vec2(24.0, 84.0),
+                    color=pyg.Color.rgb(180, 180, 190),
+                    font_size=16.0,
+                    draw_order=11.0,
+                ),
+            ]
         )
 
         engine.update()

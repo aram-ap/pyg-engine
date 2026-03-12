@@ -1,6 +1,6 @@
 import math
 
-from pyg_engine import Color, Engine
+from pyg_engine import Color, Engine, Text, Vec2
 
 
 def make_checkerboard_rgba(width: int, height: int, cell_size: int = 8) -> bytes:
@@ -62,23 +62,25 @@ def main() -> None:
             texture_height,
             draw_order=1.0,
         )
-        engine.draw_text(
-            "Visualization/Texture Demo",
-            24.0,
-            24.0,
-            Color(0.97, 0.99, 1.0, 0.98),
-            font_size=24.0,
-            letter_spacing=1.0,
-            draw_order=11.0,
-        )
-        engine.draw_text(
-            f"elapsed: {t:0.2f}s\nfont: built-in open-source default",
-            24.0,
-            58.0,
-            Color(0.90, 0.95, 1.0, 0.95),
-            font_size=16.0,
-            line_spacing=4.0,
-            draw_order=11.01,
+        engine.draw(
+            [
+                Text(
+                    "Visualization/Texture Demo",
+                    position=Vec2(24.0, 24.0),
+                    color=Color(0.97, 0.99, 1.0, 0.98),
+                    font_size=24.0,
+                    letter_spacing=1.0,
+                    draw_order=11.0,
+                ),
+                Text(
+                    f"elapsed: {t:0.2f}s\nfont: built-in open-source default",
+                    position=Vec2(24.0, 58.0),
+                    color=Color(0.90, 0.95, 1.0, 0.95),
+                    font_size=16.0,
+                    line_spacing=4.0,
+                    draw_order=11.01,
+                ),
+            ]
         )
 
         engine.update()

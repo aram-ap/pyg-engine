@@ -2,6 +2,7 @@ use super::draw_manager::DrawCommand;
 use super::game_object::GameObject;
 use super::render_manager::CameraAspectMode;
 use crate::core::component::ComponentTrait;
+use crate::core::component::{MeshComponent, TextMeshComponent};
 use crate::types::Color;
 use crate::types::vector::Vec2;
 use std::sync::Arc;
@@ -30,8 +31,18 @@ pub enum EngineCommand {
     /// Update a runtime GameObject scale by id
     SetGameObjectScale { object_id: u32, scale: Vec2 },
 
-    /// Update a runtime GameObject mesh fill color by id
-    SetGameObjectMeshFillColor { object_id: u32, color: Option<Color> },
+    /// Replace a runtime GameObject mesh component by id
+    SetGameObjectMeshComponent {
+        object_id: u32,
+        mesh: MeshComponent,
+    },
+
+    /// Replace a runtime TextMesh component on an object by component id
+    SetTextMeshComponent {
+        object_id: u32,
+        component_id: u32,
+        component: TextMeshComponent,
+    },
 
     /// Parent a child object under another object
     AddChild { parent_id: u32, child_id: u32 },

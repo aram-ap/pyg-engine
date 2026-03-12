@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 try:
     from .pyg_engine_native import DrawCommand as _RustDrawCommand
+    from .pyg_engine_native import Vec2 as _RustVec2
     from .pyg_engine_native import Engine as _RustEngine
     from .pyg_engine_native import EngineHandle as _RustEngineHandle
     from .pyg_engine_native import CameraAspectMode, Keys, MouseButton
@@ -677,6 +678,155 @@ class EngineObjects:
     def get_name(self, name: str) -> list[Any]:
         """Get all runtime objects with a matching name."""
         return list(self._engine._engine.get_game_object_name(name))
+
+
+class _LiveVec2Proxy:
+    def __init__(
+        self,
+        getter: Callable[[], Any],
+        setter: Callable[[Any], Any],
+        *,
+        x_name: str = "x",
+        y_name: str = "y",
+    ) -> None:
+        self._getter = getter
+        self._setter = setter
+        self._x_name = x_name
+        self._y_name = y_name
+
+    def _get_vec(self) -> Any:
+        return self._getter()
+
+    def _set_xy(self, x: float, y: float) -> None:
+        self._setter(_RustVec2(float(x), float(y)))
+
+    @property
+    def x(self) -> float:
+        return float(getattr(self._get_vec(), self._x_name))
+
+    @x.setter
+    def x(self, value: float) -> None:
+        current = self._get_vec()
+        self._set_xy(float(value), float(getattr(current, self._y_name)))
+
+    @property
+    def y(self) -> float:
+        return float(getattr(self._get_vec(), self._y_name))
+
+    @y.setter
+    def y(self, value: float) -> None:
+        current = self._get_vec()
+        self._set_xy(float(getattr(current, self._x_name)), float(value))
+
+    @property
+    def width(self) -> float:
+        return self.x
+
+    @width.setter
+    def width(self, value: float) -> None:
+        self.x = value
+
+    @property
+    def height(self) -> float:
+        return self.y
+
+    @height.setter
+    def height(self, value: float) -> None:
+        self.y = value
+
+    def to_vec2(self) -> Any:
+        current = self._get_vec()
+        return _RustVec2(float(getattr(current, self._x_name)), float(getattr(current, self._y_name)))
+
+    def __iter__(self):
+        current = self._get_vec()
+        yield float(getattr(current, self._x_name))
+        yield float(getattr(current, self._y_name))
+
+    def __repr__(self) -> str:
+        return f"Vec2({self.x}, {self.y})"
+
+
+class CameraProxy:
+    def __init__(self, engine: "Engine") -> None:
+        object.__setattr__(self, "_engine_wrapper", engine)
+
+    def _game_object(self) -> Optional[Any]:
+        return self._engine_wrapper._engine.get_camera_object()
+
+    def __getattr__(self, name: str) -> Any:
+        game_object = self._game_object()
+        if game_object is None:
+            raise AttributeError(name)
+        return getattr(game_object, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name == "_engine_wrapper":
+            object.__setattr__(self, name, value)
+            return
+        descriptor = getattr(type(self), name, None)
+        if isinstance(descriptor, property) and descriptor.fset is not None:
+            descriptor.fset(self, value)
+            return
+        game_object = self._game_object()
+        if game_object is None:
+            raise AttributeError(name)
+        setattr(game_object, name, value)
+
+    @property
+    def game_object(self) -> Optional[Any]:
+        return self._game_object()
+
+    @property
+    def position(self) -> _LiveVec2Proxy:
+        return _LiveVec2Proxy(
+            getter=self._engine_wrapper._engine.get_camera_position,
+            setter=self._engine_wrapper._engine.set_camera_position,
+        )
+
+    @position.setter
+    def position(self, value: Any) -> None:
+        self._engine_wrapper._engine.set_camera_position(value)
+
+    @property
+    def viewport_size(self) -> _LiveVec2Proxy:
+        def getter() -> Any:
+            width, height = self._engine_wrapper._engine.get_camera_viewport_size()
+            return _RustVec2(width, height)
+
+        def setter(value: Any) -> None:
+            self._engine_wrapper._engine.set_camera_viewport_size(float(value.x), float(value.y))
+
+        return _LiveVec2Proxy(getter=getter, setter=setter)
+
+    @viewport_size.setter
+    def viewport_size(self, value: Any) -> None:
+        self._engine_wrapper._engine.set_camera_viewport_size(float(value.x), float(value.y))
+
+    @property
+    def aspect_mode(self) -> str:
+        return self._engine_wrapper._engine.get_camera_aspect_mode()
+
+    @aspect_mode.setter
+    def aspect_mode(self, value: str) -> None:
+        self._engine_wrapper._engine.set_camera_aspect_mode(value)
+
+    @property
+    def background_color(self) -> Any:
+        return self._engine_wrapper._engine.get_camera_background_color()
+
+    @background_color.setter
+    def background_color(self, value: Any) -> None:
+        self._engine_wrapper._engine.set_camera_background_color(value)
+
+    def __repr__(self) -> str:
+        game_object = self._game_object()
+        if game_object is None:
+            return "CameraProxy(None)"
+        return f"CameraProxy({game_object!r})"
+
+    def __bool__(self) -> bool:
+        return self._game_object() is not None
 
 
 class UIManager:
@@ -1585,6 +1735,7 @@ class Engine:
         self._input = Input(self)
         self._ui = UIManager(self)
         self._objects = EngineObjects(self)
+        self._camera = CameraProxy(self)
         self._runtime_state = _RUNTIME_STATE_IDLE
         self._window_icon_path: Optional[str] = None
 
@@ -1615,8 +1766,8 @@ class Engine:
 
     @property
     def camera(self) -> Optional[Any]:
-        """Get the active camera `GameObject` handle."""
-        return self._engine.get_camera_object()
+        """Get the active camera proxy."""
+        return self._camera
 
     @property
     def is_running(self) -> bool:
@@ -2051,6 +2202,8 @@ class Engine:
         """
         Set the active camera world position.
 
+        Legacy helper. Prefer `engine.camera.position = ...` in new code.
+
         Args:
             position: A `pyg_engine.Vec2` or `pyg_engine.Vec3` in world space.
 
@@ -2086,6 +2239,8 @@ class Engine:
     def set_camera_viewport_size(self, width: float, height: float) -> bool:
         """
         Set the active camera viewport size in world units.
+
+        Legacy helper. Prefer `engine.camera.viewport_size = ...` in new code.
 
         The viewport size determines how many world units are visible on screen.
         Smaller values = more zoomed in, larger values = more zoomed out.
@@ -2127,6 +2282,8 @@ class Engine:
         """
         Set the camera aspect handling mode.
 
+        Legacy helper. Prefer `engine.camera.aspect_mode = ...` in new code.
+
         Controls how the viewport adapts when the window is resized.
 
         Args:
@@ -2155,7 +2312,10 @@ class Engine:
         return self._engine.set_camera_aspect_mode(mode)
 
     def set_camera_background_color(self, color: Any) -> None:
-        """Set the active camera background clear color."""
+        """Set the active camera background clear color.
+
+        Legacy helper. Prefer `engine.camera.background_color = ...` in new code.
+        """
         self._engine.set_camera_background_color(color)
 
     def get_camera_background_color(self) -> Any:
@@ -2557,6 +2717,8 @@ class Engine:
 
         By default, this uses the engine's built-in open-source font.
         Provide `font_path` to use a custom TTF/OTF font file.
+
+        Legacy helper. Prefer `engine.draw(Text(...))` in new code.
         """
         self._engine.draw_text(
             text,

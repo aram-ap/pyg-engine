@@ -1344,6 +1344,98 @@ impl RenderManager {
         Some((item, Some(upload)))
     }
 
+    #[allow(clippy::too_many_arguments)]
+    fn build_world_text_draw_item(
+        &mut self,
+        text: &str,
+        position: Vec2,
+        rotation: f32,
+        scale: Vec2,
+        font_size: f32,
+        color: Color,
+        font_path: Option<&str>,
+        letter_spacing: f32,
+        line_spacing: f32,
+        camera_position: Vec2,
+        draw_order: f32,
+    ) -> Option<(DrawItem, Option<PendingTextureUpload>)> {
+        if text.is_empty() {
+            return None;
+        }
+
+        let font_size = font_size.max(1.0);
+        let texture_key = Self::build_text_texture_key(
+            text,
+            font_path,
+            font_size,
+            color,
+            letter_spacing,
+            line_spacing,
+        );
+
+        let cached_dimensions = if let Some(Some(entry)) = self.texture_cache.get_mut(&texture_key) {
+            entry.last_used_frame = self.current_frame;
+            Some((entry.cached_texture.width, entry.cached_texture.height))
+        } else {
+            None
+        };
+
+        let (width, height, upload) = if let Some((width, height)) = cached_dimensions {
+            (width as f32, height as f32, None)
+        } else {
+            let rasterized = self.rasterize_text(
+                text,
+                font_size,
+                color,
+                font_path,
+                letter_spacing,
+                line_spacing,
+            )?;
+            let upload = PendingTextureUpload {
+                key: texture_key.clone(),
+                rgba: Arc::from(rasterized.rgba),
+                width: rasterized.width,
+                height: rasterized.height,
+            };
+            (rasterized.width as f32, rasterized.height as f32, Some(upload))
+        };
+
+        let half_w = width * 0.5 * scale.x();
+        let half_h = height * 0.5 * scale.y();
+        let cos_t = rotation.cos();
+        let sin_t = rotation.sin();
+        let corners = [
+            Vec2::new(-half_w, half_h),
+            Vec2::new(-half_w, -half_h),
+            Vec2::new(half_w, -half_h),
+            Vec2::new(half_w, half_h),
+        ];
+
+        let transform_corner = |corner: Vec2| {
+            let rotated_x = corner.x() * cos_t - corner.y() * sin_t;
+            let rotated_y = corner.x() * sin_t + corner.y() * cos_t;
+            self.world_to_clip(
+                position.x() + rotated_x,
+                position.y() + rotated_y,
+                camera_position,
+            )
+        };
+
+        let white = Self::color_to_array(Color::WHITE);
+        let item = self.build_quad_draw_item_with_options(
+            transform_corner(corners[0]),
+            transform_corner(corners[1]),
+            transform_corner(corners[2]),
+            transform_corner(corners[3]),
+            [white, white, white, white],
+            [[0.0, 0.0], [0.0, 1.0], [1.0, 1.0], [1.0, 0.0]],
+            Some(texture_key),
+            draw_order,
+        );
+
+        Some((item, upload))
+    }
+
     fn build_line_draw_item(
         &self,
         start_x: f32,
@@ -2079,6 +2171,68 @@ impl RenderManager {
         items
     }
 
+    fn collect_text_mesh_draw_items(
+        &mut self,
+        objects: &ObjectManager,
+        camera_position: Vec2,
+    ) -> (Vec<DrawItem>, Vec<PendingTextureUpload>) {
+        let mut items = Vec::new();
+        let mut texture_uploads = Vec::new();
+        let keys = objects.get_sorted_keys();
+
+        for &id in keys {
+            if self.active_camera_object_id == Some(id) {
+                continue;
+            }
+
+            let Some(object) = objects.get_object_by_id(id) else {
+                continue;
+            };
+
+            if !object.is_active() {
+                continue;
+            }
+
+            let Some(world_transform) = objects.world_transform(id) else {
+                continue;
+            };
+
+            for component in object.all_components() {
+                let Some(text_mesh) = component
+                    .as_any()
+                    .downcast_ref::<crate::core::component::TextMeshComponent>()
+                else {
+                    continue;
+                };
+
+                if !text_mesh.is_effectively_enabled() || !text_mesh.visible() {
+                    continue;
+                }
+
+                if let Some((item, upload)) = self.build_world_text_draw_item(
+                    text_mesh.text(),
+                    world_transform.position,
+                    world_transform.rotation,
+                    world_transform.scale,
+                    text_mesh.font_size(),
+                    text_mesh.color(),
+                    text_mesh.font_path(),
+                    text_mesh.letter_spacing(),
+                    text_mesh.line_spacing(),
+                    camera_position,
+                    text_mesh.draw_order(),
+                ) {
+                    items.push(item);
+                    if let Some(upload) = upload {
+                        texture_uploads.push(upload);
+                    }
+                }
+            }
+        }
+
+        (items, texture_uploads)
+    }
+
     fn collect_draw_items(
         &mut self,
         objects: &ObjectManager,
@@ -2086,8 +2240,12 @@ impl RenderManager {
     ) -> (Vec<DrawItem>, Vec<PendingTextureUpload>) {
         let camera_position = self.active_camera_position(objects);
         let mut items = self.collect_mesh_draw_items(objects, camera_position);
-        let (direct_draw_items, texture_uploads) = self.collect_direct_draw_items(draw_manager);
+        let (mut text_mesh_items, mut text_mesh_uploads) =
+            self.collect_text_mesh_draw_items(objects, camera_position);
+        let (direct_draw_items, mut texture_uploads) = self.collect_direct_draw_items(draw_manager);
+        items.append(&mut text_mesh_items);
         items.extend(direct_draw_items);
+        texture_uploads.append(&mut text_mesh_uploads);
 
         items.sort_by(|a, b| {
             a.draw_order

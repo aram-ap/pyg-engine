@@ -39,7 +39,7 @@ def background_spawner(handle: pyg.EngineHandle, stop_event: threading.Event, co
         
         # Add a visual representation
         mesh = pyg.MeshComponent()
-        mesh.set_geometry_rectangle(20.0, 20.0)
+        mesh.set_geometry(pyg.Mesh.Rect(20.0, 20.0))
         
         r = random.random()
         g = random.random()
