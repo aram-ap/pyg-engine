@@ -21,7 +21,7 @@ impl Default for ObjectType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct GameObject {
     id: u32,
     name: Option<String>,
@@ -31,7 +31,8 @@ pub struct GameObject {
     mesh: Option<MeshComponent>,
     components: Vec<Box<dyn ComponentTrait>>,
     object_type: Option<ObjectType>,
-    active: bool,
+    enabled_self: bool,
+    enabled_in_hierarchy: bool,
 }
 
 impl GameObject {
@@ -50,7 +51,8 @@ impl GameObject {
             mesh: None,
             components: Vec::new(),
             object_type: None,
-            active: true,
+            enabled_self: true,
+            enabled_in_hierarchy: true,
         }
     }
 
@@ -70,7 +72,8 @@ impl GameObject {
             mesh: None,
             components: Vec::new(),
             object_type: None,
-            active: true,
+            enabled_self: true,
+            enabled_in_hierarchy: true,
         }
     }
 
@@ -98,13 +101,26 @@ impl GameObject {
         self.name.as_deref()
     }
 
-    /**
-        Adds a child to the game object.
-        @param child: The child to add.
-    */
-    pub fn add_child(&mut self, child: &GameObject) {
-        let child_id = child.get_id();
-        self.children.push(child_id);
+    pub fn parent_id(&self) -> Option<u32> {
+        self.parent
+    }
+
+    pub fn set_parent_id(&mut self, parent: Option<u32>) {
+        self.parent = parent;
+    }
+
+    pub fn children(&self) -> &[u32] {
+        &self.children
+    }
+
+    pub fn child_count(&self) -> usize {
+        self.children.len()
+    }
+
+    pub fn add_child_id(&mut self, child_id: u32) {
+        if !self.children.contains(&child_id) {
+            self.children.push(child_id);
+        }
     }
 
     /**
@@ -112,7 +128,28 @@ impl GameObject {
         @param component: The component to add.
     */
     pub fn add_component(&mut self, component: Box<dyn ComponentTrait>) {
+        if component.as_any().is::<TransformComponent>() {
+            let transform = component
+                .into_any()
+                .downcast::<TransformComponent>()
+                .expect("transform downcast should succeed");
+            self.transform = *transform;
+            self.refresh_component_enabled_states();
+            return;
+        }
+
+        if component.as_any().is::<MeshComponent>() {
+            let mesh = component
+                .into_any()
+                .downcast::<MeshComponent>()
+                .expect("mesh downcast should succeed");
+            self.mesh = Some(*mesh);
+            self.refresh_component_enabled_states();
+            return;
+        }
+
         self.components.push(component);
+        self.refresh_component_enabled_states();
     }
 
     /// Gets the transform component for this game object.
@@ -128,6 +165,7 @@ impl GameObject {
     /// Replaces the transform component.
     pub fn set_transform(&mut self, transform: TransformComponent) {
         self.transform = transform;
+        self.refresh_component_enabled_states();
     }
 
     /// Gets the position of the game object.
@@ -163,6 +201,7 @@ impl GameObject {
     /// Adds or replaces the mesh component.
     pub fn add_mesh_component(&mut self, mesh: MeshComponent) {
         self.mesh = Some(mesh);
+        self.refresh_component_enabled_states();
     }
 
     /// Removes and returns the mesh component if present.
@@ -193,7 +232,6 @@ impl GameObject {
     pub fn remove_child_by_id(&mut self, id: u32) -> Option<u32> {
         if let Some(index) = self.children.iter().position(|c| *c == id) {
             let child_id = self.children.swap_remove(index);
-            // Note: Setting child.parent to None should be handled by the ObjectManager
             Some(child_id)
         } else {
             None
@@ -223,11 +261,7 @@ impl GameObject {
         @return: The child id.
     */
     pub fn get_child_by_id(&self, id: u32) -> Option<u32> {
-        if let Some(index) = self.children.iter().position(|c| *c == id) {
-            Some(self.children[index])
-        } else {
-            None
-        }
+        self.children.iter().find(|c| **c == id).copied()
     }
 
     // /**
@@ -247,7 +281,31 @@ impl GameObject {
         @return: The removed component.
     */
     pub fn remove_component_by_name(&mut self, name: &str) -> Option<Box<dyn ComponentTrait>> {
+        if self.mesh_component().is_some_and(|mesh| mesh.name() == name) {
+            return self
+                .remove_mesh_component()
+                .map(|component| Box::new(component) as Box<dyn ComponentTrait>);
+        }
+
         if let Some(index) = self.components.iter().position(|c| c.name() == name) {
+            Some(self.components.remove(index))
+        } else {
+            None
+        }
+    }
+
+    pub fn remove_component_by_id(&mut self, component_id: u32) -> Option<Box<dyn ComponentTrait>> {
+        if self.transform.id() == component_id {
+            return None;
+        }
+
+        if self.mesh_component().is_some_and(|mesh| mesh.id() == component_id) {
+            return self
+                .remove_mesh_component()
+                .map(|component| Box::new(component) as Box<dyn ComponentTrait>);
+        }
+
+        if let Some(index) = self.components.iter().position(|c| c.id() == component_id) {
             Some(self.components.remove(index))
         } else {
             None
@@ -260,9 +318,36 @@ impl GameObject {
         @return: The component.
     */
     pub fn get_component_by_name(&self, name: &str) -> Option<&dyn ComponentTrait> {
+        if self.transform.name() == name {
+            return Some(&self.transform);
+        }
+
+        if let Some(mesh) = &self.mesh
+            && mesh.name() == name
+        {
+            return Some(mesh);
+        }
+
         self.components
             .iter()
             .find(|c| c.name() == name)
+            .map(|c| c.as_ref())
+    }
+
+    pub fn get_component_by_id(&self, component_id: u32) -> Option<&dyn ComponentTrait> {
+        if self.transform.id() == component_id {
+            return Some(&self.transform);
+        }
+
+        if let Some(mesh) = &self.mesh
+            && mesh.id() == component_id
+        {
+            return Some(mesh);
+        }
+
+        self.components
+            .iter()
+            .find(|c| c.id() == component_id)
             .map(|c| c.as_ref())
     }
 
@@ -272,8 +357,40 @@ impl GameObject {
         @return: The mutable component.
     */
     pub fn get_component_by_name_mut(&mut self, name: &str) -> Option<&mut (dyn ComponentTrait + '_)> {
+        if self.transform.name() == name {
+            return Some(&mut self.transform);
+        }
+
+        if let Some(mesh) = &mut self.mesh
+            && mesh.name() == name
+        {
+            return Some(mesh);
+        }
+
         for component in self.components.iter_mut() {
             if component.name() == name {
+                return Some(component.as_mut());
+            }
+        }
+        None
+    }
+
+    pub fn get_component_by_id_mut(
+        &mut self,
+        component_id: u32,
+    ) -> Option<&mut (dyn ComponentTrait + '_)> {
+        if self.transform.id() == component_id {
+            return Some(&mut self.transform);
+        }
+
+        if let Some(mesh) = &mut self.mesh
+            && mesh.id() == component_id
+        {
+            return Some(mesh);
+        }
+
+        for component in self.components.iter_mut() {
+            if component.id() == component_id {
                 return Some(component.as_mut());
             }
         }
@@ -285,6 +402,16 @@ impl GameObject {
         @return: The component if found and type matches.
     */
     pub fn get_component<T: ComponentTrait + 'static>(&self) -> Option<&T> {
+        if let Some(concrete) = self.transform.as_any().downcast_ref::<T>() {
+            return Some(concrete);
+        }
+
+        if let Some(mesh) = &self.mesh
+            && let Some(concrete) = mesh.as_any().downcast_ref::<T>()
+        {
+            return Some(concrete);
+        }
+
         for component in self.components.iter() {
             if let Some(concrete) = component.as_any().downcast_ref::<T>() {
                 return Some(concrete);
@@ -298,6 +425,16 @@ impl GameObject {
         @return: The mutable component if found and type matches.
     */
     pub fn get_component_mut<T: ComponentTrait + 'static>(&mut self) -> Option<&mut T> {
+        if let Some(concrete) = self.transform.as_any_mut().downcast_mut::<T>() {
+            return Some(concrete);
+        }
+
+        if let Some(mesh) = &mut self.mesh
+            && let Some(concrete) = mesh.as_any_mut().downcast_mut::<T>()
+        {
+            return Some(concrete);
+        }
+
         for component in self.components.iter_mut() {
             if let Some(concrete) = component.as_any_mut().downcast_mut::<T>() {
                 return Some(concrete);
@@ -314,12 +451,45 @@ impl GameObject {
         self.components.iter()
     }
 
+    pub fn all_components(&self) -> Vec<&dyn ComponentTrait> {
+        let mut components: Vec<&dyn ComponentTrait> =
+            Vec::with_capacity(self.components.len() + 2 + usize::from(self.mesh.is_some()));
+        components.push(&self.transform);
+        if let Some(mesh) = &self.mesh {
+            components.push(mesh);
+        }
+        components.extend(self.components.iter().map(|component| component.as_ref()));
+        components
+    }
+
+    pub fn get_components<T: ComponentTrait + 'static>(&self) -> Vec<&T> {
+        let mut matches = Vec::new();
+
+        if let Some(concrete) = self.transform.as_any().downcast_ref::<T>() {
+            matches.push(concrete);
+        }
+
+        if let Some(mesh) = &self.mesh
+            && let Some(concrete) = mesh.as_any().downcast_ref::<T>()
+        {
+            matches.push(concrete);
+        }
+
+        for component in &self.components {
+            if let Some(concrete) = component.as_any().downcast_ref::<T>() {
+                matches.push(concrete);
+            }
+        }
+
+        matches
+    }
+
     /**
         Checks if the game object is active.
         @return: True if the game object is active, false otherwise.
     */
     pub fn is_active(&self) -> bool {
-        self.active
+        self.is_enabled()
     }
 
     /**
@@ -327,7 +497,37 @@ impl GameObject {
         @param active: The active state to set.
     */
     pub fn set_active(&mut self, active: bool) {
-        self.active = active;
+        self.set_enabled_self(active);
+    }
+
+    pub fn enabled_self(&self) -> bool {
+        self.enabled_self
+    }
+
+    pub fn enabled_in_hierarchy(&self) -> bool {
+        self.enabled_in_hierarchy
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.enabled_self && self.enabled_in_hierarchy
+    }
+
+    pub fn set_enabled_self(&mut self, enabled: bool) -> bool {
+        let old_enabled = self.is_enabled();
+        self.enabled_self = enabled;
+        self.refresh_component_enabled_states();
+        let new_enabled = self.is_enabled();
+        self.dispatch_enabled_callbacks(old_enabled, new_enabled);
+        old_enabled != new_enabled
+    }
+
+    pub fn set_enabled_in_hierarchy(&mut self, enabled: bool) -> bool {
+        let old_enabled = self.is_enabled();
+        self.enabled_in_hierarchy = enabled;
+        self.refresh_component_enabled_states();
+        let new_enabled = self.is_enabled();
+        self.dispatch_enabled_callbacks(old_enabled, new_enabled);
+        old_enabled != new_enabled
     }
 
     /**
@@ -353,12 +553,22 @@ impl GameObject {
         Updates the game object.
     */
     pub fn update(&self, time: &Time) {
-        self.transform.update(time);
-        if let Some(mesh) = &self.mesh {
+        if !self.is_enabled() {
+            return;
+        }
+
+        if self.transform.is_effectively_enabled() {
+            self.transform.update(time);
+        }
+        if let Some(mesh) = &self.mesh
+            && mesh.is_effectively_enabled()
+        {
             mesh.update(time);
         }
         for component in self.components.iter() {
-            component.update(time);
+            if component.is_effectively_enabled() {
+                component.update(time);
+            }
         }
     }
 
@@ -368,12 +578,57 @@ impl GameObject {
         @param fixed_time: The fixed time.
     */
     pub fn fixed_update(&self, time: &Time, fixed_time: f32) {
-        self.transform.fixed_update(time, fixed_time);
-        if let Some(mesh) = &self.mesh {
+        if !self.is_enabled() {
+            return;
+        }
+
+        if self.transform.is_effectively_enabled() {
+            self.transform.fixed_update(time, fixed_time);
+        }
+        if let Some(mesh) = &self.mesh
+            && mesh.is_effectively_enabled()
+        {
             mesh.fixed_update(time, fixed_time);
         }
         for component in self.components.iter() {
-            component.fixed_update(time, fixed_time);
+            if component.is_effectively_enabled() {
+                component.fixed_update(time, fixed_time);
+            }
+        }
+    }
+
+    pub fn invoke_on_destroy(&self) {
+        for component in self.all_components() {
+            component.on_destroy();
+        }
+    }
+
+    fn refresh_component_enabled_states(&mut self) {
+        let object_enabled = self.is_enabled();
+        self.transform.set_enabled_in_hierarchy(object_enabled);
+        if let Some(mesh) = &mut self.mesh {
+            mesh.set_enabled_in_hierarchy(object_enabled);
+        }
+        for component in &mut self.components {
+            component.set_enabled_in_hierarchy(object_enabled);
+        }
+    }
+
+    fn dispatch_enabled_callbacks(&self, was_enabled: bool, is_enabled: bool) {
+        if was_enabled == is_enabled {
+            return;
+        }
+
+        for component in self.all_components() {
+            if !component.is_enabled_self() {
+                continue;
+            }
+
+            if is_enabled {
+                component.on_enable();
+            } else {
+                component.on_disable();
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ use super::aabb_tree::AABBTree;
 use super::collider::ColliderComponent;
 use super::events::{CollisionEvent, CollisionEventType};
 use super::sat::SAT;
+use crate::core::component::ComponentTrait;
 use crate::core::object_manager::ObjectManager;
 use std::collections::HashSet;
 
@@ -69,6 +70,10 @@ impl CollisionWorld {
                 _ => continue,
             };
 
+            if !obj_a.is_enabled() || !obj_b.is_enabled() {
+                continue;
+            }
+
             let (collider_a, collider_b) = match (
                 obj_a.get_component::<ColliderComponent>(),
                 obj_b.get_component::<ColliderComponent>(),
@@ -77,21 +82,32 @@ impl CollisionWorld {
                 _ => continue,
             };
 
+            if !collider_a.is_effectively_enabled() || !collider_b.is_effectively_enabled() {
+                continue;
+            }
+
             // Check layer filtering
             if !collider_a.should_collide_with(&collider_b) {
                 continue;
             }
 
             // Narrow-phase collision detection
+            let (Some(transform_a), Some(transform_b)) = (
+                object_manager.world_transform(id_a),
+                object_manager.world_transform(id_b),
+            ) else {
+                continue;
+            };
+
             let manifold = SAT::test_collision(
                 collider_a.shape(),
-                obj_a.position(),
-                obj_a.rotation(),
-                obj_a.scale(),
+                transform_a.position,
+                transform_a.rotation,
+                transform_a.scale,
                 collider_b.shape(),
-                obj_b.position(),
-                obj_b.rotation(),
-                obj_b.scale(),
+                transform_b.position,
+                transform_b.rotation,
+                transform_b.scale,
             );
 
             if let Some(manifold) = manifold {
@@ -137,13 +153,22 @@ impl CollisionWorld {
 
         for &object_id in all_objects {
             if let Some(obj) = object_manager.get_object_by_id(object_id) {
-                if let Some(collider) = obj.get_component::<ColliderComponent>() {
+                if !obj.is_enabled() {
+                    continue;
+                }
+
+                if let Some(collider) = obj.get_component::<ColliderComponent>()
+                    && collider.is_effectively_enabled()
+                {
                     tracked_objects.insert(object_id);
 
+                    let Some(world_transform) = object_manager.world_transform(object_id) else {
+                        continue;
+                    };
                     let aabb = collider.compute_aabb(
-                        obj.position(),
-                        obj.rotation(),
-                        obj.scale(),
+                        world_transform.position,
+                        world_transform.rotation,
+                        world_transform.scale,
                     );
 
                     // Update or insert in AABB tree
@@ -173,11 +198,20 @@ impl CollisionWorld {
 
         for &object_id in &all_objects {
             if let Some(obj) = object_manager.get_object_by_id(object_id) {
-                if let Some(collider) = obj.get_component::<ColliderComponent>() {
+                if !obj.is_enabled() {
+                    continue;
+                }
+
+                if let Some(collider) = obj.get_component::<ColliderComponent>()
+                    && collider.is_effectively_enabled()
+                {
+                    let Some(world_transform) = object_manager.world_transform(object_id) else {
+                        continue;
+                    };
                     let aabb = collider.compute_aabb(
-                        obj.position(),
-                        obj.rotation(),
-                        obj.scale(),
+                        world_transform.position,
+                        world_transform.rotation,
+                        world_transform.scale,
                     );
 
                     let overlapping = self.aabb_tree.query(&aabb);

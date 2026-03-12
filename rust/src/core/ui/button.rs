@@ -2,7 +2,7 @@ use super::{Rect, StyleState, UIComponentTrait};
 use super::event::UIEvent;
 use super::style::StyleSet;
 use super::layout::UILayoutComponent;
-use crate::core::component::ComponentTrait;
+use crate::core::component::{ComponentTrait, next_component_id};
 use crate::core::draw_manager::DrawManager;
 use crate::core::time::Time;
 use crate::types::color::Color;
@@ -128,6 +128,7 @@ pub enum ButtonTrigger {
 /// - Python examples: `examples/button_features_demo.py`, `examples/ui_demo.py`
 #[derive(Clone)]
 pub struct ButtonComponent {
+    component_id: u32,
     name: String,
     bounds: Rect,
     layout: UILayoutComponent,
@@ -138,6 +139,7 @@ pub struct ButtonComponent {
     is_hovered: bool,
     is_pressed: bool,
     enabled: bool,
+    enabled_in_hierarchy: bool,
     depth: f32,
     trigger_on: ButtonTrigger,
     repeat_interval_ms: Option<f32>,
@@ -181,6 +183,7 @@ impl ButtonComponent {
     /// ```
     pub fn new(name: impl Into<String>) -> Self {
         Self {
+            component_id: next_component_id(),
             name: name.into(),
             bounds: Rect::new(0.0, 0.0, 100.0, 30.0),
             layout: UILayoutComponent::with_fixed_size(100.0, 30.0),
@@ -191,6 +194,7 @@ impl ButtonComponent {
             is_hovered: false,
             is_pressed: false,
             enabled: true,
+            enabled_in_hierarchy: true,
             depth: 0.0,
             trigger_on: ButtonTrigger::Release,
             repeat_interval_ms: None,
@@ -317,7 +321,7 @@ impl ButtonComponent {
     }
 
     fn update_state(&mut self) {
-        if !self.enabled {
+        if !(self.enabled && self.enabled_in_hierarchy) {
             self.current_state = StyleState::Disabled;
         } else if self.is_pressed {
             self.current_state = StyleState::Pressed;
@@ -338,9 +342,34 @@ impl ComponentTrait for ButtonComponent {
         &self.name
     }
 
+    fn id(&self) -> u32 {
+        self.component_id
+    }
+
+    fn component_type(&self) -> &'static str {
+        "Button"
+    }
+
+    fn is_enabled_self(&self) -> bool {
+        self.enabled
+    }
+
+    fn set_enabled_self(&mut self, enabled: bool) {
+        self.set_enabled(enabled);
+    }
+
+    fn is_enabled_in_hierarchy(&self) -> bool {
+        self.enabled_in_hierarchy
+    }
+
+    fn set_enabled_in_hierarchy(&mut self, enabled: bool) {
+        self.enabled_in_hierarchy = enabled;
+        self.update_state();
+    }
+
     fn update(&self, time: &Time) {
         // Handle repeat functionality when button is held down
-        if !self.enabled || !self.is_pressed {
+        if !(self.enabled && self.enabled_in_hierarchy) || !self.is_pressed {
             return;
         }
 
@@ -380,11 +409,19 @@ impl ComponentTrait for ButtonComponent {
     fn on_enable(&self) {}
     fn on_disable(&self) {}
 
+    fn clone_component(&self) -> Box<dyn ComponentTrait> {
+        Box::new(self.clone())
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self
     }
 }
@@ -399,7 +436,7 @@ impl UIComponentTrait for ButtonComponent {
     }
 
     fn handle_event(&mut self, event: &UIEvent) -> bool {
-        if !self.enabled {
+        if !(self.enabled && self.enabled_in_hierarchy) {
             return false;
         }
 
@@ -532,7 +569,7 @@ impl UIComponentTrait for ButtonComponent {
     }
 
     fn is_enabled(&self) -> bool {
-        self.enabled
+        self.enabled && self.enabled_in_hierarchy
     }
 
     fn as_any(&self) -> &dyn Any {

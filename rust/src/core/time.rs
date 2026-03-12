@@ -40,7 +40,7 @@ impl Time {
             .duration_since(self.system_time)
             .unwrap_or_default()
             .as_secs_f32();
-        // wrapping_add avoids explicit conditional and efficiently increments with overflow wrapping to 0
+        // wrapping_add avoids explicit conditional and efficient increments with overflow wrapping to 0
         self.tick_count = self.tick_count.wrapping_add(1);
 
         self.delta_time

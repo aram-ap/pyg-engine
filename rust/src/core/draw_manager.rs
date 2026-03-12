@@ -55,6 +55,8 @@
 //! - Python examples: `examples/python_direct_draw_demo.py`, `examples/python_bulk_draw_demo.py`
 //! - [`RenderManager`](crate::core::render_manager::RenderManager) - Processes draw commands
 
+use crate::core::component::MeshVertex;
+use crate::types::vector::Vec2;
 use crate::types::Color;
 use std::sync::Arc;
 
@@ -185,6 +187,25 @@ pub enum DrawCommand {
         segments: u32,
         draw_order: f32,
     },
+    Arc {
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        color: Color,
+        filled: bool,
+        thickness: f32,
+        segments: u32,
+        draw_order: f32,
+    },
+    Polygon {
+        points: Vec<Vec2>,
+        color: Color,
+        filled: bool,
+        thickness: f32,
+        draw_order: f32,
+    },
 
     /// Draw a rectangle with gradient colors at each corner.
     ///
@@ -251,6 +272,13 @@ pub enum DrawCommand {
         rgba: Arc<[u8]>,
         texture_width: u32,
         texture_height: u32,
+        draw_order: f32,
+    },
+    Mesh {
+        vertices: Vec<MeshVertex>,
+        indices: Vec<u32>,
+        color: Color,
+        texture_path: Option<String>,
         draw_order: f32,
     },
 
@@ -442,6 +470,28 @@ impl DrawManager {
                     *radius *= scale;
                     *thickness *= scale;
                 }
+                DrawCommand::Arc {
+                    center_x,
+                    center_y,
+                    radius,
+                    thickness,
+                    ..
+                } => {
+                    *center_x *= scale;
+                    *center_y *= scale;
+                    *radius *= scale;
+                    *thickness *= scale;
+                }
+                DrawCommand::Polygon {
+                    points,
+                    thickness,
+                    ..
+                } => {
+                    for point in points {
+                        *point = Vec2::new(point.x() * scale, point.y() * scale);
+                    }
+                    *thickness *= scale;
+                }
                 DrawCommand::GradientRect { x, y, width, height, .. } => {
                     *x *= scale;
                     *y *= scale;
@@ -459,6 +509,16 @@ impl DrawManager {
                     *y *= scale;
                     *width *= scale;
                     *height *= scale;
+                }
+                DrawCommand::Mesh { vertices, .. } => {
+                    for vertex in vertices {
+                        let position = vertex.position();
+                        let uv = vertex.uv();
+                        *vertex = MeshVertex::new(
+                            Vec2::new(position.x() * scale, position.y() * scale),
+                            uv,
+                        );
+                    }
                 }
             }
         }
@@ -580,6 +640,51 @@ impl DrawManager {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_arc_with_options(
+        &mut self,
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        color: Color,
+        filled: bool,
+        thickness: f32,
+        segments: u32,
+        draw_order: f32,
+    ) {
+        self.push_command(DrawCommand::Arc {
+            center_x,
+            center_y,
+            radius,
+            start_angle,
+            end_angle,
+            color,
+            filled,
+            thickness,
+            segments,
+            draw_order,
+        });
+    }
+
+    pub fn draw_polygon_with_options(
+        &mut self,
+        points: Vec<Vec2>,
+        color: Color,
+        filled: bool,
+        thickness: f32,
+        draw_order: f32,
+    ) {
+        self.push_command(DrawCommand::Polygon {
+            points,
+            color,
+            filled,
+            thickness,
+            draw_order,
+        });
+    }
+
     pub fn draw_gradient_rect_with_options(
         &mut self,
         x: f32,
@@ -663,6 +768,23 @@ impl DrawManager {
         });
 
         Ok(())
+    }
+
+    pub fn draw_mesh_with_options(
+        &mut self,
+        vertices: Vec<MeshVertex>,
+        indices: Vec<u32>,
+        color: Color,
+        texture_path: Option<String>,
+        draw_order: f32,
+    ) {
+        self.push_command(DrawCommand::Mesh {
+            vertices,
+            indices,
+            color,
+            texture_path,
+            draw_order,
+        });
     }
 
     pub fn draw_text(&mut self, text: String, x: f32, y: f32, color: Color) {

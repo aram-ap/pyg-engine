@@ -14,7 +14,7 @@ use crate::types::Color;
 use crate::types::vector::Vec2;
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::time::Instant;
 use tracing::Level;
 use winit::application::ApplicationHandler;
@@ -26,7 +26,7 @@ pub struct Engine {
     version: String,
     window_manager: Option<WindowManager>,
     render_manager: Option<RenderManager>,
-    object_manager: Option<ObjectManager>,
+    object_manager: Arc<RwLock<ObjectManager>>,
     pub input_manager: Option<InputManager>,
     pub draw_manager: DrawManager,
     pub time: Time,
@@ -63,7 +63,7 @@ impl Engine {
             version: VERSION.to_string(),
             window_manager: None,
             render_manager: None,
-            object_manager: Some(ObjectManager::new()),
+            object_manager: Arc::new(RwLock::new(ObjectManager::new())),
             input_manager: Some(InputManager::new()),
             draw_manager: DrawManager::new(),
             time: Time::new(),
@@ -117,7 +117,7 @@ impl Engine {
             version: VERSION.to_string(),
             window_manager: None,
             render_manager: None,
-            object_manager: Some(ObjectManager::new()),
+            object_manager: Arc::new(RwLock::new(ObjectManager::new())),
             input_manager: Some(InputManager::new()),
             draw_manager: DrawManager::new(),
             time: Time::new(),
@@ -143,6 +143,10 @@ impl Engine {
     /// Get a sender for engine commands
     pub fn get_command_sender(&self) -> Sender<EngineCommand> {
         self.command_sender.clone()
+    }
+
+    pub fn get_object_manager_handle(&self) -> Arc<RwLock<ObjectManager>> {
+        Arc::clone(&self.object_manager)
     }
 
     /// Set the window configuration for the engine
@@ -259,12 +263,7 @@ impl Engine {
     fn ensure_active_camera_object(&mut self) -> Option<u32> {
         let camera_is_valid = self
             .active_camera_object_id
-            .and_then(|id| {
-                self.object_manager
-                    .as_ref()
-                    .and_then(|object_manager| object_manager.get_object_by_id(id))
-                    .map(|_| id)
-            })
+            .and_then(|id| self.object_manager.read().ok()?.get_object_by_id(id).map(|_| id))
             .is_some();
 
         if !camera_is_valid {
@@ -347,9 +346,9 @@ impl Engine {
         };
 
         self.object_manager
-            .as_ref()
-            .and_then(|object_manager| object_manager.get_object_by_id(camera_id))
-            .map(|camera| *camera.transform().position())
+            .read()
+            .ok()
+            .and_then(|object_manager| object_manager.world_position(camera_id))
             .unwrap_or_else(|| Vec2::new(0.0, 0.0))
     }
 
@@ -485,19 +484,14 @@ impl Engine {
     /// Returns the ID of the added object, or None if the object manager is not initialized.
     pub fn add_game_object(&mut self, object: GameObject) -> Option<u32> {
         let object_type = object.get_object_type();
-        if let Some(object_manager) = &mut self.object_manager {
-            let object_id = object_manager.add_object(object);
-            if object_type == ObjectType::Camera && self.active_camera_object_id.is_none() {
-                self.active_camera_object_id = object_id;
-            }
-            if let Some(render_manager) = &mut self.render_manager {
-                render_manager.set_active_camera_object_id(self.active_camera_object_id);
-            }
-            object_id
-        } else {
-            logging::log_warn("Cannot add game object: object manager is not initialized");
-            None
+        let object_id = self.object_manager.write().ok()?.add_object(object);
+        if object_type == ObjectType::Camera && self.active_camera_object_id.is_none() {
+            self.active_camera_object_id = object_id;
         }
+        if let Some(render_manager) = &mut self.render_manager {
+            render_manager.set_active_camera_object_id(self.active_camera_object_id);
+        }
+        object_id
     }
 
     /// Create a new GameObject and add it to the engine
@@ -518,20 +512,99 @@ impl Engine {
 
     /// Get an immutable reference to a game object by id.
     pub fn get_game_object(&self, id: u32) -> Option<&GameObject> {
-        self.object_manager.as_ref()?.get_object_by_id(id)
+        None
     }
 
     /// Get a mutable reference to a game object by id.
     pub fn get_game_object_mut(&mut self, id: u32) -> Option<&mut GameObject> {
-        self.object_manager.as_mut()?.get_object_by_id_mut(id)
+        None
+    }
+
+    pub fn get_game_object_clone(&self, id: u32) -> Option<GameObject> {
+        self.object_manager.read().ok()?.get_object_clone(id)
+    }
+
+    pub fn get_game_object_clones_by_name(&self, name: &str) -> Vec<GameObject> {
+        self.object_manager
+            .read()
+            .map(|object_manager| object_manager.get_object_clones_by_name(name))
+            .unwrap_or_default()
+    }
+
+    pub fn add_child(&mut self, parent_id: u32, child_id: u32) -> Result<(), String> {
+        self.object_manager
+            .write()
+            .map_err(|_| "Object manager lock poisoned".to_string())?
+            .add_child(parent_id, child_id)?;
+        self.request_render_redraw();
+        Ok(())
+    }
+
+    pub fn detach_child(&mut self, child_id: u32) -> bool {
+        let removed = self
+            .object_manager
+            .write()
+            .map(|mut object_manager| object_manager.detach_child(child_id))
+            .unwrap_or(false);
+        if removed {
+            self.request_render_redraw();
+        }
+        removed
+    }
+
+    pub fn get_child_clones(&self, parent_id: u32) -> Vec<GameObject> {
+        self.object_manager
+            .read()
+            .map(|object_manager| {
+                object_manager
+                    .get_child_ids(parent_id)
+                    .into_iter()
+                    .filter_map(|id| object_manager.get_object_clone(id))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub fn get_child_clone_by_id(&self, parent_id: u32, child_id: u32) -> Option<GameObject> {
+        self.object_manager
+            .read()
+            .ok()?
+            .get_child_by_id(parent_id, child_id)
+    }
+
+    pub fn get_child_clones_by_name(&self, parent_id: u32, name: &str) -> Vec<GameObject> {
+        self.object_manager
+            .read()
+            .map(|object_manager| object_manager.get_children_by_name(parent_id, name))
+            .unwrap_or_default()
+    }
+
+    pub fn set_game_object_enabled(&mut self, id: u32, enabled: bool) -> bool {
+        let updated = self
+            .object_manager
+            .write()
+            .map(|mut object_manager| object_manager.set_object_enabled(id, enabled))
+            .unwrap_or(false);
+        if updated {
+            self.request_render_redraw();
+        }
+        updated
     }
 
     /// Remove a game object by id.
     pub fn remove_game_object(&mut self, id: u32) {
-        if let Some(object_manager) = &mut self.object_manager {
-            object_manager.remove_object(id);
+        let removed_ids = self
+            .object_manager
+            .write()
+            .map(|mut object_manager| object_manager.destroy_object_recursive(id))
+            .unwrap_or_default();
+        if removed_ids.is_empty() {
+            return;
         }
-        if self.active_camera_object_id == Some(id) {
+        if self
+            .active_camera_object_id
+            .is_some_and(|camera_id| removed_ids.contains(&camera_id))
+        {
             self.active_camera_object_id = None;
             self.ensure_active_camera_object();
         }
@@ -542,66 +615,138 @@ impl Engine {
 
     /// Update a runtime GameObject position by id.
     pub fn set_game_object_position(&mut self, id: u32, position: Vec2) -> bool {
-        let Some(object_manager) = &mut self.object_manager else {
-            return false;
-        };
+        {
+            let Ok(mut object_manager) = self.object_manager.write() else {
+                return false;
+            };
+            let Some(object) = object_manager.get_object_by_id_mut(id) else {
+                return false;
+            };
+            object.transform_mut().set_position(position);
+        }
+        self.request_render_redraw();
+        true
+    }
 
-        let Some(object) = object_manager.get_object_by_id_mut(id) else {
-            return false;
-        };
-
-        object.transform_mut().set_position(position);
+    pub fn set_game_object_name(&mut self, id: u32, name: String) -> bool {
+        {
+            let Ok(mut object_manager) = self.object_manager.write() else {
+                return false;
+            };
+            let Some(object) = object_manager.get_object_by_id_mut(id) else {
+                return false;
+            };
+            object.set_name(name);
+        }
         self.request_render_redraw();
         true
     }
 
     /// Update a runtime GameObject rotation by id.
     pub fn set_game_object_rotation(&mut self, id: u32, rotation: f32) -> bool {
-        let Some(object_manager) = &mut self.object_manager else {
-            return false;
-        };
-
-        let Some(object) = object_manager.get_object_by_id_mut(id) else {
-            return false;
-        };
-
-        object.transform_mut().set_rotation(rotation);
+        {
+            let Ok(mut object_manager) = self.object_manager.write() else {
+                return false;
+            };
+            let Some(object) = object_manager.get_object_by_id_mut(id) else {
+                return false;
+            };
+            object.transform_mut().set_rotation(rotation);
+        }
         self.request_render_redraw();
         true
     }
 
     /// Update a runtime GameObject scale by id.
     pub fn set_game_object_scale(&mut self, id: u32, scale: Vec2) -> bool {
-        let Some(object_manager) = &mut self.object_manager else {
-            return false;
-        };
-
-        let Some(object) = object_manager.get_object_by_id_mut(id) else {
-            return false;
-        };
-
-        object.transform_mut().set_scale(scale);
+        {
+            let Ok(mut object_manager) = self.object_manager.write() else {
+                return false;
+            };
+            let Some(object) = object_manager.get_object_by_id_mut(id) else {
+                return false;
+            };
+            object.transform_mut().set_scale(scale);
+        }
         self.request_render_redraw();
         true
     }
 
     /// Update a runtime GameObject mesh fill color by id.
     pub fn set_game_object_mesh_fill_color(&mut self, id: u32, color: Option<Color>) -> bool {
-        let Some(object_manager) = &mut self.object_manager else {
-            return false;
-        };
+        let updated = {
+            let Ok(mut object_manager) = self.object_manager.write() else {
+                return false;
+            };
+            let Some(object) = object_manager.get_object_by_id_mut(id) else {
+                return false;
+            };
 
-        let Some(object) = object_manager.get_object_by_id_mut(id) else {
-            return false;
+            if let Some(mesh) = object.mesh_component_mut() {
+                mesh.set_fill_color(color);
+                true
+            } else {
+                false
+            }
         };
-
-        if let Some(mesh) = object.mesh_component_mut() {
-            mesh.set_fill_color(color);
+        if updated {
             self.request_render_redraw();
-            true
-        } else {
-            false
         }
+        updated
+    }
+
+    pub fn add_component_to_game_object(
+        &mut self,
+        object_id: u32,
+        component: Box<dyn crate::core::component::ComponentTrait>,
+    ) -> bool {
+        {
+            let Ok(mut object_manager) = self.object_manager.write() else {
+                return false;
+            };
+            let Some(object) = object_manager.get_object_by_id_mut(object_id) else {
+                return false;
+            };
+            object.add_component(component);
+        }
+        self.request_render_redraw();
+        true
+    }
+
+    pub fn remove_component_from_game_object_by_name(&mut self, object_id: u32, name: &str) -> bool {
+        let removed = {
+            let Ok(mut object_manager) = self.object_manager.write() else {
+                return false;
+            };
+            let Some(object) = object_manager.get_object_by_id_mut(object_id) else {
+                return false;
+            };
+            object.remove_component_by_name(name).is_some()
+        };
+        if removed {
+            self.request_render_redraw();
+        }
+        removed
+    }
+
+    pub fn remove_component_from_game_object_by_id(
+        &mut self,
+        object_id: u32,
+        component_id: u32,
+    ) -> bool {
+        let removed = {
+            let Ok(mut object_manager) = self.object_manager.write() else {
+                return false;
+            };
+            let Some(object) = object_manager.get_object_by_id_mut(object_id) else {
+                return false;
+            };
+            object.remove_component_by_id(component_id).is_some()
+        };
+        if removed {
+            self.request_render_redraw();
+        }
+        removed
     }
 
     fn request_render_redraw(&mut self) {
@@ -887,6 +1032,12 @@ impl Engine {
                 } => {
                     let _ = self.set_game_object_position(object_id, position);
                 }
+                EngineCommand::SetGameObjectName { object_id, name } => {
+                    let _ = self.set_game_object_name(object_id, name);
+                }
+                EngineCommand::SetGameObjectEnabled { object_id, enabled } => {
+                    let _ = self.set_game_object_enabled(object_id, enabled);
+                }
                 EngineCommand::SetGameObjectRotation {
                     object_id,
                     rotation,
@@ -898,6 +1049,30 @@ impl Engine {
                 }
                 EngineCommand::SetGameObjectMeshFillColor { object_id, color } => {
                     let _ = self.set_game_object_mesh_fill_color(object_id, color);
+                }
+                EngineCommand::AddChild {
+                    parent_id,
+                    child_id,
+                } => {
+                    let _ = self.add_child(parent_id, child_id);
+                }
+                EngineCommand::DetachChild { child_id } => {
+                    let _ = self.detach_child(child_id);
+                }
+                EngineCommand::AddComponent {
+                    object_id,
+                    component,
+                } => {
+                    let _ = self.add_component_to_game_object(object_id, component);
+                }
+                EngineCommand::RemoveComponentByName { object_id, name } => {
+                    let _ = self.remove_component_from_game_object_by_name(object_id, &name);
+                }
+                EngineCommand::RemoveComponentById {
+                    object_id,
+                    component_id,
+                } => {
+                    let _ = self.remove_component_from_game_object_by_id(object_id, component_id);
                 }
                 EngineCommand::SetCameraPosition { position } => {
                     let _ = self.set_camera_position(position);
@@ -1051,23 +1226,27 @@ impl Engine {
                     );
                 }
                 EngineCommand::UpdateUILabelText { object_id, text } => {
-                    if let Some(object_manager) = &mut self.object_manager {
+                    if let Ok(mut object_manager) = self.object_manager.write() {
                         if let Some(obj) = object_manager.get_object_by_id_mut(object_id) {
-                            if let Some(comp) = obj.get_component_by_name_mut("Label") {
-                                if let Some(label) = comp.as_any_mut().downcast_mut::<crate::core::ui::label::LabelComponent>() {
-                                    label.set_text(text);
-                                }
+                            if let Some(comp) = obj.get_component_by_name_mut("Label")
+                                && let Some(label) = comp
+                                    .as_any_mut()
+                                    .downcast_mut::<crate::core::ui::label::LabelComponent>()
+                            {
+                                label.set_text(text);
                             }
                         }
                     }
                 }
                 EngineCommand::UpdateUIButtonText { object_id, text } => {
-                    if let Some(object_manager) = &mut self.object_manager {
+                    if let Ok(mut object_manager) = self.object_manager.write() {
                         if let Some(obj) = object_manager.get_object_by_id_mut(object_id) {
-                            if let Some(comp) = obj.get_component_by_name_mut("Button") {
-                                if let Some(btn) = comp.as_any_mut().downcast_mut::<crate::core::ui::button::ButtonComponent>() {
-                                    btn.set_text(text);
-                                }
+                            if let Some(comp) = obj.get_component_by_name_mut("Button")
+                                && let Some(btn) = comp
+                                    .as_any_mut()
+                                    .downcast_mut::<crate::core::ui::button::ButtonComponent>()
+                            {
+                                btn.set_text(text);
                             }
                         }
                     }
@@ -1120,17 +1299,19 @@ impl Engine {
         // Event System - enqueue input events
 
         // UI - input handling / hit-testing (UI gets first right of refusal)
-        if let (Some(ui_manager), Some(input_manager), Some(object_manager)) =
-            (&mut self.ui_manager, &self.input_manager, &mut self.object_manager)
-        {
-            ui_manager.update(input_manager, object_manager);
-
-            // If UI consumed input, mark scene dirty and request redraw
-            // This ensures UI updates continue even in redraw_on_change_only mode
-            if ui_manager.is_input_consumed() {
-                if let Some(object_manager) = &mut self.object_manager {
+        if let (Some(ui_manager), Some(input_manager)) = (&mut self.ui_manager, &self.input_manager) {
+            let consumed = if let Ok(mut object_manager) = self.object_manager.write() {
+                ui_manager.update(input_manager, &mut object_manager);
+                if ui_manager.is_input_consumed() {
                     object_manager.mark_scene_dirty();
+                    true
+                } else {
+                    false
                 }
+            } else {
+                false
+            };
+            if consumed {
                 self.request_render_redraw();
             }
         }
@@ -1138,14 +1319,13 @@ impl Engine {
         // Event System - dispatch "unconsumed" gameplay input events
 
         // GameObjects + Components - pre-physics (gameplay/AI/scripts)
-        if let Some(object_manager) = &mut self.object_manager {
+        if let Ok(mut object_manager) = self.object_manager.write() {
             if object_manager.get_total_objects() > 0 {
-                // Component updates can mutate object state through interior mutability.
-                // Mark scene state as potentially changed before running user updates.
                 object_manager.mark_scene_dirty();
             }
 
-            for &key in object_manager.get_keys() {
+            let keys = object_manager.get_keys().to_vec();
+            for key in keys {
                 if let Some(object) = object_manager.get_object_by_id(key) {
                     object.update(&self.time);
                 }
@@ -1155,21 +1335,20 @@ impl Engine {
         // **Fixed update:**
         // Physics (often fixed-timestep; may run 0..N steps)
         let (is_fixed_time, fixed_time) = self.time.tick_fixed();
-        if is_fixed_time && let Some(object_manager) = &mut self.object_manager {
+        if is_fixed_time && let Ok(mut object_manager) = self.object_manager.write() {
             if object_manager.get_total_objects() > 0 {
-                // Fixed-step systems may also update transforms/mesh state.
                 object_manager.mark_scene_dirty();
             }
 
-            for &key in object_manager.get_keys() {
+            let keys = object_manager.get_keys().to_vec();
+            for key in keys {
                 if let Some(object) = object_manager.get_object_by_id(key) {
                     object.fixed_update(&self.time, fixed_time);
                 }
             }
 
-            // Run collision detection
             if let Some(collision_world) = &mut self.collision_world {
-                collision_world.step(object_manager);
+                collision_world.step(&object_manager);
             }
         }
 
@@ -1205,26 +1384,30 @@ impl Engine {
         self.ensure_active_camera_object();
 
         // Render UI elements
-        if let (Some(ui_manager), Some(object_manager)) = (&mut self.ui_manager, &self.object_manager) {
-            ui_manager.render(&mut self.draw_manager, object_manager);
+        if let Some(ui_manager) = &mut self.ui_manager
+            && let Ok(object_manager) = self.object_manager.read()
+        {
+            ui_manager.render(&mut self.draw_manager, &object_manager);
         }
 
         if let Some(render_manager) = &mut self.render_manager {
-            match render_manager.render(&self.object_manager, Some(&self.draw_manager)) {
+            let render_result = if let Ok(object_manager) = self.object_manager.read() {
+                render_manager.render(&object_manager, Some(&self.draw_manager))
+            } else {
+                Ok(())
+            };
+            match render_result {
                 Ok(_) => {
-                    // Update FPS counter on successful render
                     if self.show_fps_in_title {
                         self.update_fps_counter();
                     }
                 }
-                Err(wgpu::SurfaceError::Lost) => {
-                    // Surface is lost, need to reconfigure
+                Err(wgpu::SurfaceError::Outdated) => {
                     if let Some(window_manager) = &self.window_manager {
                         render_manager.resize(window_manager.size());
                     }
                 }
-                Err(wgpu::SurfaceError::Outdated) => {
-                    // Surface is outdated, reconfigure with current size
+                Err(wgpu::SurfaceError::Lost) => {
                     if let Some(window_manager) = &self.window_manager {
                         render_manager.resize(window_manager.size());
                     }
@@ -1464,17 +1647,18 @@ impl ApplicationHandler for Engine {
 
             // If there are UI objects, continuously update to process input
             // This ensures UI works in redraw_on_change_only mode without callbacks
-            if let Some(object_manager) = &self.object_manager {
-                if object_manager.has_ui_objects() {
-                    window_manager.request_redraw();
-                    return;
-                }
+            if let Ok(object_manager) = self.object_manager.read()
+                && object_manager.has_ui_objects()
+            {
+                window_manager.request_redraw();
+                return;
             }
         }
 
         if let Some(window_manager) = &self.window_manager
             && let Some(render_manager) = &mut self.render_manager
-            && render_manager.should_request_redraw(&self.object_manager, Some(&self.draw_manager))
+            && let Ok(object_manager) = self.object_manager.read()
+            && render_manager.should_request_redraw(&object_manager, Some(&self.draw_manager))
         {
             window_manager.request_redraw();
         }

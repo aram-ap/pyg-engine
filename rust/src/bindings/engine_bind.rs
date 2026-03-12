@@ -3,7 +3,7 @@ use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use std::cell::RefCell;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::platform::pump_events::{EventLoopExtPumpEvents, PumpStatus};
 
@@ -15,6 +15,7 @@ use crate::core::draw_manager::DrawCommand;
 use crate::core::engine::Engine as RustEngine;
 use crate::core::game_object::GameObject as RustGameObject;
 use crate::core::input_manager::{MouseAxisBinding, MouseAxisType};
+use crate::core::object_manager::ObjectManager;
 use crate::core::render_manager::CameraAspectMode;
 use crate::core::time::Time as RustTime;
 use crate::core::ui::{Rect, UIComponentTrait};
@@ -28,6 +29,7 @@ use super::color_bind::PyColor;
 use super::input_bind::{PyKeys, PyMouseButton, parse_key, parse_mouse_button};
 use super::physics_bind::PyCollider;
 use super::vector_bind::{PyVec2, PyVec3};
+use crate::core::physics::collider::ColliderComponent;
 
 // ========== Engine Bindings ==========
 
@@ -64,6 +66,72 @@ fn parse_camera_aspect_mode(mode_name: &str) -> Option<CameraAspectMode> {
         "fillboth" | "fill" | "cover" => Some(CameraAspectMode::FillBoth),
         _ => None,
     }
+}
+
+fn component_to_pyobject(py: Python<'_>, component: &dyn ComponentTrait) -> PyResult<Py<PyAny>> {
+    if let Some(transform) = component.as_any().downcast_ref::<TransformComponent>() {
+        return Ok(Py::new(
+            py,
+            PyTransformComponent {
+                inner: transform.clone(),
+            },
+        )?
+        .into_any());
+    }
+    if let Some(mesh) = component.as_any().downcast_ref::<MeshComponent>() {
+        return Ok(Py::new(py, PyMeshComponent { inner: mesh.clone() })?.into_any());
+    }
+    if let Some(button) = component.as_any().downcast_ref::<ButtonComponent>() {
+        return Ok(Py::new(py, PyButtonComponent { inner: button.clone() })?.into_any());
+    }
+    if let Some(panel) = component.as_any().downcast_ref::<PanelComponent>() {
+        return Ok(Py::new(py, PyPanelComponent { inner: panel.clone() })?.into_any());
+    }
+    if let Some(label) = component.as_any().downcast_ref::<LabelComponent>() {
+        return Ok(Py::new(py, PyLabelComponent { inner: label.clone() })?.into_any());
+    }
+    if let Some(collider) = component.as_any().downcast_ref::<ColliderComponent>() {
+        return Ok(Py::new(
+            py,
+            PyCollider {
+                component: collider.clone(),
+            },
+        )?
+        .into_any());
+    }
+
+    Err(PyRuntimeError::new_err(format!(
+        "Unsupported component type '{}'",
+        component.component_type()
+    )))
+}
+
+fn component_type_name_from_py(value: &Bound<'_, PyAny>) -> PyResult<String> {
+    if let Ok(name) = value.extract::<String>() {
+        return Ok(name);
+    }
+
+    if let Ok(name_attr) = value.getattr("__name__")
+        && let Ok(name) = name_attr.extract::<String>()
+    {
+        return Ok(name);
+    }
+
+    Err(PyRuntimeError::new_err(
+        "Component type must be a string or a component class",
+    ))
+}
+
+fn component_id_from_py(value: &Bound<'_, PyAny>) -> PyResult<u32> {
+    if let Ok(component_id) = value.getattr("id")
+        && let Ok(component_id) = component_id.extract::<u32>()
+    {
+        return Ok(component_id);
+    }
+
+    Err(PyRuntimeError::new_err(
+        "Component must expose an integer 'id' property",
+    ))
 }
 
 #[pyclass(name = "CameraAspectMode")]
@@ -401,6 +469,70 @@ impl PyDrawCommand {
                 filled,
                 thickness,
                 segments,
+                draw_order,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (
+        center_x,
+        center_y,
+        radius,
+        start_angle,
+        end_angle,
+        color,
+        filled=true,
+        thickness=1.0,
+        segments=32,
+        draw_order=0.0
+    ))]
+    fn arc(
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        color: &PyColor,
+        filled: bool,
+        thickness: f32,
+        segments: u32,
+        draw_order: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::Arc {
+                center_x,
+                center_y,
+                radius,
+                start_angle,
+                end_angle,
+                color: color.inner,
+                filled,
+                thickness,
+                segments,
+                draw_order,
+            },
+        }
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (points, color, filled=true, thickness=1.0, draw_order=0.0))]
+    fn polygon(
+        points: Vec<(f32, f32)>,
+        color: &PyColor,
+        filled: bool,
+        thickness: f32,
+        draw_order: f32,
+    ) -> Self {
+        Self {
+            inner: DrawCommand::Polygon {
+                points: points
+                    .into_iter()
+                    .map(|(x, y)| crate::types::vector::Vec2::new(x, y))
+                    .collect(),
+                color: color.inner,
+                filled,
+                thickness,
                 draw_order,
             },
         }
@@ -768,6 +900,60 @@ impl PyDrawCommand {
                 rgba: Arc::from(rgba),
                 texture_width,
                 texture_height,
+                draw_order,
+            },
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (
+        vertices,
+        indices,
+        color,
+        texture_path=None,
+        uvs=None,
+        draw_order=0.0
+    ))]
+    fn mesh(
+        vertices: Vec<(f32, f32)>,
+        indices: Vec<u32>,
+        color: &PyColor,
+        texture_path: Option<String>,
+        uvs: Option<Vec<(f32, f32)>>,
+        draw_order: f32,
+    ) -> PyResult<Self> {
+        if vertices.is_empty() {
+            return Err(PyRuntimeError::new_err(
+                "mesh requires at least one vertex",
+            ));
+        }
+
+        let uvs = uvs.unwrap_or_else(|| vec![(0.0, 0.0); vertices.len()]);
+        if uvs.len() != vertices.len() {
+            return Err(PyRuntimeError::new_err(format!(
+                "mesh UV count mismatch: expected {} entries, got {}",
+                vertices.len(),
+                uvs.len()
+            )));
+        }
+
+        let mesh_vertices = vertices
+            .into_iter()
+            .zip(uvs)
+            .map(|((x, y), (u, v))| {
+                crate::core::component::MeshVertex::new(
+                    crate::types::vector::Vec2::new(x, y),
+                    crate::types::vector::Vec2::new(u, v),
+                )
+            })
+            .collect();
+
+        Ok(Self {
+            inner: DrawCommand::Mesh {
+                vertices: mesh_vertices,
+                indices,
+                color: color.inner,
+                texture_path,
                 draw_order,
             },
         })
@@ -1181,9 +1367,43 @@ impl PyEngine {
         let object_id = self.inner.add_game_object(runtime_obj);
 
         if let Some(id) = object_id {
-            game_object.bind_runtime(self.inner.get_command_sender(), id);
+            game_object.bind_runtime(
+                self.inner.get_command_sender(),
+                id,
+                self.inner.get_object_manager_handle(),
+            );
         }
         object_id
+    }
+
+    fn get_game_object_id(&self, object_id: u32) -> Option<PyGameObject> {
+        self.inner.get_game_object_clone(object_id).map(|object| {
+            PyGameObject::from_runtime(
+                object,
+                self.inner.get_command_sender(),
+                self.inner.get_object_manager_handle(),
+            )
+        })
+    }
+
+    fn get_game_object_name(&self, name: &str) -> Vec<PyGameObject> {
+        self.inner
+            .get_game_object_clones_by_name(name)
+            .into_iter()
+            .map(|object| {
+                PyGameObject::from_runtime(
+                    object,
+                    self.inner.get_command_sender(),
+                    self.inner.get_object_manager_handle(),
+                )
+            })
+            .collect()
+    }
+
+    fn get_camera_object(&self) -> Option<PyGameObject> {
+        self.inner
+            .active_camera_object_id()
+            .and_then(|object_id| self.get_game_object_id(object_id))
     }
 
     /// Create and add a default GameObject (or named one) to the runtime scene.
@@ -4103,8 +4323,9 @@ impl PyTime {
 ///
 /// `GameObject` is the fundamental building block of your game. Each GameObject has:
 /// - **Transform**: Position, rotation, scale
-/// - **Components**: Rendering (mesh), UI elements (button, panel, label)
-/// - **State**: Active/inactive, name, unique ID
+/// - **Components**: Rendering, collision, and UI behavior attached through `add_component(...)`
+/// - **State**: Enabled/disabled, name, unique ID
+/// - **Hierarchy**: Optional parent/child relationships with inherited transforms
 ///
 /// # Creation and Setup
 ///
@@ -4121,7 +4342,7 @@ impl PyTime {
 /// mesh = MeshComponent("Rectangle")
 /// mesh.set_geometry_rectangle(1.0, 1.0)
 /// mesh.set_fill_color(Color.BLUE)
-/// player.set_mesh_component(mesh)
+/// player.add_component(mesh)
 ///
 /// # Add to engine
 /// engine.add_game_object(player)
@@ -4130,24 +4351,30 @@ impl PyTime {
 /// # Transform Properties
 ///
 /// GameObjects use a 2D transform with position, rotation, and scale:
-/// - **position**: `Vec2` in world coordinates
+/// - **position**: `Vec2` local to the parent (world-space when unparented)
 /// - **rotation**: Angle in **radians** (counter-clockwise)
 /// - **scale**: `Vec2` multiplier (1.0 = original size)
+///
+/// In Python, the direct convenience accessors are `obj.position`, `obj.rotation`,
+/// and `obj.scale`. `TransformComponent` is still the underlying runtime component type.
 ///
 /// # Components
 ///
 /// Attach components to add functionality:
 /// - `MeshComponent` - 2D rendering (rectangles, circles, images)
+/// - `Collider` - Collision and trigger callbacks
 /// - `ButtonComponent` - Clickable UI button
 /// - `PanelComponent` - UI container panel
 /// - `LabelComponent` - UI text label
 ///
-/// # Active State
+/// Parent transforms propagate to children in world rendering and physics.
+///
+/// # Enabled State
 ///
 /// GameObjects can be enabled/disabled:
 /// ```python
-/// player.active = False  # Disable (not rendered, not updated)
-/// player.active = True   # Enable
+/// player.enabled = False  # Disable object, children, and components
+/// player.enabled = True
 /// ```
 ///
 /// # Object Types
@@ -4171,6 +4398,7 @@ pub struct PyGameObject {
 struct RuntimeBinding {
     sender: Sender<EngineCommand>,
     object_id: u32,
+    objects: Arc<RwLock<ObjectManager>>,
 }
 
 impl PyGameObject {
@@ -4185,48 +4413,49 @@ impl PyGameObject {
     }
 
     fn to_runtime_game_object(&self) -> RustGameObject {
-        let mut runtime = if let Some(name) = self.inner.name() {
-            RustGameObject::new_named(name.to_string())
-        } else {
-            RustGameObject::new()
-        };
-
-        runtime.set_transform(self.inner.transform().clone());
-        runtime.set_active(self.inner.is_active());
-        runtime.set_object_type(self.inner.get_object_type());
-
-        if let Some(mesh) = self.inner.mesh_component() {
-            runtime.add_mesh_component(mesh.clone());
-        }
-
-        // Copy UI components (Button, Panel, Label) by downcasting and cloning
-        for comp_name in &["Button", "Panel", "Label"] {
-            if let Some(comp) = self.inner.get_component_by_name(comp_name) {
-                if let Some(btn) = comp.as_any().downcast_ref::<ButtonComponent>() {
-                    runtime.add_component(Box::new(btn.clone()));
-                } else if let Some(panel) = comp.as_any().downcast_ref::<PanelComponent>() {
-                    runtime.add_component(Box::new(panel.clone()));
-                } else if let Some(label) = comp.as_any().downcast_ref::<LabelComponent>() {
-                    runtime.add_component(Box::new(label.clone()));
-                }
-            }
-        }
-
-        // Copy ALL other components (including Colliders)
-        use crate::core::physics::collider::ColliderComponent;
-        for component in self.inner.components_iter() {
-            // Check if it's a Collider (and not already copied above)
-            if let Some(collider) = component.as_any().downcast_ref::<ColliderComponent>() {
-                runtime.add_component(Box::new(collider.clone()));
-            }
-        }
-
-        runtime
+        self.inner.clone()
     }
 
-    fn bind_runtime(&self, sender: Sender<EngineCommand>, object_id: u32) {
+    fn bind_runtime(
+        &self,
+        sender: Sender<EngineCommand>,
+        object_id: u32,
+        objects: Arc<RwLock<ObjectManager>>,
+    ) {
         self.runtime_binding
-            .replace(Some(RuntimeBinding { sender, object_id }));
+            .replace(Some(RuntimeBinding {
+                sender,
+                object_id,
+                objects,
+            }));
+    }
+
+    fn current_object(&self) -> RustGameObject {
+        self.runtime_binding
+            .borrow()
+            .as_ref()
+            .and_then(|binding| binding.objects.read().ok()?.get_object_clone(binding.object_id))
+            .unwrap_or_else(|| self.inner.clone())
+    }
+
+    fn refresh_from_runtime(&mut self) {
+        self.inner = self.current_object();
+    }
+
+    fn from_runtime(
+        object: RustGameObject,
+        sender: Sender<EngineCommand>,
+        objects: Arc<RwLock<ObjectManager>>,
+    ) -> Self {
+        let object_id = object.get_id();
+        Self {
+            inner: object,
+            runtime_binding: RefCell::new(Some(RuntimeBinding {
+                sender,
+                object_id,
+                objects,
+            })),
+        }
     }
 }
 
@@ -4274,7 +4503,7 @@ impl PyGameObject {
     /// Once an object is destroyed, its ID may be reused for new objects.
     #[getter]
     fn id(&self) -> u32 {
-        self.inner.get_id()
+        self.current_object().get_id()
     }
 
     /// Get the name of this GameObject.
@@ -4307,7 +4536,20 @@ impl PyGameObject {
     /// - `set_name()` - Change the object's name
     #[getter]
     fn name(&self) -> Option<String> {
-        self.inner.name().map(|name| name.to_string())
+        self.current_object().name().map(|name| name.to_string())
+    }
+
+    #[getter]
+    fn object_type(&self) -> String {
+        match self.current_object().get_object_type() {
+            crate::core::game_object::ObjectType::GameObject => "GameObject",
+            crate::core::game_object::ObjectType::UIObject => "UIObject",
+            crate::core::game_object::ObjectType::ParticleSystem => "ParticleSystem",
+            crate::core::game_object::ObjectType::Sound => "Sound",
+            crate::core::game_object::ObjectType::Light => "Light",
+            crate::core::game_object::ObjectType::Camera => "Camera",
+        }
+        .to_string()
     }
 
     /// Set or change the name of this GameObject.
@@ -4334,53 +4576,59 @@ impl PyGameObject {
     /// # See Also
     /// - `name` (property) - Get the current name
     fn set_name(&mut self, name: String) {
-        self.inner.set_name(name);
+        self.inner.set_name(name.clone());
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::SetGameObjectName {
+                object_id: binding.object_id,
+                name,
+            });
+        }
     }
 
-    /// Check if this GameObject is active.
+    /// Compatibility alias for `enabled`.
     ///
-    /// Active objects are updated and rendered each frame. Inactive objects are ignored
-    /// by the engine until they are activated again.
+    /// Prefer `enabled` in new code. This property remains available for older examples and
+    /// returns the same hierarchy-aware enabled state as `enabled`.
     ///
     /// # Returns
-    /// - `True` - Object is active (updated and rendered)
-    /// - `False` - Object is inactive (dormant)
+    /// - `True` - Object is enabled
+    /// - `False` - Object is disabled
     ///
     /// # Example
     /// ```python
     /// import pyg_engine as pyg
     ///
     /// player = pyg.GameObject("Player")
-    /// print(player.active)  # True (active by default)
+    /// print(player.active)  # True
     ///
-    /// # Deactivate object
+    /// # Disable object through compatibility alias
     /// player.active = False
     /// print(player.active)  # False
     ///
-    /// # Reactivate object
+    /// # Re-enable later
     /// player.active = True
     /// print(player.active)  # True
     /// ```
     ///
     /// # Use Cases
-    /// - **Object pooling**: Deactivate/reactivate objects instead of creating/destroying
-    /// - **Pause mechanics**: Deactivate enemies when game is paused
+    /// - **Object pooling**: Disable/re-enable objects instead of creating/destroying
+    /// - **Pause mechanics**: Disable enemies when the game is paused
     /// - **Conditional rendering**: Hide objects without removing them from the scene
     ///
     /// # See Also
-    /// - `active` (setter) - Set active state
+    /// - `enabled` - Preferred property name in new code
     #[getter]
     fn active(&self) -> bool {
-        self.inner.is_active()
+        self.current_object().is_active()
     }
 
-    /// Set whether this GameObject is active.
+    /// Compatibility setter for `enabled`.
     ///
-    /// Controls whether the object is updated and rendered. Inactive objects remain in
-    /// the scene but are skipped during update and render passes.
+    /// Prefer `enabled` in new code. Disabled objects remain in the scene but are skipped
+    /// during update, render, and collision passes, and disabled parents cascade to children.
     ///
     /// # Arguments
-    /// * `active` - `True` to activate, `False` to deactivate
+    /// * `active` - `True` to enable, `False` to disable
     ///
     /// # Example
     /// ```python
@@ -4405,12 +4653,12 @@ impl PyGameObject {
     ///         self.bullets = []
     ///         for i in range(size):
     ///             bullet = pyg.GameObject(f"Bullet_{i}")
-    ///             bullet.active = False  # Start deactivated
+    ///             bullet.active = False  # Compatibility alias for enabled = False
     ///             engine.add_game_object(bullet)
     ///             self.bullets.append(bullet)
     ///
     ///     def spawn(self, position):
-    ///         # Find inactive bullet
+    ///         # Find disabled bullet
     ///         for bullet in self.bullets:
     ///             if not bullet.active:
     ///                 bullet.position = position
@@ -4423,10 +4671,82 @@ impl PyGameObject {
     /// ```
     ///
     /// # See Also
-    /// - `active` (getter) - Check active state
+    /// - `enabled` - Preferred property name in new code
     #[setter]
     fn set_active(&mut self, active: bool) {
         self.inner.set_active(active);
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::SetGameObjectEnabled {
+                object_id: binding.object_id,
+                enabled: active,
+            });
+        }
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.current_object().is_enabled()
+    }
+
+    #[setter]
+    fn set_enabled(&mut self, enabled: bool) {
+        self.set_active(enabled);
+    }
+
+    fn add_child(&mut self, child: &mut PyGameObject) -> PyResult<()> {
+        self.inner.add_child_id(child.inner.get_id());
+        child.inner.set_parent_id(Some(self.inner.get_id()));
+
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::AddChild {
+                parent_id: binding.object_id,
+                child_id: child.inner.get_id(),
+            });
+        }
+        Ok(())
+    }
+
+    fn get_children(&self) -> Vec<PyGameObject> {
+        let binding_ref = self.runtime_binding.borrow();
+        let Some(binding) = binding_ref.as_ref() else {
+            return Vec::new();
+        };
+
+        binding
+            .objects
+            .read()
+            .map(|object_manager| {
+                self.current_object()
+                    .children()
+                    .iter()
+                    .filter_map(|child_id| object_manager.get_object_clone(*child_id))
+                    .map(|object| {
+                        PyGameObject::from_runtime(
+                            object,
+                            binding.sender.clone(),
+                            Arc::clone(&binding.objects),
+                        )
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    fn get_child_id(&self, child_id: u32) -> Option<PyGameObject> {
+        self.get_children()
+            .into_iter()
+            .find(|child| child.inner.get_id() == child_id)
+    }
+
+    fn get_child_name(&self, name: &str) -> Vec<PyGameObject> {
+        self.get_children()
+            .into_iter()
+            .filter(|child| child.inner.name() == Some(name))
+            .collect()
+    }
+
+    fn get_child_count(&self) -> usize {
+        self.current_object().child_count()
     }
 
     /// Get the position of this GameObject.
@@ -4480,8 +4800,9 @@ impl PyGameObject {
     /// - `examples/python_game_object_transform_demo.py` - Transform examples
     #[getter]
     fn position(&self) -> PyVec2 {
+        let object = self.current_object();
         PyVec2 {
-            inner: *self.inner.transform().position(),
+            inner: *object.transform().position(),
         }
     }
 
@@ -4601,7 +4922,7 @@ impl PyGameObject {
     /// - `GameObject.rotation` - Direct property access
     #[getter]
     fn rotation(&self) -> f32 {
-        self.inner.transform().rotation()
+        self.current_object().transform().rotation()
     }
 
     /// Set the object's rotation angle.
@@ -4777,15 +5098,17 @@ impl PyGameObject {
     /// - `examples/python_game_object_transform_demo.py` - Transform examples
     #[getter]
     fn scale(&self) -> PyVec2 {
+        let object = self.current_object();
         PyVec2 {
-            inner: *self.inner.transform().scale(),
+            inner: *object.transform().scale(),
         }
     }
 
     /// Set the scale of this GameObject.
     ///
     /// Controls the size of the object relative to its original dimensions.
-    /// Scale is applied to both the mesh geometry and any child components.
+    /// Scale is applied to the object's components and propagates through child objects
+    /// when the object is part of a hierarchy.
     ///
     /// # Arguments
     /// * `scale` - Scale factors as `Vec2`:
@@ -4950,7 +5273,7 @@ impl PyGameObject {
     /// - `mesh_component()` - Get the mesh component
     /// - `remove_mesh_component()` - Remove the mesh component
     fn has_mesh_component(&self) -> bool {
-        self.inner.has_mesh_component()
+        self.current_object().has_mesh_component()
     }
 
     /// Add a mesh component to this GameObject.
@@ -4992,19 +5315,32 @@ impl PyGameObject {
     /// engine.add_game_object(obj)
     /// ```
     ///
+    /// Compatibility helper for mesh attachment.
+    ///
+    /// Prefer `add_component(mesh_component)` in new code so mesh, collider, transform,
+    /// and UI components all follow the same attachment API.
+    ///
     /// # See Also
+    /// - `add_component()` - Canonical component attachment API
     /// - `has_mesh_component()` - Check if mesh exists
     /// - `mesh_component()` - Get the mesh component
-    /// - `set_mesh_component()` - Alternative to add (same behavior)
     /// - `MeshComponent` - Mesh component class
     fn add_mesh_component(&mut self, mesh_component: &PyMeshComponent) {
         self.inner.add_mesh_component(mesh_component.inner.clone());
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::AddComponent {
+                object_id: binding.object_id,
+                component: Box::new(mesh_component.inner.clone()),
+            });
+        }
     }
 
     /// Set the mesh component for this GameObject.
     ///
-    /// Attaches or replaces the `MeshComponent` for rendering. This is functionally
-    /// identical to `add_mesh_component()`.
+    /// Compatibility helper for attaching or replacing the `MeshComponent`.
+    ///
+    /// This is functionally identical to `add_mesh_component()`. Prefer
+    /// `add_component(mesh_component)` in new code.
     ///
     /// # Arguments
     /// * `mesh_component` - The `MeshComponent` to attach
@@ -5019,13 +5355,14 @@ impl PyGameObject {
     /// mesh.set_geometry_rectangle(64.0, 64.0)
     /// mesh.set_fill_color(pyg.Color.BLUE)
     ///
-    /// obj.set_mesh_component(mesh)  # Same as add_mesh_component()
+    /// obj.add_component(mesh)  # Preferred
     /// ```
     ///
     /// # See Also
-    /// - `add_mesh_component()` - Preferred method (same behavior)
+    /// - `add_component()` - Preferred method in new code
+    /// - `add_mesh_component()` - Compatibility helper with same behavior
     fn set_mesh_component(&mut self, mesh_component: &PyMeshComponent) {
-        self.inner.add_mesh_component(mesh_component.inner.clone());
+        self.add_mesh_component(mesh_component);
     }
 
     /// Remove the mesh component from this GameObject.
@@ -5079,9 +5416,19 @@ impl PyGameObject {
     /// - `mesh_component()` - Get mesh without removing
     /// - `MeshComponent.visible` - Toggle visibility without removing
     fn remove_mesh_component(&mut self) -> Option<PyMeshComponent> {
-        self.inner
+        let removed = self
+            .inner
             .remove_mesh_component()
-            .map(|inner| PyMeshComponent { inner })
+            .map(|inner| PyMeshComponent { inner });
+        if let Some(binding) = self.runtime_binding.borrow().as_ref()
+            && let Some(mesh) = self.current_object().mesh_component()
+        {
+            let _ = binding.sender.send(EngineCommand::RemoveComponentById {
+                object_id: binding.object_id,
+                component_id: mesh.id(),
+            });
+        }
+        removed
     }
 
     /// Get a copy of this GameObject's mesh component.
@@ -5139,7 +5486,7 @@ impl PyGameObject {
     /// - `remove_mesh_component()` - Remove and get mesh
     /// - GameObject mesh methods: `set_mesh_visible()`, `set_mesh_fill_color()`, etc.
     fn mesh_component(&self) -> Option<PyMeshComponent> {
-        self.inner
+        self.current_object()
             .mesh_component()
             .cloned()
             .map(|inner| PyMeshComponent { inner })
@@ -5575,7 +5922,8 @@ impl PyGameObject {
     /// Set the object type for specialized rendering or behavior.
     ///
     /// Marks the object as a specific type, which affects how the engine handles it.
-    /// Most commonly used to mark objects as UI elements for screen-space rendering.
+    /// Most projects only need the default `"GameObject"` type plus `"UIObject"` for
+    /// objects that carry UI components.
     ///
     /// # Arguments
     /// * `object_type` - Type string (case-sensitive):
@@ -5588,11 +5936,9 @@ impl PyGameObject {
     ///
     /// # UI Objects
     ///
-    /// **UIObject** is the most commonly used type. UI objects:
-    /// - Render in **screen-space** coordinates (pixels from top-left)
-    /// - **Ignore camera** position and viewport
-    /// - Always rendered **on top** of world objects
-    /// - Used for: buttons, panels, labels, menus, HUD elements
+    /// **UIObject** is intended for objects that use UI components such as buttons,
+    /// panels, and labels. Those components render in screen space and ignore the
+    /// world camera.
     ///
     /// # Example
     /// ```python
@@ -5613,7 +5959,7 @@ impl PyGameObject {
     ///
     /// engine = pyg.Engine()
     ///
-    /// # Create UI button
+    /// # Create UI button object
     /// button_obj = pyg.GameObject("Button")
     /// button_obj.set_object_type("UIObject")  # Mark as UI
     ///
@@ -5627,24 +5973,15 @@ impl PyGameObject {
     /// engine.run(title="UI Demo")
     /// ```
     ///
-    /// # Screen-Space vs World-Space
+    /// # Preferred High-Level UI API
     /// ```python
     /// import pyg_engine as pyg
     ///
-    /// # World-space object (affected by camera)
-    /// world_obj = pyg.GameObject("WorldSprite")
-    /// world_obj.position = pyg.Vec2(100.0, 100.0)  # World coordinates
-    /// world_obj.set_mesh_geometry_rectangle(64.0, 64.0)
-    /// world_obj.set_mesh_fill_color(pyg.Color.BLUE)
-    /// # Moves with camera, affected by camera zoom
-    ///
-    /// # Screen-space UI object (ignores camera)
-    /// ui_obj = pyg.GameObject("UIPanel")
-    /// ui_obj.set_object_type("UIObject")
-    /// ui_obj.position = pyg.Vec2(10.0, 10.0)  # Screen pixels from top-left
-    /// ui_obj.set_mesh_geometry_rectangle(200.0, 100.0)
-    /// ui_obj.set_mesh_fill_color(pyg.Color.rgba(0, 0, 0, 128))
-    /// # Always at same screen position, ignores camera
+    /// engine = pyg.Engine()
+    /// panel = pyg.Panel(x=20, y=20, width=220, height=120)
+    /// button = pyg.Button("Play", x=16, y=16, width=120, height=40)
+    /// panel.add_child(button)
+    /// engine.ui.add(panel)
     /// ```
     ///
     /// # See Also
@@ -5663,41 +6000,42 @@ impl PyGameObject {
         self.inner.set_object_type(obj_type);
     }
 
-    /// Add a UI component to this GameObject.
+    /// Add a component to this GameObject.
     ///
-    /// Attaches a UI component (button, panel, or label) to the object. The object
-    /// should typically be marked as a `"UIObject"` for proper screen-space rendering.
+    /// This is the canonical attachment API for runtime components. It accepts mesh,
+    /// transform, collider, and UI component types. If you attach a UI component, the
+    /// object should typically be marked as `"UIObject"` for screen-space rendering.
     ///
     /// # Supported Components
+    /// - `MeshComponent` - 2D rendering
+    /// - `TransformComponent` - Replace the object's local transform
+    /// - `Collider` - Collision / trigger behavior
     /// - `ButtonComponent` - Clickable button with callback
     /// - `PanelComponent` - Rectangular UI container/background
     /// - `LabelComponent` - Text label for UI
     ///
     /// # Arguments
-    /// * `component` - The UI component to attach (ButtonComponent, PanelComponent, or LabelComponent)
+    /// * `component` - The component to attach
     ///
     /// # Returns
     /// - `Ok(())` - Component added successfully
     /// - `Err(TypeError)` - Invalid component type
     ///
-    /// # Example
+    /// # World Component Example
     /// ```python
     /// import pyg_engine as pyg
     ///
-    /// # Create UI object
-    /// ui_obj = pyg.GameObject("UIElement")
-    /// ui_obj.set_object_type("UIObject")
+    /// player = pyg.GameObject("Player")
+    /// mesh = pyg.MeshComponent()
+    /// mesh.set_geometry_rectangle(64.0, 64.0)
+    /// mesh.set_fill_color(pyg.Color.BLUE)
+    /// player.add_component(mesh)
     ///
-    /// # Add button component
-    /// button = pyg.ButtonComponent("ClickMe", 100, 100, 200, 50)
-    /// button.set_text("Click Me!")
-    /// button.set_on_click(lambda: print("Clicked!"))
-    /// ui_obj.add_component(button)
-    ///
-    /// engine.add_game_object(ui_obj)
+    /// collider = pyg.Collider("PlayerCollider")
+    /// player.add_component(collider)
     /// ```
     ///
-    /// # Complete UI Example
+    /// # UI Component Example
     /// ```python
     /// import pyg_engine as pyg
     ///
@@ -5714,9 +6052,8 @@ impl PyGameObject {
     /// # Title label
     /// label_obj = pyg.GameObject("Title")
     /// label_obj.set_object_type("UIObject")
-    /// label = pyg.LabelComponent("TitleText", 100, 70, "Game Menu")
-    /// label.set_font_size(24.0)
-    /// label.set_text_color(pyg.Color.WHITE)
+    /// label = pyg.LabelComponent("Game Menu", 100, 70, 24.0)
+    /// label.set_color(1.0, 1.0, 1.0, 1.0)
     /// label_obj.add_component(label)
     /// engine.add_game_object(label_obj)
     ///
@@ -5751,10 +6088,11 @@ impl PyGameObject {
     /// ```
     ///
     /// # Errors
-    /// Raises `TypeError` if the component is not a valid UI component type:
+    /// Raises `TypeError` if the component is not a supported runtime component type:
     /// ```python
-    /// obj.add_component(mesh)  # TypeError: not a UI component
-    /// obj.add_component(button)  # OK: ButtonComponent
+    /// obj.add_component(mesh)      # OK
+    /// obj.add_component(collider)  # OK
+    /// obj.add_component(button)    # OK
     /// ```
     ///
     /// # See Also
@@ -5764,24 +6102,123 @@ impl PyGameObject {
     /// - `LabelComponent` - Text label
     /// - `examples/ui_demo.py` - Complete UI examples
     fn add_component(&mut self, component: &Bound<'_, PyAny>) -> PyResult<()> {
-        // Try to downcast to each component type
-        if let Ok(button) = component.extract::<PyRef<PyButtonComponent>>() {
-            self.inner.add_component(Box::new(button.inner.clone()));
-            Ok(())
-        } else if let Ok(panel) = component.extract::<PyRef<PyPanelComponent>>() {
-            self.inner.add_component(Box::new(panel.inner.clone()));
-            Ok(())
-        } else if let Ok(label) = component.extract::<PyRef<PyLabelComponent>>() {
-            self.inner.add_component(Box::new(label.inner.clone()));
-            Ok(())
-        } else if let Ok(collider) = component.extract::<PyRef<PyCollider>>() {
-            self.inner.add_component(Box::new(collider.component.clone()));
-            Ok(())
-        } else {
-            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                "Component must be ButtonComponent, PanelComponent, LabelComponent, or Collider"
-            ))
+        let component_box: Box<dyn ComponentTrait> =
+            if let Ok(button) = component.extract::<PyRef<PyButtonComponent>>() {
+                Box::new(button.inner.clone())
+            } else if let Ok(panel) = component.extract::<PyRef<PyPanelComponent>>() {
+                Box::new(panel.inner.clone())
+            } else if let Ok(label) = component.extract::<PyRef<PyLabelComponent>>() {
+                Box::new(label.inner.clone())
+            } else if let Ok(mesh) = component.extract::<PyRef<PyMeshComponent>>() {
+                Box::new(mesh.inner.clone())
+            } else if let Ok(transform) = component.extract::<PyRef<PyTransformComponent>>() {
+                Box::new(transform.inner.clone())
+            } else if let Ok(collider) = component.extract::<PyRef<PyCollider>>() {
+                Box::new(collider.component.clone())
+            } else {
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                    "Component must be MeshComponent, TransformComponent, ButtonComponent, PanelComponent, LabelComponent, or Collider",
+                ));
+            };
+
+        let runtime_component = component_box.clone();
+        self.inner.add_component(component_box);
+        if let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::AddComponent {
+                object_id: binding.object_id,
+                component: runtime_component,
+            });
         }
+        Ok(())
+    }
+
+    fn get_component_name(&self, py: Python<'_>, name: &str) -> PyResult<Option<Py<PyAny>>> {
+        self.current_object()
+            .get_component_by_name(name)
+            .map(|component| component_to_pyobject(py, component))
+            .transpose()
+    }
+
+    fn get_component_id(&self, py: Python<'_>, component_id: u32) -> PyResult<Option<Py<PyAny>>> {
+        self.current_object()
+            .get_component_by_id(component_id)
+            .map(|component| component_to_pyobject(py, component))
+            .transpose()
+    }
+
+    fn get_component_type(
+        &self,
+        py: Python<'_>,
+        component_type: &str,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        let object = self.current_object();
+        for component in object.all_components() {
+            if component.component_type() == component_type {
+                return component_to_pyobject(py, component).map(Some);
+            }
+        }
+        Ok(None)
+    }
+
+    fn get_components_type(
+        &self,
+        py: Python<'_>,
+        component_type: &str,
+    ) -> PyResult<Vec<Py<PyAny>>> {
+        let object = self.current_object();
+        object
+            .all_components()
+            .into_iter()
+            .filter(|component| component.component_type() == component_type)
+            .map(|component| component_to_pyobject(py, component))
+            .collect()
+    }
+
+    #[pyo3(name = "get_component")]
+    fn py_get_component(
+        &self,
+        py: Python<'_>,
+        component_type: &Bound<'_, PyAny>,
+    ) -> PyResult<Option<Py<PyAny>>> {
+        let component_type_name = component_type_name_from_py(component_type)?;
+        self.get_component_type(py, &component_type_name)
+    }
+
+    #[pyo3(name = "get_components")]
+    fn py_get_components(
+        &self,
+        py: Python<'_>,
+        component_type: &Bound<'_, PyAny>,
+    ) -> PyResult<Vec<Py<PyAny>>> {
+        let component_type_name = component_type_name_from_py(component_type)?;
+        self.get_components_type(py, &component_type_name)
+    }
+
+    fn remove_component_name(&mut self, name: &str) -> bool {
+        let removed = self.inner.remove_component_by_name(name).is_some();
+        if removed && let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::RemoveComponentByName {
+                object_id: binding.object_id,
+                name: name.to_string(),
+            });
+        }
+        removed
+    }
+
+    fn remove_component_id(&mut self, component_id: u32) -> bool {
+        let removed = self.inner.remove_component_by_id(component_id).is_some();
+        if removed && let Some(binding) = self.runtime_binding.borrow().as_ref() {
+            let _ = binding.sender.send(EngineCommand::RemoveComponentById {
+                object_id: binding.object_id,
+                component_id,
+            });
+        }
+        removed
+    }
+
+    fn remove_component(&mut self, component: &Bound<'_, PyAny>) -> PyResult<bool> {
+        let component_id = component_id_from_py(component)?;
+        Ok(self.remove_component_id(component_id))
     }
 }
 
@@ -5869,6 +6306,21 @@ impl PyMeshComponent {
         self.inner.name().to_string()
     }
 
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
+    }
+
     fn set_geometry_rectangle(&mut self, width: f32, height: f32) {
         self.inner
             .set_geometry(MeshGeometry::rectangle(width, height));
@@ -5924,18 +6376,20 @@ impl PyMeshComponent {
 
 /// 2D transform component for position, rotation, and scale.
 ///
-/// `TransformComponent` defines the spatial properties of a GameObject in 2D space.
-/// Every GameObject has a transform that controls where it appears and how it's oriented.
+/// `TransformComponent` defines the local spatial properties of a `GameObject` in 2D space.
+/// Every `GameObject` has one, and parent transforms are composed into world-space for
+/// rendering and physics when the object is part of a hierarchy.
 ///
 /// # Properties
 ///
-/// - **position**: `Vec2` - Location in world coordinates
+/// - **position**: `Vec2` - Location relative to the parent (world-space when unparented)
 /// - **rotation**: `float` - Angle in **radians** (counter-clockwise)
 /// - **scale**: `Vec2` - Size multiplier (1.0 = original size)
 ///
 /// # Coordinate System
 ///
-/// - **World space**: Absolute positions in the game world
+/// - **Local space**: Stored on the object relative to its parent
+/// - **World space**: Computed from the full parent chain at runtime
 /// - **Origin**: Typically center of the screen, but configurable via camera
 /// - **Y-axis**: Typically up is positive, down is negative
 ///
@@ -6048,6 +6502,21 @@ impl PyTransformComponent {
     fn name(&self) -> String {
         self.inner.name().to_string()
     }
+
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
+    }
 }
 
 // ========== Module Functions ==========
@@ -6085,8 +6554,23 @@ impl PyButtonComponent {
         self.inner.text().to_string()
     }
 
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
     fn set_enabled(&mut self, enabled: bool) {
         self.inner.set_enabled(enabled);
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
     }
 
     fn set_position(&mut self, x: f32, y: f32) {
@@ -6563,6 +7047,21 @@ impl PyPanelComponent {
     fn name(&self) -> String {
         self.inner.name().to_string()
     }
+
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
+    }
 }
 
 /// Python wrapper for LabelComponent.
@@ -6621,6 +7120,21 @@ impl PyLabelComponent {
     #[getter]
     fn name(&self) -> String {
         self.inner.name().to_string()
+    }
+
+    #[getter]
+    fn id(&self) -> u32 {
+        self.inner.id()
+    }
+
+    #[getter]
+    fn enabled(&self) -> bool {
+        self.inner.is_enabled_self()
+    }
+
+    #[setter(enabled)]
+    fn set_enabled_property(&mut self, enabled: bool) {
+        self.inner.set_enabled_self(enabled);
     }
 }
 

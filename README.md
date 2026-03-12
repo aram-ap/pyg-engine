@@ -66,11 +66,32 @@ import pyg_engine as pyg
 
 engine = pyg.Engine()
 
-# Draw a cyan line
-engine.draw_line(20, 20, 220, 80, pyg.Color.CYAN, thickness=2.0)
-
-# Draw an orange rectangle outline
-engine.draw_rectangle(60, 120, 180, 90, pyg.Color.ORANGE, filled=False, thickness=3.0)
+# Draw shape objects
+engine.draw([
+    pyg.Line(
+        start=pyg.Vec2(20, 20),
+        end=pyg.Vec2(220, 80),
+        color=pyg.Color.CYAN,
+        thickness=2.0,
+    ),
+    pyg.Rect(
+        position=pyg.Vec2(60, 120),
+        width=180,
+        height=90,
+        color=pyg.Color.ORANGE,
+        filled=False,
+        thickness=3.0,
+    ),
+    pyg.Arc(
+        position=pyg.Vec2(320, 180),
+        radius=42,
+        start_angle=0.0,
+        end_angle=3.8,
+        color=pyg.Color.YELLOW,
+        filled=False,
+        thickness=5.0,
+    ),
+])
 
 # Draw text (built-in font by default)
 engine.draw_text("Hello PyG", 32, 48, pyg.Color.WHITE, font_size=28.0)
@@ -79,29 +100,32 @@ engine.draw_text("Hello PyG", 32, 48, pyg.Color.WHITE, font_size=28.0)
 engine.run(title="Direct Draw Demo", show_fps_in_title=True)
 ```
 
-### 3. Using Game Objects & Meshes (Normalized Coordinates)
+### 3. Using Game Objects & Meshes (World Coordinates)
 ```python
 import pyg_engine as pyg
 
 engine = pyg.Engine()
 
-# Create a Game Object
-go = pyg.GameObject("Player")
+# Create a GameObject
+player = pyg.GameObject("Player")
 
-# Add a Mesh Component
+# Add components through the shared component API
 mesh = pyg.MeshComponent("PlayerSprite")
-mesh.set_geometry_rectangle(1.0, 1.0) # 1.0 width/height in normalized units
+mesh.set_geometry_rectangle(1.0, 1.0)  # 1 world unit wide and tall
 mesh.set_fill_color(pyg.Color.RED)
-# mesh.set_image_path("path/to/image.png") # Optional texture
+player.add_component(mesh)
 
-go.set_mesh_component(mesh)
+# Local transform (world-space while unparented)
+player.position = pyg.Vec2(0.0, 0.0)
+player.scale = pyg.Vec2(0.5, 0.5)
 
-# Position is in Normalized Device Coordinates (NDC)
-# (0,0) is center, (-1, -1) bottom-left, (1, 1) top-right
-go.position = pyg.Vec2(0.0, 0.0)
-go.scale = pyg.Vec2(0.5, 0.5)
+player_id = engine.add_game_object(player)
 
-engine.add_game_object(go)
+# Runtime lookup + lifecycle helpers
+runtime_player = engine.objects.get_id(player_id)
+camera = engine.camera
+runtime_player.enabled = True
+# engine.destroy(runtime_player)
 
 engine.run(title="Game Object Demo")
 ```
@@ -143,10 +167,10 @@ raises `RuntimeError`.
 ### Current Capabilities
 - **Window Management**: Resizable windows, VSync control, Fullscreen support.
 - **2D Rendering**:
-    - **Primitives**: Immediate mode drawing using pixel coordinates.
+    - **Primitives**: Shape-first immediate drawing using pixel coordinates.
     - **Text**: Built-in open-source font rendering with optional custom font files.
-    - **Meshes**: Component-based rendering using normalized device coordinates.
-    - **Layers**: Z-indexing and integer layering for draw order control.
+    - **Meshes**: Component-based world-space rendering plus immediate mesh drawing.
+    - **Layers**: Float draw ordering for composition.
 - **Component System**: Basic `GameObject` with `TransformComponent` and `MeshComponent`.
 - **Input System**: Rust input manager (Keyboard, Mouse, Gamepad) to Python.
 - **Loop Control**: `run(...)` with optional callback and explicit `start_manual(...)` mode.
@@ -166,7 +190,7 @@ raises `RuntimeError`.
 
 Check the [`examples/`](examples) directory for more complete demonstrations:
 
-- `python_direct_draw_demo.py`: Shows how to draw basic shapes (pixels, lines, rects).
+- `python_direct_draw_demo.py`: Shows the new `engine.draw(...)` shape API.
 - `python_mesh_demo.py`: Demonstrates the GameObject and Mesh system.
 - `python_threading_demo.py`: **Advanced**: Spawns a background thread that safely updates the UI using `engine.get_handle()`.
 - `python_manual_loop.py`: Shows how to control the game loop manually (`start_manual` -> poll -> update -> render).

@@ -2,7 +2,7 @@
 
 use super::layers::{all, should_collide};
 use super::shapes::{ColliderShape, AABB};
-use crate::core::component::ComponentTrait;
+use crate::core::component::{ComponentTrait, next_component_id};
 use crate::core::time::Time;
 use crate::types::vector::Vec2;
 use std::any::Any;
@@ -13,12 +13,15 @@ pub type CollisionCallback = Arc<Mutex<Option<Box<dyn FnMut(u32, Vec2, f32) + Se
 
 /// Collider component for collision detection
 pub struct ColliderComponent {
+    component_id: u32,
     name: String,
     shape: ColliderShape,
     offset: Vec2,
     layer: u32,
     collision_mask: u32,
     is_trigger: bool,
+    enabled_self: bool,
+    enabled_in_hierarchy: bool,
     // Cached AABB for broad-phase optimization
     cached_aabb: RwLock<Option<AABB>>,
     aabb_dirty: RwLock<bool>,
@@ -42,12 +45,15 @@ impl std::fmt::Debug for ColliderComponent {
 impl Clone for ColliderComponent {
     fn clone(&self) -> Self {
         Self {
+            component_id: self.component_id,
             name: self.name.clone(),
             shape: self.shape.clone(),
             offset: self.offset,
             layer: self.layer,
             collision_mask: self.collision_mask,
             is_trigger: self.is_trigger,
+            enabled_self: self.enabled_self,
+            enabled_in_hierarchy: self.enabled_in_hierarchy,
             // Clone the cached AABB by reading the lock
             cached_aabb: RwLock::new(self.cached_aabb.read().unwrap().clone()),
             aabb_dirty: RwLock::new(*self.aabb_dirty.read().unwrap()),
@@ -62,12 +68,15 @@ impl Clone for ColliderComponent {
 impl ComponentTrait for ColliderComponent {
     fn new(name: String) -> Self {
         Self {
+            component_id: next_component_id(),
             name,
             shape: ColliderShape::circle(0.5),
             offset: Vec2::new(0.0, 0.0),
             layer: 0,
             collision_mask: all(),
             is_trigger: false,
+            enabled_self: true,
+            enabled_in_hierarchy: true,
             cached_aabb: RwLock::new(None),
             aabb_dirty: RwLock::new(true),
             on_collision_enter: Arc::new(Mutex::new(None)),
@@ -78,6 +87,30 @@ impl ComponentTrait for ColliderComponent {
 
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn id(&self) -> u32 {
+        self.component_id
+    }
+
+    fn component_type(&self) -> &'static str {
+        "Collider"
+    }
+
+    fn is_enabled_self(&self) -> bool {
+        self.enabled_self
+    }
+
+    fn set_enabled_self(&mut self, enabled: bool) {
+        self.enabled_self = enabled;
+    }
+
+    fn is_enabled_in_hierarchy(&self) -> bool {
+        self.enabled_in_hierarchy
+    }
+
+    fn set_enabled_in_hierarchy(&mut self, enabled: bool) {
+        self.enabled_in_hierarchy = enabled;
     }
 
     fn update(&self, _time: &Time) {}
@@ -92,11 +125,19 @@ impl ComponentTrait for ColliderComponent {
 
     fn on_disable(&self) {}
 
+    fn clone_component(&self) -> Box<dyn ComponentTrait> {
+        Box::new(self.clone())
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self
     }
 

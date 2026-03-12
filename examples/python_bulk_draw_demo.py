@@ -1,13 +1,13 @@
 import math
 
-from pyg_engine import Color, DrawCommand, Engine
+from pyg_engine import Color, DrawCommand, Engine, Line, Rect
 
 
 def main() -> None:
     """
     Bulk draw demo for pyg_engine.
 
-    Shows how to use the bulk draw API using DrawCommand objects to draw a scene.
+    Shows how to use the bulk draw API with shape objects and `engine.draw([...])`.
     """
 
     engine = Engine()
@@ -33,7 +33,7 @@ def main() -> None:
         display_width, display_height = engine.get_display_size()
         t = engine.elapsed_time
 
-        commands: list[DrawCommand] = [
+        commands = [
             DrawCommand.gradient_rect(
                 0.0,
                 0.0,
@@ -55,12 +55,11 @@ def main() -> None:
             wave = math.sin(i * 0.11 + t * 2.2) * 0.5 + 0.5
             h = baseline + wave * (display_height * 0.45)
             commands.append(
-                DrawCommand.rectangle(
-                    float(x),
-                    float(center_y - h),
-                    bar_width,
-                    float(h),
-                    bar_color,
+                Rect(
+                    position=(float(x), float(center_y - h)),
+                    width=bar_width,
+                    height=float(h),
+                    color=bar_color,
                 )
             )
 
@@ -70,11 +69,16 @@ def main() -> None:
             y0 = center_y - (math.sin((i - 1) * 0.11 + t * 1.6) * 120.0)
             y1 = center_y - (math.sin(i * 0.11 + t * 1.6) * 120.0)
             commands.append(
-                DrawCommand.line(float(x0), float(y0), float(x1), float(y1), line_color, 2.0)
+                Line(
+                    start=(float(x0), float(y0)),
+                    end=(float(x1), float(y1)),
+                    color=line_color,
+                    thickness=2.0,
+                )
             )
 
         engine.clear_draw_commands()
-        engine.add_draw_commands(commands)
+        engine.draw(commands)
         engine.update()
         engine.render()
 

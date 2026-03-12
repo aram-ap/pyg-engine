@@ -26,6 +26,8 @@ except ImportError as e:
 
 DrawCommand = _RustDrawCommand
 
+from .shapes import to_draw_commands
+
 
 class EngineHandle:
     """
@@ -176,8 +178,12 @@ class EngineHandle:
         self._inner.clear_draw_commands()
 
     def add_draw_commands(self, commands: list[Any]) -> None:
-        """Submit many draw commands via command queue in one call."""
-        self._inner.add_draw_commands(commands)
+        """Submit many draw shapes or draw commands via command queue."""
+        self._inner.add_draw_commands(to_draw_commands(commands))
+
+    def draw(self, drawable: Any) -> None:
+        """Draw one shape or a batch of shapes via the command queue."""
+        self._inner.add_draw_commands(to_draw_commands(drawable))
 
     def draw_pixel(
         self,
@@ -658,6 +664,21 @@ class EngineHandle:
         self._inner.log_error(message)
 
 
+class EngineObjects:
+    """Runtime object lookup facade."""
+
+    def __init__(self, engine: "Engine") -> None:
+        self._engine = engine
+
+    def get_id(self, object_id: int) -> Optional[Any]:
+        """Get a runtime object by id."""
+        return self._engine._engine.get_game_object_id(object_id)
+
+    def get_name(self, name: str) -> list[Any]:
+        """Get all runtime objects with a matching name."""
+        return list(self._engine._engine.get_game_object_name(name))
+
+
 class UIManager:
     """
     Manages UI elements like buttons, panels, and labels.
@@ -711,20 +732,53 @@ class UIManager:
         # Import here to avoid circular dependency
         from . import ui as ui_module
 
+        if isinstance(ui_component, (ui_module.Button, ui_module.Panel, ui_module.Label)):
+            return self._add_tree(ui_component)
+        raise TypeError(
+            f"Expected Button, Panel, or Label, got {type(ui_component).__name__}"
+        )
+
+    def get_id(self, object_id: int) -> Optional[Any]:
+        """Get a UI element by runtime id."""
+        obj = self._engine.objects.get_id(object_id)
+        if obj is None or getattr(obj, "object_type", None) != "UIObject":
+            return None
+        return obj
+
+    def get_name(self, name: str) -> list[Any]:
+        """Get UI elements by name."""
+        return [
+            obj
+            for obj in self._engine.objects.get_name(name)
+            if getattr(obj, "object_type", None) == "UIObject"
+        ]
+
+    def _add_tree(self, ui_component: Any) -> Optional[int]:
+        object_id = self._add_single(ui_component)
+        for child in list(getattr(ui_component, "_children", [])):
+            self._add_tree(child)
+            ui_component._game_object.add_child(child._game_object)
+        return object_id
+
+    def _add_single(self, ui_component: Any) -> Optional[int]:
+        from . import ui as ui_module
+
         if isinstance(ui_component, ui_module.Button):
             return self._add_button(ui_component)
-        elif isinstance(ui_component, ui_module.Panel):
+        if isinstance(ui_component, ui_module.Panel):
             return self._add_panel(ui_component)
-        elif isinstance(ui_component, ui_module.Label):
+        if isinstance(ui_component, ui_module.Label):
             return self._add_label(ui_component)
-        else:
-            raise TypeError(
-                f"Expected Button, Panel, or Label, got {type(ui_component).__name__}"
-            )
+        raise TypeError(
+            f"Expected Button, Panel, or Label, got {type(ui_component).__name__}"
+        )
 
     def _add_button(self, button: Any) -> Optional[int]:
         """Internal: Add a Button to the engine."""
         from .pyg_engine_native import GameObject
+
+        if getattr(button, "_object_id", None) is not None:
+            return button._object_id
 
         # Store engine handle for callbacks
         button._engine_handle = self._engine.get_handle()
@@ -734,26 +788,37 @@ class UIManager:
             button._setup_callback()
 
         button._game_object = GameObject()
+        button._game_object.set_name(button.text or "Button")
         button._game_object.set_object_type("UIObject")
         button._game_object.add_component(button._component)
-        return self._engine.add_game_object(button._game_object)
+        button._object_id = self._engine.add_game_object(button._game_object)
+        return button._object_id
 
     def _add_panel(self, panel: Any) -> Optional[int]:
         """Internal: Add a Panel to the engine."""
         from .pyg_engine_native import GameObject
 
+        if getattr(panel, "_object_id", None) is not None:
+            return panel._object_id
+
         panel._game_object = GameObject()
+        panel._game_object.set_name("Panel")
         panel._game_object.set_object_type("UIObject")
         panel._game_object.add_component(panel._component)
-        return self._engine.add_game_object(panel._game_object)
+        panel._object_id = self._engine.add_game_object(panel._game_object)
+        return panel._object_id
 
     def _add_label(self, label: Any) -> Optional[int]:
         """Internal: Add a Label to the engine."""
         from .pyg_engine_native import GameObject
 
+        if getattr(label, "_object_id", None) is not None:
+            return label._object_id
+
         # Store engine handle instead of engine to avoid borrow checker issues in callbacks
         label._engine = self._engine.get_handle()
         label._game_object = GameObject()
+        label._game_object.set_name(label.text or "Label")
         label._game_object.set_object_type("UIObject")
         label._game_object.add_component(label._component)
         label._object_id = self._engine.add_game_object(label._game_object)
@@ -1519,6 +1584,7 @@ class Engine:
         )
         self._input = Input(self)
         self._ui = UIManager(self)
+        self._objects = EngineObjects(self)
         self._runtime_state = _RUNTIME_STATE_IDLE
         self._window_icon_path: Optional[str] = None
 
@@ -1541,6 +1607,16 @@ class Engine:
             UIManager: The UI manager instance for adding UI components.
         """
         return self._ui
+
+    @property
+    def objects(self) -> EngineObjects:
+        """Get the runtime object lookup facade."""
+        return self._objects
+
+    @property
+    def camera(self) -> Optional[Any]:
+        """Get the active camera `GameObject` handle."""
+        return self._engine.get_camera_object()
 
     @property
     def is_running(self) -> bool:
@@ -1930,6 +2006,18 @@ class Engine:
         """Remove a runtime GameObject by id."""
         self._engine.remove_game_object(object_id)
 
+    def _resolve_runtime_object_id(self, game_object_or_id: Any) -> int:
+        object_id = getattr(game_object_or_id, "id", None)
+        if object_id is None:
+            object_id = getattr(game_object_or_id, "_object_id", None)
+        if object_id is None:
+            object_id = game_object_or_id
+        return int(object_id)
+
+    def destroy(self, game_object_or_id: Any) -> None:
+        """Destroy a runtime object by id or object handle."""
+        self.remove_game_object(self._resolve_runtime_object_id(game_object_or_id))
+
     def set_game_object_position(self, object_id: int, position: Any) -> bool:
         """
         Update a runtime GameObject position by id.
@@ -2127,8 +2215,23 @@ class Engine:
         self._engine.clear_draw_commands()
 
     def add_draw_commands(self, commands: list[Any]) -> None:
-        """Submit many draw commands in one call."""
-        self._engine.add_draw_commands(commands)
+        """Submit many draw shapes or draw commands in one call."""
+        self._engine.add_draw_commands(to_draw_commands(commands))
+
+    def draw(self, drawable: Any) -> None:
+        """
+        Draw one shape or a batch of shapes.
+
+        Examples:
+            ```python
+            engine.draw(Circle(position=Vec2(200, 200), radius=40, color=Color.RED))
+            engine.draw([
+                Rect(position=Vec2(20, 20), width=120, height=60, color=Color.BLUE),
+                Line(start=Vec2(0, 0), end=Vec2(100, 100), color=Color.WHITE),
+            ])
+            ```
+        """
+        self._engine.add_draw_commands(to_draw_commands(drawable))
 
     def draw_pixel(
         self,

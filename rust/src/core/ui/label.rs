@@ -2,7 +2,7 @@ use super::{Rect, UIComponentTrait};
 use super::event::UIEvent;
 use super::style::UIStyle;
 use super::layout::UILayoutComponent;
-use crate::core::component::ComponentTrait;
+use crate::core::component::{ComponentTrait, next_component_id};
 use crate::core::draw_manager::DrawManager;
 use crate::core::time::Time;
 use crate::types::color::Color;
@@ -25,6 +25,7 @@ impl Default for TextAlign {
 /// Label UI component for displaying text
 #[derive(Debug, Clone)]
 pub struct LabelComponent {
+    component_id: u32,
     name: String,
     bounds: Rect,
     layout: UILayoutComponent,
@@ -32,12 +33,14 @@ pub struct LabelComponent {
     style: UIStyle,
     text_align: TextAlign,
     enabled: bool,
+    enabled_in_hierarchy: bool,
     depth: f32,
 }
 
 impl LabelComponent {
     pub fn new(name: impl Into<String>) -> Self {
         Self {
+            component_id: next_component_id(),
             name: name.into(),
             bounds: Rect::new(0.0, 0.0, 100.0, 20.0),
             layout: UILayoutComponent::with_fixed_size(100.0, 20.0),
@@ -45,6 +48,7 @@ impl LabelComponent {
             style: UIStyle::transparent(),
             text_align: TextAlign::Left,
             enabled: true,
+            enabled_in_hierarchy: true,
             depth: 0.0,
         }
     }
@@ -135,6 +139,30 @@ impl ComponentTrait for LabelComponent {
         &self.name
     }
 
+    fn id(&self) -> u32 {
+        self.component_id
+    }
+
+    fn component_type(&self) -> &'static str {
+        "Label"
+    }
+
+    fn is_enabled_self(&self) -> bool {
+        self.enabled
+    }
+
+    fn set_enabled_self(&mut self, enabled: bool) {
+        self.enabled = enabled;
+    }
+
+    fn is_enabled_in_hierarchy(&self) -> bool {
+        self.enabled_in_hierarchy
+    }
+
+    fn set_enabled_in_hierarchy(&mut self, enabled: bool) {
+        self.enabled_in_hierarchy = enabled;
+    }
+
     fn update(&self, _time: &Time) {}
     fn fixed_update(&self, _time: &Time, _fixed_time: f32) {}
     fn on_start(&self) {}
@@ -142,11 +170,19 @@ impl ComponentTrait for LabelComponent {
     fn on_enable(&self) {}
     fn on_disable(&self) {}
 
+    fn clone_component(&self) -> Box<dyn ComponentTrait> {
+        Box::new(self.clone())
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self
     }
 }
@@ -209,7 +245,7 @@ impl UIComponentTrait for LabelComponent {
     }
 
     fn is_enabled(&self) -> bool {
-        self.enabled
+        self.enabled && self.enabled_in_hierarchy
     }
 
     fn as_any(&self) -> &dyn Any {

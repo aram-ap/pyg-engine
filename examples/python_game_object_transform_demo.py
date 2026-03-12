@@ -14,18 +14,22 @@ import time
 import pyg_engine as pyg
 
 
-def create_circle_object() -> pyg.GameObject:
+def create_circle_hierarchy() -> tuple[pyg.GameObject, pyg.GameObject]:
+    parent = pyg.GameObject("MovingParent")
+    parent.position = pyg.Vec2(0.0, 0.0)
+
     circle = pyg.GameObject("MovingCircle")
-    circle.position = pyg.Vec2(0.0, 0.0)
+    circle.position = pyg.Vec2(0.70, 0.0)
     circle.scale = pyg.Vec2(0.22, 0.22)
 
     mesh = pyg.MeshComponent("MovingCircleMesh")
     mesh.set_geometry_circle(1.0, segments=48)
     mesh.set_fill_color(pyg.Color.CYAN)
     mesh.draw_order = 2.2
-    circle.set_mesh_component(mesh)
+    circle.add_component(mesh)
 
-    return circle
+    parent.add_child(circle)
+    return parent, circle
 
 
 def main() -> None:
@@ -41,9 +45,16 @@ def main() -> None:
         show_fps_in_title=True,
     )
 
-    circle = create_circle_object()
-    if engine.add_game_object(circle) is None:
-        raise RuntimeError("Failed to add circle GameObject to runtime scene")
+    parent, circle = create_circle_hierarchy()
+    parent_id = engine.add_game_object(parent)
+    circle_id = engine.add_game_object(circle)
+    if parent_id is None or circle_id is None:
+        raise RuntimeError("Failed to add hierarchy to runtime scene")
+
+    runtime_parent = engine.objects.get_id(parent_id)
+    runtime_circle = engine.objects.get_id(circle_id)
+    if runtime_parent is None or runtime_circle is None:
+        raise RuntimeError("Failed to resolve hierarchy runtime handles")
 
     engine.log_info("Running transform update demo. Press ESC to quit.")
 
@@ -55,12 +66,13 @@ def main() -> None:
         pos_x = math.cos(t * 2.0) * 0.70
         pos_y = math.sin(t * 3.0) * 0.45
 
-        # Property updates now propagate to the runtime object after add_game_object.
-        circle.position = pyg.Vec2(pos_x, pos_y)
+        # Parent transform now propagates into the child's world transform.
+        runtime_parent.position = pyg.Vec2(pos_x, pos_y)
+        runtime_parent.rotation = t * 0.8
 
         engine.clear_draw_commands()
         engine.draw_text(
-            "One circle mesh object. Only transform changes per frame.",
+            "Parent transform drives a child circle through hierarchy propagation.",
             24.0,
             24.0,
             pyg.Color.WHITE,
@@ -68,7 +80,7 @@ def main() -> None:
             draw_order=11.0,
         )
         engine.draw_text(
-            f"position=({pos_x:.2f}, {pos_y:.2f})  |  ESC to quit",
+            f"parent_pos=({pos_x:.2f}, {pos_y:.2f})  child_local=({runtime_circle.position.x:.2f}, {runtime_circle.position.y:.2f})",
             24.0,
             56.0,
             pyg.Color.CYAN,
@@ -76,7 +88,7 @@ def main() -> None:
             draw_order=11.0,
         )
         engine.draw_text(
-            "Mesh objects now use world-space coordinates (camera-relative view).",
+            "The child keeps a local offset while render/physics use the composed world transform.",
             24.0,
             84.0,
             pyg.Color.rgb(180, 180, 190),

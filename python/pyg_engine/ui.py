@@ -103,6 +103,10 @@ class Button:
         self._game_object = None
         self._engine_handle = None
         self._user_callback = on_click
+        self._children: list[object] = []
+        self._parent = None
+        self._object_id = None
+        self._enabled = enabled
 
         self._component.set_enabled(enabled)
         self._component.set_depth(depth)
@@ -131,9 +135,11 @@ class Button:
             self._setup_callback()
 
         self._game_object = GameObject()
+        self._game_object.set_name(self.text or "Button")
         self._game_object.set_object_type("UIObject")
         self._game_object.add_component(self._component)
-        return engine.add_game_object(self._game_object)
+        self._object_id = engine.add_game_object(self._game_object)
+        return self._object_id
 
     def _setup_callback(self):
         """Internal: Set up the callback wrapper to pass engine handle if needed."""
@@ -177,6 +183,11 @@ class Button:
         """Set whether the button is enabled."""
         self._enabled = value
         self._component.set_enabled(value)
+
+    @property
+    def id(self) -> Optional[int]:
+        """Get the runtime object id after the button is added."""
+        return self._object_id
 
     def set_position(self, x: float, y: float):
         """
@@ -345,6 +356,10 @@ class Panel:
         """
         self._component = PanelComponent(x, y, width, height)
         self._game_object = None
+        self._children: list[object] = []
+        self._parent = None
+        self._object_id = None
+        self._enabled = True
         self._component.set_depth(depth)
 
     def add_to_engine(self, engine) -> int:
@@ -361,9 +376,11 @@ class Panel:
             The GameObject ID
         """
         self._game_object = GameObject()
+        self._game_object.set_name("Panel")
         self._game_object.set_object_type("UIObject")
         self._game_object.add_component(self._component)
-        return engine.add_game_object(self._game_object)
+        self._object_id = engine.add_game_object(self._game_object)
+        return self._object_id
 
     def set_position(self, x: float, y: float):
         """
@@ -455,6 +472,51 @@ class Panel:
         """
         self._component.set_border(width, r, g, b, a)
 
+    @property
+    def enabled(self) -> bool:
+        """Get whether the panel is enabled."""
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        """Set whether the panel is enabled."""
+        self._enabled = value
+        self._component.enabled = value
+
+    @property
+    def id(self) -> Optional[int]:
+        """Get the runtime object id after the panel is added."""
+        return self._object_id
+
+    def add_child(self, child):
+        """Add a child UI element under this panel."""
+        self._children.append(child)
+        child._parent = self
+        if self._game_object is not None and getattr(child, "_game_object", None) is not None:
+            self._game_object.add_child(child._game_object)
+        return child
+
+    def add_children(self, children):
+        """Add multiple child UI elements under this panel."""
+        for child in children:
+            self.add_child(child)
+        return list(children)
+
+    def get_children(self):
+        """Get this panel's direct child UI elements."""
+        return list(self._children)
+
+    def get_child_id(self, child_id: int):
+        """Get a direct child UI element by runtime id."""
+        for child in self._children:
+            if getattr(child, "id", None) == child_id:
+                return child
+        return None
+
+    def get_child_count(self) -> int:
+        """Get the number of direct child UI elements."""
+        return len(self._children)
+
 
 class Label:
     """
@@ -540,6 +602,9 @@ class Label:
         self._game_object = None
         self._engine = None
         self._object_id = None
+        self._children: list[object] = []
+        self._parent = None
+        self._enabled = True
         self._component.set_align(align)
         self._component.set_depth(depth)
 
@@ -559,6 +624,7 @@ class Label:
         # Store engine handle instead of engine to avoid borrow checker issues in callbacks
         self._engine = engine.get_handle()
         self._game_object = GameObject()
+        self._game_object.set_name(self.text or "Label")
         self._game_object.set_object_type("UIObject")
         self._game_object.add_component(self._component)
         self._object_id = engine.add_game_object(self._game_object)
@@ -599,6 +665,22 @@ class Label:
         # Update runtime component if already added to engine
         if self._engine is not None and self._object_id is not None:
             self._engine.update_ui_label_text(self._object_id, value)
+
+    @property
+    def enabled(self) -> bool:
+        """Get whether the label is enabled."""
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        """Set whether the label is enabled."""
+        self._enabled = value
+        self._component.enabled = value
+
+    @property
+    def id(self) -> Optional[int]:
+        """Get the runtime object id after the label is added."""
+        return self._object_id
 
     def set_position(self, x: float, y: float):
         """

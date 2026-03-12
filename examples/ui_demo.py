@@ -1,6 +1,6 @@
 """
 UI Demo - Demonstrates the PyG Engine UI system
-Shows buttons, panels, and labels with different styling and layouts.
+Shows buttons, panels, labels, and root-panel tree composition.
 """
 
 from pyg_engine import Engine, Button, Panel, Label, Keys
@@ -40,143 +40,133 @@ def main() -> None:
     panel = Panel(x=50, y=50, width=700, height=500, depth=0)
     panel.set_background_color(0.95, 0.95, 0.95, 1.0)
     panel.set_border(2, 0.3, 0.3, 0.3, 1.0)
-    engine.ui.add(panel)
 
     # Title label
     title = Label(
         "PyG Engine UI Demo",
-        x=400,
-        y=80,
+        x=350,
+        y=30,
         font_size=24,
         align="center",
         depth=1
     )
     title.set_color(0.1, 0.1, 0.1, 1.0)
-    engine.ui.add(title)
 
     # Description label
     desc = Label(
         "Click the buttons below to test the UI system",
-        x=430,
-        y=160,
+        x=380,
+        y=110,
         font_size=12,
         align="center",
         depth=1
     )
     desc.set_color(0.4, 0.4, 0.4, 1.0)
-    engine.ui.add(desc)
 
     # Counter label
     counter_label = Label(
         f"Clicks: {click_count[0]}",
-        x=400,
-        y=120,
+        x=350,
+        y=70,
         font_size=18,
         align="center",
         depth=1
     )
     counter_label.set_color(0.0, 0.5, 0.0, 1.0)
-    engine.ui.add(counter_label)
     label_obj[0] = counter_label  # Store reference
 
     # Button row 1
     btn1 = Button(
         "Increment",
-        x=150,
-        y=250,
+        x=100,
+        y=200,
         width=150,
         height=40,
         on_click=on_increment_click,
         trigger_on="press",
         depth=1
     )
-    engine.ui.add(btn1)
 
     btn2 = Button(
         "Decrement",
-        x=325,
-        y=250,
+        x=275,
+        y=200,
         width=150,
         height=40,
         on_click=on_decrement_click,
         trigger_on="press",
         depth=1
     )
-    engine.ui.add(btn2)
 
     btn3 = Button(
         "Reset",
-        x=500,
-        y=250,
+        x=450,
+        y=200,
         width=150,
         height=40,
         on_click=on_reset_click,
         trigger_on="press",
         depth=1
     )
-    engine.ui.add(btn3)
 
     # Info panel
-    info_panel = Panel(x=100, y=350, width=600, height=150, depth=0.5)
+    info_panel = Panel(x=50, y=300, width=600, height=150, depth=0.5)
     info_panel.set_background_color(0.9, 0.95, 1.0, 1.0)
     info_panel.set_border(1, 0.4, 0.6, 0.8, 1.0)
-    engine.ui.add(info_panel)
 
     # Info labels
     info1 = Label(
         "Features Demonstrated:",
-        x=120,
-        y=370,
+        x=20,
+        y=20,
         font_size=14,
         align="left",
         depth=1
     )
     info1.set_color(0.0, 0.0, 0.0, 1.0)
-    engine.ui.add(info1)
 
     info2 = Label(
         "- Clickable buttons with callbacks",
-        x=130,
-        y=400,
+        x=30,
+        y=50,
         font_size=12,
         align="left",
         depth=1
     )
     info2.set_color(0.2, 0.2, 0.2, 1.0)
-    engine.ui.add(info2)
 
     info3 = Label(
         "- Nested panels with borders and backgrounds",
-        x=130,
-        y=425,
+        x=30,
+        y=75,
         font_size=12,
         align="left",
         depth=1
     )
     info3.set_color(0.2, 0.2, 0.2, 1.0)
-    engine.ui.add(info3)
 
     info4 = Label(
         "- Dynamic text updates",
-        x=130,
-        y=450,
+        x=30,
+        y=100,
         font_size=12,
         align="left",
         depth=1
     )
     info4.set_color(0.2, 0.2, 0.2, 1.0)
-    engine.ui.add(info4)
 
     info5 = Label(
         "- Depth-based layering",
-        x=130,
-        y=475,
+        x=30,
+        y=125,
         font_size=12,
         align="left",
         depth=1
     )
     info5.set_color(0.2, 0.2, 0.2, 1.0)
-    engine.ui.add(info5)
+    info_panel.add_children([info1, info2, info3, info4, info5])
+    panel.add_children([title, desc, counter_label, btn1, btn2, btn3, info_panel])
+    engine.ui.add(panel)
 
     engine.log("UI Demo started!")
     engine.log("Click the buttons to interact with the UI.")

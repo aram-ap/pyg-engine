@@ -14,6 +14,7 @@ use winit::window::Window;
 
 use super::geometry::Vertex;
 use super::logging;
+use crate::core::component::ComponentTrait;
 use crate::core::draw_manager::{DrawCommand, DrawManager};
 use crate::core::object_manager::ObjectManager;
 use crate::types::Color;
@@ -706,15 +707,13 @@ impl RenderManager {
         [normalized_x * clip_scale_x, normalized_y * clip_scale_y]
     }
 
-    fn active_camera_position(&self, objects: &Option<ObjectManager>) -> Vec2 {
+    fn active_camera_position(&self, objects: &ObjectManager) -> Vec2 {
         let Some(camera_id) = self.active_camera_object_id else {
             return Vec2::new(0.0, 0.0);
         };
 
         objects
-            .as_ref()
-            .and_then(|object_manager| object_manager.get_object_by_id(camera_id))
-            .map(|camera| *camera.transform().position())
+            .world_position(camera_id)
             .unwrap_or_else(|| Vec2::new(0.0, 0.0))
     }
 
@@ -1482,6 +1481,198 @@ impl RenderManager {
         })
     }
 
+    fn build_filled_arc_draw_item(
+        &self,
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        segments: u32,
+        color: Color,
+        draw_order: f32,
+    ) -> Option<DrawItem> {
+        if radius <= 0.0 {
+            return None;
+        }
+
+        let sweep = end_angle - start_angle;
+        if sweep.abs() <= f32::EPSILON {
+            return None;
+        }
+
+        let segments = segments.max(3);
+        let mut vertices = Vec::with_capacity((segments + 2) as usize);
+        let mut indices = Vec::with_capacity((segments * 3) as usize);
+        let color = Self::color_to_array(color);
+
+        let center = self.pixel_to_clip(center_x, center_y);
+        vertices.push(Vertex {
+            position: [center[0], center[1], 0.0],
+            color,
+            tex_coords: [0.5, 0.5],
+        });
+
+        for i in 0..=segments {
+            let t = i as f32 / segments as f32;
+            let angle = start_angle + sweep * t;
+            let px = center_x + radius * angle.cos();
+            let py = center_y + radius * angle.sin();
+            let clip = self.pixel_to_clip(px, py);
+            vertices.push(Vertex {
+                position: [clip[0], clip[1], 0.0],
+                color,
+                tex_coords: [(angle.cos() + 1.0) * 0.5, (angle.sin() + 1.0) * 0.5],
+            });
+        }
+
+        for i in 1..=segments {
+            indices.extend_from_slice(&[0, i, i + 1]);
+        }
+
+        Some(DrawItem {
+            draw_order,
+            texture_path: None,
+            vertices,
+            indices,
+        })
+    }
+
+    fn build_arc_outline_draw_item(
+        &self,
+        center_x: f32,
+        center_y: f32,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+        thickness: f32,
+        segments: u32,
+        color: Color,
+        draw_order: f32,
+    ) -> Option<DrawItem> {
+        if radius <= 0.0 {
+            return None;
+        }
+
+        let sweep = end_angle - start_angle;
+        if sweep.abs() <= f32::EPSILON {
+            return None;
+        }
+
+        let segments = segments.max(3);
+        let thickness = thickness.max(1.0);
+        let inner = (radius - thickness * 0.5).max(0.0);
+        let outer = radius + thickness * 0.5;
+        let mut vertices = Vec::with_capacity(((segments + 1) * 2) as usize);
+        let mut indices = Vec::with_capacity((segments * 6) as usize);
+        let color = Self::color_to_array(color);
+
+        for i in 0..=segments {
+            let t = i as f32 / segments as f32;
+            let angle = start_angle + sweep * t;
+            let cos_a = angle.cos();
+            let sin_a = angle.sin();
+
+            let outer_clip = self.pixel_to_clip(center_x + outer * cos_a, center_y + outer * sin_a);
+            let inner_clip = self.pixel_to_clip(center_x + inner * cos_a, center_y + inner * sin_a);
+
+            vertices.push(Vertex {
+                position: [outer_clip[0], outer_clip[1], 0.0],
+                color,
+                tex_coords: [1.0, 0.0],
+            });
+            vertices.push(Vertex {
+                position: [inner_clip[0], inner_clip[1], 0.0],
+                color,
+                tex_coords: [0.0, 1.0],
+            });
+        }
+
+        for i in 0..segments {
+            let base = i * 2;
+            indices.extend_from_slice(&[base, base + 1, base + 2, base + 1, base + 3, base + 2]);
+        }
+
+        Some(DrawItem {
+            draw_order,
+            texture_path: None,
+            vertices,
+            indices,
+        })
+    }
+
+    fn build_filled_polygon_draw_item(
+        &self,
+        points: &[Vec2],
+        color: Color,
+        draw_order: f32,
+    ) -> Option<DrawItem> {
+        if points.len() < 3 {
+            return None;
+        }
+
+        let mut vertices = Vec::with_capacity(points.len());
+        let mut indices = Vec::with_capacity((points.len().saturating_sub(2)) * 3);
+        let color = Self::color_to_array(color);
+
+        for point in points {
+            let clip = self.pixel_to_clip(point.x(), point.y());
+            vertices.push(Vertex {
+                position: [clip[0], clip[1], 0.0],
+                color,
+                tex_coords: [0.0, 0.0],
+            });
+        }
+
+        for i in 1..(points.len() - 1) {
+            indices.extend_from_slice(&[0, i as u32, (i + 1) as u32]);
+        }
+
+        Some(DrawItem {
+            draw_order,
+            texture_path: None,
+            vertices,
+            indices,
+        })
+    }
+
+    fn build_mesh_draw_item(
+        &self,
+        vertices: &[crate::core::component::MeshVertex],
+        indices: &[u32],
+        color: Color,
+        texture_path: Option<String>,
+        draw_order: f32,
+    ) -> Option<DrawItem> {
+        if vertices.is_empty() || indices.is_empty() {
+            return None;
+        }
+
+        let vertex_count = vertices.len() as u32;
+        if indices.iter().any(|index| *index >= vertex_count) {
+            return None;
+        }
+
+        let color = Self::color_to_array(color);
+        let mut draw_vertices = Vec::with_capacity(vertices.len());
+
+        for vertex in vertices {
+            let clip = self.pixel_to_clip(vertex.position().x(), vertex.position().y());
+            draw_vertices.push(Vertex {
+                position: [clip[0], clip[1], 0.0],
+                color,
+                tex_coords: [vertex.uv().x(), vertex.uv().y()],
+            });
+        }
+
+        Some(DrawItem {
+            draw_order,
+            texture_path,
+            vertices: draw_vertices,
+            indices: indices.to_vec(),
+        })
+    }
+
     fn collect_direct_draw_items(
         &mut self,
         draw_manager: Option<&DrawManager>,
@@ -1621,6 +1812,76 @@ impl RenderManager {
                         items.push(item);
                     }
                 }
+                DrawCommand::Arc {
+                    center_x,
+                    center_y,
+                    radius,
+                    start_angle,
+                    end_angle,
+                    color,
+                    filled,
+                    thickness,
+                    segments,
+                    draw_order,
+                } => {
+                    let item = if *filled {
+                        self.build_filled_arc_draw_item(
+                            *center_x,
+                            *center_y,
+                            *radius,
+                            *start_angle,
+                            *end_angle,
+                            *segments,
+                            *color,
+                            *draw_order,
+                        )
+                    } else {
+                        self.build_arc_outline_draw_item(
+                            *center_x,
+                            *center_y,
+                            *radius,
+                            *start_angle,
+                            *end_angle,
+                            *thickness,
+                            *segments,
+                            *color,
+                            *draw_order,
+                        )
+                    };
+
+                    if let Some(item) = item {
+                        items.push(item);
+                    }
+                }
+                DrawCommand::Polygon {
+                    points,
+                    color,
+                    filled,
+                    thickness,
+                    draw_order,
+                } => {
+                    if *filled {
+                        if let Some(item) =
+                            self.build_filled_polygon_draw_item(points, *color, *draw_order)
+                        {
+                            items.push(item);
+                        }
+                    } else if points.len() >= 2 {
+                        for i in 0..points.len() {
+                            let start = points[i];
+                            let end = points[(i + 1) % points.len()];
+                            items.push(self.build_line_draw_item(
+                                start.x(),
+                                start.y(),
+                                end.x(),
+                                end.y(),
+                                *thickness,
+                                *color,
+                                *draw_order,
+                            ));
+                        }
+                    }
+                }
                 DrawCommand::GradientRect {
                     x,
                     y,
@@ -1687,6 +1948,23 @@ impl RenderManager {
                         height: *texture_height,
                     });
                 }
+                DrawCommand::Mesh {
+                    vertices,
+                    indices,
+                    color,
+                    texture_path,
+                    draw_order,
+                } => {
+                    if let Some(item) = self.build_mesh_draw_item(
+                        vertices,
+                        indices,
+                        *color,
+                        texture_path.clone(),
+                        *draw_order,
+                    ) {
+                        items.push(item);
+                    }
+                }
                 DrawCommand::Text {
                     text,
                     x,
@@ -1723,23 +2001,18 @@ impl RenderManager {
 
     fn collect_mesh_draw_items(
         &self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         camera_position: Vec2,
     ) -> Vec<DrawItem> {
         let mut items = Vec::new();
-
-        let Some(object_manager) = objects else {
-            return items;
-        };
-
-        let keys = object_manager.get_sorted_keys();
+        let keys = objects.get_sorted_keys();
 
         for &id in keys {
             if self.active_camera_object_id == Some(id) {
                 continue;
             }
 
-            let Some(object) = object_manager.get_object_by_id(id) else {
+            let Some(object) = objects.get_object_by_id(id) else {
                 continue;
             };
 
@@ -1755,7 +2028,9 @@ impl RenderManager {
                 continue;
             }
 
-            let transform = object.transform();
+            let Some(world_transform) = objects.world_transform(id) else {
+                continue;
+            };
             let fill_color = mesh.fill_color().copied().unwrap_or(Color::WHITE);
             let color = [
                 fill_color.r(),
@@ -1764,12 +2039,16 @@ impl RenderManager {
                 fill_color.a(),
             ];
 
-            let cos_t = transform.rotation().cos();
-            let sin_t = transform.rotation().sin();
-            let scale_x = transform.scale().x();
-            let scale_y = transform.scale().y();
-            let pos_x = transform.position().x();
-            let pos_y = transform.position().y();
+            if !mesh.is_effectively_enabled() {
+                continue;
+            }
+
+            let cos_t = world_transform.rotation.cos();
+            let sin_t = world_transform.rotation.sin();
+            let scale_x = world_transform.scale.x();
+            let scale_y = world_transform.scale.y();
+            let pos_x = world_transform.position.x();
+            let pos_y = world_transform.position.y();
 
             let mut vertices = Vec::with_capacity(mesh.geometry().vertices().len());
             for vertex in mesh.geometry().vertices() {
@@ -1802,7 +2081,7 @@ impl RenderManager {
 
     fn collect_draw_items(
         &mut self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         draw_manager: Option<&DrawManager>,
     ) -> (Vec<DrawItem>, Vec<PendingTextureUpload>) {
         let camera_position = self.active_camera_position(objects);
@@ -1821,12 +2100,12 @@ impl RenderManager {
 
     fn compute_scene_version(
         &self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         draw_manager: Option<&DrawManager>,
     ) -> SceneVersion {
         SceneVersion {
             render_state_epoch: self.render_state_epoch,
-            object_epoch: objects.as_ref().map_or(0, ObjectManager::scene_version),
+            object_epoch: objects.scene_version(),
             draw_epoch: draw_manager.map_or(0, DrawManager::scene_version),
         }
     }
@@ -1834,7 +2113,7 @@ impl RenderManager {
     /// Returns whether the window should request another redraw.
     pub fn should_request_redraw(
         &mut self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         draw_manager: Option<&DrawManager>,
     ) -> bool {
         if !self.redraw_on_change_only {
@@ -1914,7 +2193,7 @@ impl RenderManager {
     /// Returns an error if the surface needs to be reconfigured or if rendering fails.
     pub fn render(
         &mut self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         draw_manager: Option<&DrawManager>,
     ) -> Result<(), wgpu::SurfaceError> {
         let scene_version = self

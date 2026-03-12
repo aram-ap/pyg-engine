@@ -29,7 +29,7 @@ def create_background() -> pyg.GameObject:
     mesh.set_geometry_rectangle(1.8, 1.2)
     mesh.set_fill_color(pyg.Color.rgb(20, 24, 32))
     mesh.draw_order = -0.8
-    bg.set_mesh_component(mesh)
+    bg.add_component(mesh)
     return bg
 
 
@@ -43,7 +43,7 @@ def create_solid_quad() -> pyg.GameObject:
     mesh.set_geometry_rectangle(1.0, 1.0)
     mesh.set_fill_color(pyg.Color.ORANGE)
     mesh.draw_order = 1.1
-    quad.set_mesh_component(mesh)
+    quad.add_component(mesh)
     return quad
 
 
@@ -62,7 +62,7 @@ def create_textured_quad(use_texture: bool = True) -> pyg.GameObject:
     else:
         mesh.set_fill_color(pyg.Color.CYAN)
     mesh.draw_order = 2.3
-    quad.set_mesh_component(mesh)
+    quad.add_component(mesh)
     return quad
 
 
@@ -82,12 +82,15 @@ def main() -> None:
 
     engine = pyg.Engine(log_level="INFO")
 
-    # NOTE:
-    # Mesh transforms are currently interpreted in normalized clip space:
-    # X/Y in roughly [-1, 1], where (0,0) is center of screen.
+    engine.set_camera_viewport_size(3.2, 1.8)
     engine.add_game_object(create_background())
-    engine.add_game_object(create_solid_quad())
+    solid_id = engine.add_game_object(create_solid_quad())
     engine.add_game_object(create_textured_quad(use_texture=not args.no_texture))
+
+    if solid_id is not None:
+        solid_quad = engine.objects.get_id(solid_id)
+        if solid_quad is not None:
+            solid_quad.enabled = True
 
     engine.run(
         title="PyG Engine - Python Mesh Demo",

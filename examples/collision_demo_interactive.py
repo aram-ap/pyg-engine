@@ -30,17 +30,19 @@ class Player:
         self.is_colliding = False
 
         # Create mesh
-        self.obj.set_mesh_geometry_circle(radius)
-        self.obj.set_mesh_fill_color(pyg.Color.rgb(100, 200, 255))  # Blue
-        self.obj.set_mesh_draw_order(2.0)
+        mesh = pyg.MeshComponent("PlayerMesh")
+        mesh.set_geometry_circle(radius)
+        mesh.set_fill_color(pyg.Color.rgb(100, 200, 255))  # Blue
+        mesh.draw_order = 2.0
+        self.obj.add_component(mesh)
 
         # Add collider component with callbacks!
         collider = pyg.Collider("PlayerCollider")
         collider.set_shape(pyg.ColliderShape.circle(0.5))
         collider.set_layer(pyg.PhysicsLayers.PLAYER)
-        collider.set_collision_mask(
-            pyg.PhysicsLayers.create_mask([pyg.PhysicsLayers.ENVIRONMENT])
-        )
+        # collider.set_collision_mask(
+        #     pyg.PhysicsLayers.create_mask([pyg.PhysicsLayers.ENVIRONMENT])
+        # )
         collider.set_trigger(True)  # No physics response, just detection
 
         # Set collision callbacks
@@ -84,14 +86,16 @@ class CircleObstacle:
         self.obj.scale = pyg.Vec2(radius * 2, radius * 2)
 
         # Create mesh
-        self.obj.set_mesh_geometry_circle(radius)
-        self.obj.set_mesh_fill_color(color)
-        self.obj.set_mesh_draw_order(1.0)
+        mesh = pyg.MeshComponent("CircleObstacleMesh")
+        mesh.set_geometry_circle(radius)
+        mesh.set_fill_color(color)
+        mesh.draw_order = 1.0
+        self.obj.add_component(mesh)
 
         # Add collider component
         collider = pyg.Collider("ObstacleCollider")
         collider.set_shape(pyg.ColliderShape.circle(radius))
-        collider.set_layer(pyg.PhysicsLayers.ENVIRONMENT)
+        # collider.set_layer(pyg.PhysicsLayers.ENVIRONMENT)
         collider.set_trigger(True)
         self.obj.add_component(collider)
 
@@ -105,9 +109,11 @@ class BoxObstacle:
         self.obj.scale = pyg.Vec2(width, height)
 
         # Create mesh
-        self.obj.set_mesh_geometry_rectangle(1.0, 1.0)
-        self.obj.set_mesh_fill_color(color)
-        self.obj.set_mesh_draw_order(1.0)
+        mesh = pyg.MeshComponent("BoxObstacleMesh")
+        mesh.set_geometry_rectangle(1.0, 1.0)
+        mesh.set_fill_color(color)
+        mesh.draw_order = 1.0
+        self.obj.add_component(mesh)
 
         # Add collider component
         collider = pyg.Collider("BoxCollider")

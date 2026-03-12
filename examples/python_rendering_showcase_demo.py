@@ -80,7 +80,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     panel_mesh.set_geometry_rectangle(1.25, 1.05)
     panel_mesh.set_fill_color(Color(0.10, 0.11, 0.16, 0.92))
     panel_mesh.draw_order = -0.6
-    panel.set_mesh_component(panel_mesh)
+    panel.add_component(panel_mesh)
     engine.add_game_object(panel)
 
     textured = GameObject("MeshTextured")
@@ -92,7 +92,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     textured_mesh.set_fill_color(Color.WHITE)
     textured_mesh.set_image_path("images/1_lower-res.png")
     textured_mesh.draw_order = 1.10
-    textured.set_mesh_component(textured_mesh)
+    textured.add_component(textured_mesh)
     engine.add_game_object(textured)
 
     solid = GameObject("MeshSolid")
@@ -103,7 +103,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     solid_mesh.set_geometry_rectangle(1.0, 1.0)
     solid_mesh.set_fill_color(Color(0.95, 0.50, 0.16, 0.95))
     solid_mesh.draw_order = 2.25
-    solid.set_mesh_component(solid_mesh)
+    solid.add_component(solid_mesh)
     engine.add_game_object(solid)
 
     accent = GameObject("MeshAccent")
@@ -113,7 +113,7 @@ def add_mesh_showcase(engine: Engine) -> None:
     accent_mesh.set_geometry_rectangle(1.0, 1.0)
     accent_mesh.set_fill_color(Color(0.15, 0.85, 0.90, 0.85))
     accent_mesh.draw_order = 3.30
-    accent.set_mesh_component(accent_mesh)
+    accent.add_component(accent_mesh)
     engine.add_game_object(accent)
 
 

@@ -2,7 +2,13 @@ use super::time::Time;
 use crate::types::color::Color;
 use crate::types::vector::Vec2;
 use std::any::Any;
-// use crate::types::texture::Texture;
+use std::sync::atomic::{AtomicU32, Ordering};
+
+static COMPONENT_ID: AtomicU32 = AtomicU32::new(0);
+
+pub fn next_component_id() -> u32 {
+    COMPONENT_ID.fetch_add(1, Ordering::SeqCst) + 1
+}
 
 // Game objects contain components.
 // Components are used to add functionality to game objects.
@@ -21,6 +27,17 @@ pub trait ComponentTrait: Send + Sync + std::fmt::Debug {
     */
     fn name(&self) -> &str;
 
+    fn id(&self) -> u32;
+    fn component_type(&self) -> &'static str;
+    fn is_enabled_self(&self) -> bool;
+    fn set_enabled_self(&mut self, enabled: bool);
+    fn is_enabled_in_hierarchy(&self) -> bool;
+    fn set_enabled_in_hierarchy(&mut self, enabled: bool);
+
+    fn is_effectively_enabled(&self) -> bool {
+        self.is_enabled_self() && self.is_enabled_in_hierarchy()
+    }
+
     /**
         Updates the component.
         @param delta_time: The time since the last update.
@@ -32,11 +49,16 @@ pub trait ComponentTrait: Send + Sync + std::fmt::Debug {
     fn on_enable(&self);
     fn on_disable(&self);
 
+    fn clone_component(&self) -> Box<dyn ComponentTrait>;
+
     /// Downcast to Any for type checking
     fn as_any(&self) -> &dyn Any;
 
     /// Downcast to Any (mutable) for type checking
     fn as_any_mut(&mut self) -> &mut dyn Any;
+
+    /// Convert boxed component into a concrete Any box.
+    fn into_any(self: Box<Self>) -> Box<dyn Any>;
 
     // Physics callbacks (optional, default implementations do nothing)
     /// Called when a collision starts
@@ -47,6 +69,12 @@ pub trait ComponentTrait: Send + Sync + std::fmt::Debug {
 
     /// Called when a collision ends
     fn on_collision_exit(&self, _other_id: u32) {}
+}
+
+impl Clone for Box<dyn ComponentTrait> {
+    fn clone(&self) -> Self {
+        self.clone_component()
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -153,24 +181,54 @@ impl Default for MeshGeometry {
 
 #[derive(Clone, Debug)]
 pub struct TransformComponent {
+    component_id: u32,
     name: String,
     position: Vec2,
     rotation: f32,
     scale: Vec2,
+    enabled_self: bool,
+    enabled_in_hierarchy: bool,
 }
 
 impl ComponentTrait for TransformComponent {
     fn new(name: String) -> Self {
         Self {
+            component_id: next_component_id(),
             name,
             position: Vec2::new(0.0, 0.0),
             rotation: 0.0,
             scale: Vec2::new(1.0, 1.0),
+            enabled_self: true,
+            enabled_in_hierarchy: true,
         }
     }
 
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn id(&self) -> u32 {
+        self.component_id
+    }
+
+    fn component_type(&self) -> &'static str {
+        "Transform"
+    }
+
+    fn is_enabled_self(&self) -> bool {
+        self.enabled_self
+    }
+
+    fn set_enabled_self(&mut self, enabled: bool) {
+        self.enabled_self = enabled;
+    }
+
+    fn is_enabled_in_hierarchy(&self) -> bool {
+        self.enabled_in_hierarchy
+    }
+
+    fn set_enabled_in_hierarchy(&mut self, enabled: bool) {
+        self.enabled_in_hierarchy = enabled;
     }
 
     fn update(&self, _time: &Time) {}
@@ -181,11 +239,19 @@ impl ComponentTrait for TransformComponent {
     fn on_enable(&self) {}
     fn on_disable(&self) {}
 
+    fn clone_component(&self) -> Box<dyn ComponentTrait> {
+        Box::new(self.clone())
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self
     }
 }
@@ -222,28 +288,58 @@ impl TransformComponent {
 
 #[derive(Clone, Debug)]
 pub struct MeshComponent {
+    component_id: u32,
     name: String,
     geometry: MeshGeometry,
     fill_color: Option<Color>,
     image_path: Option<String>,
     visible: bool,
     draw_order: f32,
+    enabled_self: bool,
+    enabled_in_hierarchy: bool,
 }
 
 impl ComponentTrait for MeshComponent {
     fn new(name: String) -> Self {
         Self {
+            component_id: next_component_id(),
             name,
             geometry: MeshGeometry::default(),
             fill_color: Some(Color::WHITE),
             image_path: None,
             visible: true,
             draw_order: 0.0,
+            enabled_self: true,
+            enabled_in_hierarchy: true,
         }
     }
 
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn id(&self) -> u32 {
+        self.component_id
+    }
+
+    fn component_type(&self) -> &'static str {
+        "Mesh"
+    }
+
+    fn is_enabled_self(&self) -> bool {
+        self.enabled_self
+    }
+
+    fn set_enabled_self(&mut self, enabled: bool) {
+        self.enabled_self = enabled;
+    }
+
+    fn is_enabled_in_hierarchy(&self) -> bool {
+        self.enabled_in_hierarchy
+    }
+
+    fn set_enabled_in_hierarchy(&mut self, enabled: bool) {
+        self.enabled_in_hierarchy = enabled;
     }
 
     fn update(&self, _time: &Time) {}
@@ -253,11 +349,19 @@ impl ComponentTrait for MeshComponent {
     fn on_enable(&self) {}
     fn on_disable(&self) {}
 
+    fn clone_component(&self) -> Box<dyn ComponentTrait> {
+        Box::new(self.clone())
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self
     }
 }
@@ -330,6 +434,7 @@ impl MeshComponent {
 
 #[derive(Debug)]
 pub struct SpriteComponent {
+    component_id: u32,
     name: String,
     // texture: Option<Texture>,
     offset: Vec2,
@@ -346,11 +451,14 @@ pub struct SpriteComponent {
     color: Color,
     visible: bool,
     layer: u32,
+    enabled_self: bool,
+    enabled_in_hierarchy: bool,
 }
 
 impl ComponentTrait for SpriteComponent {
     fn new(name: String) -> Self {
         Self {
+            component_id: next_component_id(),
             name,
             // texture: None,
             color: Color::new(1.0, 1.0, 1.0, 1.0),
@@ -364,11 +472,37 @@ impl ComponentTrait for SpriteComponent {
             rotation: 0.0,
             pivot: Vec2::new(0.5, 0.5),
             origin: Vec2::new(0.5, 0.5),
+            enabled_self: true,
+            enabled_in_hierarchy: true,
         }
     }
 
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn id(&self) -> u32 {
+        self.component_id
+    }
+
+    fn component_type(&self) -> &'static str {
+        "Sprite"
+    }
+
+    fn is_enabled_self(&self) -> bool {
+        self.enabled_self
+    }
+
+    fn set_enabled_self(&mut self, enabled: bool) {
+        self.enabled_self = enabled;
+    }
+
+    fn is_enabled_in_hierarchy(&self) -> bool {
+        self.enabled_in_hierarchy
+    }
+
+    fn set_enabled_in_hierarchy(&mut self, enabled: bool) {
+        self.enabled_in_hierarchy = enabled;
     }
 
     fn update(&self, _time: &Time) {}
@@ -378,11 +512,35 @@ impl ComponentTrait for SpriteComponent {
     fn on_enable(&self) {}
     fn on_disable(&self) {}
 
+    fn clone_component(&self) -> Box<dyn ComponentTrait> {
+        Box::new(Self {
+            component_id: self.component_id,
+            name: self.name.clone(),
+            offset: self.offset,
+            scale: self.scale,
+            rotation: self.rotation,
+            pivot: self.pivot,
+            origin: self.origin,
+            flip_x: self.flip_x,
+            flip_y: self.flip_y,
+            z_index: self.z_index,
+            color: self.color,
+            visible: self.visible,
+            layer: self.layer,
+            enabled_self: self.enabled_self,
+            enabled_in_hierarchy: self.enabled_in_hierarchy,
+        })
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
         self
     }
 }
