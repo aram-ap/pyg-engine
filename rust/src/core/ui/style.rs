@@ -1,4 +1,5 @@
 use super::StyleState;
+use crate::core::text::{FontStyle, FontWeight, TextStyle};
 
 /// Padding for UI elements
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -44,8 +45,7 @@ pub struct UIStyle {
     pub border_radius: f32,
     pub padding: Padding,
     pub margin: Padding,
-    pub font_size: f32,
-    pub font_path: Option<String>,
+    pub text_style: TextStyle,
 }
 
 impl UIStyle {
@@ -58,8 +58,7 @@ impl UIStyle {
             border_radius: 0.0,
             padding: Padding::zero(),
             margin: Padding::zero(),
-            font_size: 16.0,
-            font_path: None,
+            text_style: TextStyle::new(16.0),
         }
     }
 
@@ -69,6 +68,70 @@ impl UIStyle {
             background_color: [0.0, 0.0, 0.0, 0.0],
             ..Self::new()
         }
+    }
+
+    pub fn font_size(&self) -> f32 {
+        self.text_style.font_size
+    }
+
+    pub fn set_font_size(&mut self, font_size: f32) {
+        self.text_style.font_size = font_size.max(1.0);
+    }
+
+    pub fn font_path(&self) -> Option<&str> {
+        self.text_style.font.path()
+    }
+
+    pub fn set_font_path(&mut self, font_path: Option<String>) {
+        self.text_style.font.set_path(font_path);
+    }
+
+    pub fn font_family(&self) -> Option<&str> {
+        self.text_style.font.family()
+    }
+
+    pub fn set_font_family(&mut self, font_family: Option<String>) {
+        self.text_style.font.set_family(font_family);
+    }
+
+    pub fn set_font_weight(&mut self, font_weight: FontWeight) {
+        self.text_style.font.set_weight(font_weight);
+    }
+
+    pub fn font_weight(&self) -> FontWeight {
+        self.text_style.font.weight()
+    }
+
+    pub fn set_font_style(&mut self, font_style: FontStyle) {
+        self.text_style.font.set_style(font_style);
+    }
+
+    pub fn font_style(&self) -> FontStyle {
+        self.text_style.font.style()
+    }
+
+    pub fn set_kerning(&mut self, kerning: bool) {
+        self.text_style.kerning = kerning;
+    }
+
+    pub fn kerning(&self) -> bool {
+        self.text_style.kerning
+    }
+
+    pub fn set_letter_spacing(&mut self, letter_spacing: f32) {
+        self.text_style.letter_spacing = letter_spacing;
+    }
+
+    pub fn letter_spacing(&self) -> f32 {
+        self.text_style.letter_spacing
+    }
+
+    pub fn set_line_spacing(&mut self, line_spacing: f32) {
+        self.text_style.line_spacing = line_spacing;
+    }
+
+    pub fn line_spacing(&self) -> f32 {
+        self.text_style.line_spacing
     }
 }
 
@@ -147,7 +210,7 @@ impl UITheme {
         button_normal.border_radius = 4.0;
         button_normal.padding = Padding::uniform(8.0);
         button_normal.text_color = [0.0, 0.0, 0.0, 1.0];
-        button_normal.font_size = 14.0;
+        button_normal.set_font_size(14.0);
 
         let mut button_hovered = button_normal.clone();
         button_hovered.background_color = [0.95, 0.95, 0.95, 1.0]; // #f2f2f2
@@ -180,7 +243,7 @@ impl UITheme {
         // Label style
         let mut label_style = UIStyle::transparent();
         label_style.text_color = [0.0, 0.0, 0.0, 1.0];
-        label_style.font_size = 14.0;
+        label_style.set_font_size(14.0);
 
         Self {
             button_style,
