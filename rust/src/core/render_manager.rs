@@ -706,14 +706,13 @@ impl RenderManager {
         [normalized_x * clip_scale_x, normalized_y * clip_scale_y]
     }
 
-    fn active_camera_position(&self, objects: &Option<ObjectManager>) -> Vec2 {
+    fn active_camera_position(&self, objects: &ObjectManager) -> Vec2 {
         let Some(camera_id) = self.active_camera_object_id else {
             return Vec2::new(0.0, 0.0);
         };
 
         objects
-            .as_ref()
-            .and_then(|object_manager| object_manager.get_object_by_id(camera_id))
+            .get_object_by_id(camera_id)
             .map(|camera| *camera.transform().position())
             .unwrap_or_else(|| Vec2::new(0.0, 0.0))
     }
@@ -2002,23 +2001,18 @@ impl RenderManager {
 
     fn collect_mesh_draw_items(
         &self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         camera_position: Vec2,
     ) -> Vec<DrawItem> {
         let mut items = Vec::new();
-
-        let Some(object_manager) = objects else {
-            return items;
-        };
-
-        let keys = object_manager.get_sorted_keys();
+        let keys = objects.get_sorted_keys();
 
         for &id in keys {
             if self.active_camera_object_id == Some(id) {
                 continue;
             }
 
-            let Some(object) = object_manager.get_object_by_id(id) else {
+            let Some(object) = objects.get_object_by_id(id) else {
                 continue;
             };
 
@@ -2081,7 +2075,7 @@ impl RenderManager {
 
     fn collect_draw_items(
         &mut self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         draw_manager: Option<&DrawManager>,
     ) -> (Vec<DrawItem>, Vec<PendingTextureUpload>) {
         let camera_position = self.active_camera_position(objects);
@@ -2100,12 +2094,12 @@ impl RenderManager {
 
     fn compute_scene_version(
         &self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         draw_manager: Option<&DrawManager>,
     ) -> SceneVersion {
         SceneVersion {
             render_state_epoch: self.render_state_epoch,
-            object_epoch: objects.as_ref().map_or(0, ObjectManager::scene_version),
+            object_epoch: objects.scene_version(),
             draw_epoch: draw_manager.map_or(0, DrawManager::scene_version),
         }
     }
@@ -2113,7 +2107,7 @@ impl RenderManager {
     /// Returns whether the window should request another redraw.
     pub fn should_request_redraw(
         &mut self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         draw_manager: Option<&DrawManager>,
     ) -> bool {
         if !self.redraw_on_change_only {
@@ -2193,7 +2187,7 @@ impl RenderManager {
     /// Returns an error if the surface needs to be reconfigured or if rendering fails.
     pub fn render(
         &mut self,
-        objects: &Option<ObjectManager>,
+        objects: &ObjectManager,
         draw_manager: Option<&DrawManager>,
     ) -> Result<(), wgpu::SurfaceError> {
         let scene_version = self

@@ -76,9 +76,6 @@ pub struct ObjectManager {
 }
 
 impl ObjectManager {
-    /// Create a new empty ObjectManager.
-    ///
-    /// Initializes with no objects and scene version 0.
     pub fn new() -> Self {
         Self {
             objects: HashMap::new(),
@@ -135,88 +132,22 @@ impl ObjectManager {
         }
     }
 
-    /// Add a GameObject to the manager and return its ID.
-    ///
-    /// Inserts the object into the registry, updates counters, and increments
-    /// the scene version. If an object with the same ID already exists, it
-    /// will be replaced.
-    ///
-    /// # Arguments
-    /// * `object` - The GameObject to add
-    ///
-    /// # Returns
-    /// The object's ID wrapped in `Some`, or `None` if the operation failed
-    /// (currently always returns `Some`)
-    ///
-    /// # Examples
-    /// ```rust
-    /// use pyg_engine::ObjectManager;
-    /// use pyg_engine::GameObject;
-    ///
-    /// let mut manager = ObjectManager::new();
-    /// let obj = GameObject::new("Player");
-    ///
-    /// if let Some(id) = manager.add_object(obj) {
-    ///     println!("Object added with ID: {}", id);
-    /// }
-    /// ```
     pub fn add_object(&mut self, object: GameObject) -> Option<u32> {
         let id = object.get_id();
-        let is_active = object.is_active();
 
-        // If replacing an existing object, update counters for the old object
-        if let Some(old_object) = self.objects.insert(id, object) {
-            // Object with this ID already existed, so we're replacing it
-            self.active_objects -= if old_object.is_active() { 1 } else { 0 };
-            // total_objects doesn't change since we're replacing, not adding
-        } else {
-            // New object, increment total_objects
+        if self.objects.insert(id, object).is_none() {
             self.total_objects += 1;
             self.insert_key(id);
+        } else {
         }
 
-        // Update active_objects counter for the new/replaced object
-        self.active_objects += if is_active { 1 } else { 0 };
+        self.refresh_enabled_counts();
         self.bump_scene_version();
         Some(id)
     }
 
-    /// Remove an object by its ID.
-    ///
-    /// Removes the object from the registry, updates counters, and increments
-    /// the scene version. If the object doesn't exist, logs a warning.
-    ///
-    /// # Arguments
-    /// * `id` - The unique ID of the object to remove
-    ///
-    /// # Examples
-    /// ```rust
-    /// use pyg_engine::ObjectManager;
-    /// use pyg_engine::GameObject;
-    ///
-    /// let mut manager = ObjectManager::new();
-    /// let obj = GameObject::new("Enemy");
-    /// let id = manager.add_object(obj).unwrap();
-    ///
-    /// // Later, remove the object
-    /// manager.remove_object(id);
-    /// ```
     pub fn remove_object(&mut self, id: u32) {
-        if self.total_objects == 0 {
-            return;
-        }
-
-        // Remove the object from the hash map using the ID as the key
-        // This is more efficient than doing get() then remove() - single hash lookup
-        if let Some(removed_object) = self.objects.remove(&id) {
-            let was_active = removed_object.is_active();
-            self.total_objects -= 1;
-            self.active_objects -= if was_active { 1 } else { 0 };
-            self.remove_key(id);
-            self.bump_scene_version();
-        } else {
-            logging::log_warn(&format!("Object {id} not found"));
-        }
+        self.destroy_object_recursive(id);
     }
 
     /// Get an immutable reference to an object by its ID.
@@ -271,10 +202,31 @@ impl ObjectManager {
     /// ```
     pub fn get_object_by_id_mut(&mut self, id: u32) -> Option<&mut GameObject> {
         if self.objects.contains_key(&id) {
-            // Mutable access may change visual state; conservatively bump.
             self.bump_scene_version();
         }
         self.objects.get_mut(&id)
+    }
+
+    pub fn get_object_clone(&self, id: u32) -> Option<GameObject> {
+        self.objects.get(&id).cloned()
+    }
+
+    pub fn get_object_ids_by_name(&self, name: &str) -> Vec<u32> {
+        self.keys_insertion
+            .iter()
+            .filter_map(|id| {
+                self.objects
+                    .get(id)
+                    .and_then(|object| (object.name() == Some(name)).then_some(*id))
+            })
+            .collect()
+    }
+
+    pub fn get_object_clones_by_name(&self, name: &str) -> Vec<GameObject> {
+        self.get_object_ids_by_name(name)
+            .into_iter()
+            .filter_map(|id| self.get_object_clone(id))
+            .collect()
     }
 
     /// Get the total number of objects in the manager.
@@ -349,5 +301,195 @@ impl ObjectManager {
     /// Slice of object IDs in sorted order
     pub fn get_sorted_keys(&self) -> &[u32] {
         &self.keys_sorted
+    }
+
+    pub fn set_object_enabled(&mut self, id: u32, enabled: bool) -> bool {
+        let changed = if let Some(object) = self.objects.get_mut(&id) {
+            object.set_enabled_self(enabled)
+        } else {
+            return false;
+        };
+
+        self.refresh_enabled_from(id);
+        self.refresh_enabled_counts();
+        if changed {
+            self.bump_scene_version();
+        }
+        true
+    }
+
+    pub fn add_child(&mut self, parent_id: u32, child_id: u32) -> Result<(), String> {
+        if parent_id == child_id {
+            return Err("Cannot parent an object to itself".to_string());
+        }
+
+        if !self.objects.contains_key(&parent_id) {
+            return Err(format!("Parent object {parent_id} not found"));
+        }
+        if !self.objects.contains_key(&child_id) {
+            return Err(format!("Child object {child_id} not found"));
+        }
+        if self.would_create_cycle(parent_id, child_id) {
+            return Err("Cannot create a parent/child cycle".to_string());
+        }
+
+        let old_parent = self.objects.get(&child_id).and_then(GameObject::parent_id);
+        if let Some(old_parent_id) = old_parent
+            && let Some(old_parent_obj) = self.objects.get_mut(&old_parent_id)
+        {
+            old_parent_obj.remove_child_by_id(child_id);
+        }
+
+        if let Some(parent) = self.objects.get_mut(&parent_id) {
+            parent.add_child_id(child_id);
+        }
+        if let Some(child) = self.objects.get_mut(&child_id) {
+            child.set_parent_id(Some(parent_id));
+        }
+
+        self.refresh_enabled_from(child_id);
+        self.refresh_enabled_counts();
+        self.bump_scene_version();
+        Ok(())
+    }
+
+    pub fn detach_child(&mut self, child_id: u32) -> bool {
+        let parent_id = self.objects.get(&child_id).and_then(GameObject::parent_id);
+        let Some(parent_id) = parent_id else {
+            return false;
+        };
+
+        if let Some(parent) = self.objects.get_mut(&parent_id) {
+            parent.remove_child_by_id(child_id);
+        }
+        if let Some(child) = self.objects.get_mut(&child_id) {
+            child.set_parent_id(None);
+        }
+        self.refresh_enabled_from(child_id);
+        self.refresh_enabled_counts();
+        self.bump_scene_version();
+        true
+    }
+
+    pub fn get_child_ids(&self, parent_id: u32) -> Vec<u32> {
+        self.objects
+            .get(&parent_id)
+            .map(|object| object.children().to_vec())
+            .unwrap_or_default()
+    }
+
+    pub fn get_child_by_id(&self, parent_id: u32, child_id: u32) -> Option<GameObject> {
+        self.objects.get(&parent_id).and_then(|parent| {
+            parent
+                .get_child_by_id(child_id)
+                .and_then(|id| self.get_object_clone(id))
+        })
+    }
+
+    pub fn get_children_by_name(&self, parent_id: u32, name: &str) -> Vec<GameObject> {
+        self.get_child_ids(parent_id)
+            .into_iter()
+            .filter_map(|id| self.get_object_by_id(id))
+            .filter(|object| object.name() == Some(name))
+            .cloned()
+            .collect()
+    }
+
+    pub fn destroy_object_recursive(&mut self, id: u32) -> Vec<u32> {
+        if !self.objects.contains_key(&id) {
+            logging::log_warn(&format!("Object {id} not found"));
+            return Vec::new();
+        }
+
+        let ids = self.collect_subtree_ids(id);
+        for object_id in ids.iter().rev() {
+            if let Some(object) = self.objects.get(object_id) {
+                object.invoke_on_destroy();
+            }
+        }
+
+        if let Some(parent_id) = self.objects.get(&id).and_then(GameObject::parent_id)
+            && let Some(parent) = self.objects.get_mut(&parent_id)
+        {
+            parent.remove_child_by_id(id);
+        }
+
+        for object_id in ids.iter().rev() {
+            if let Some(object) = self.objects.remove(object_id) {
+                if let Some(parent_id) = object.parent_id()
+                    && let Some(parent) = self.objects.get_mut(&parent_id)
+                {
+                    parent.remove_child_by_id(*object_id);
+                }
+                self.remove_key(*object_id);
+                self.total_objects = self.total_objects.saturating_sub(1);
+            }
+        }
+
+        self.refresh_enabled_counts();
+        self.bump_scene_version();
+        ids
+    }
+
+    fn collect_subtree_ids(&self, root_id: u32) -> Vec<u32> {
+        let mut ids = Vec::new();
+        self.collect_subtree_ids_recursive(root_id, &mut ids);
+        ids
+    }
+
+    fn collect_subtree_ids_recursive(&self, current_id: u32, out: &mut Vec<u32>) {
+        out.push(current_id);
+        if let Some(object) = self.objects.get(&current_id) {
+            for child_id in object.children() {
+                self.collect_subtree_ids_recursive(*child_id, out);
+            }
+        }
+    }
+
+    fn would_create_cycle(&self, parent_id: u32, child_id: u32) -> bool {
+        let mut current = Some(parent_id);
+        while let Some(current_id) = current {
+            if current_id == child_id {
+                return true;
+            }
+            current = self.objects.get(&current_id).and_then(GameObject::parent_id);
+        }
+        false
+    }
+
+    fn refresh_enabled_from(&mut self, root_id: u32) {
+        let parent_enabled = self
+            .objects
+            .get(&root_id)
+            .and_then(GameObject::parent_id)
+            .and_then(|parent_id| self.objects.get(&parent_id))
+            .map(GameObject::is_enabled)
+            .unwrap_or(true);
+        self.refresh_enabled_recursive(root_id, parent_enabled);
+    }
+
+    fn refresh_enabled_recursive(&mut self, object_id: u32, parent_enabled: bool) {
+        let Some(child_ids) = self.objects.get(&object_id).map(|object| object.children().to_vec()) else {
+            return;
+        };
+
+        let current_enabled = if let Some(object) = self.objects.get_mut(&object_id) {
+            object.set_enabled_in_hierarchy(parent_enabled);
+            object.is_enabled()
+        } else {
+            return;
+        };
+
+        for child_id in child_ids {
+            self.refresh_enabled_recursive(child_id, current_enabled);
+        }
+    }
+
+    fn refresh_enabled_counts(&mut self) {
+        self.active_objects = self
+            .objects
+            .values()
+            .filter(|object| object.is_enabled())
+            .count() as u32;
     }
 }

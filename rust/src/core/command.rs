@@ -1,6 +1,7 @@
 use super::draw_manager::DrawCommand;
 use super::game_object::GameObject;
 use super::render_manager::CameraAspectMode;
+use crate::core::component::ComponentTrait;
 use crate::types::Color;
 use crate::types::vector::Vec2;
 use std::sync::Arc;
@@ -17,6 +18,12 @@ pub enum EngineCommand {
     /// Update a runtime GameObject position by id
     SetGameObjectPosition { object_id: u32, position: Vec2 },
 
+    /// Update a runtime GameObject name by id
+    SetGameObjectName { object_id: u32, name: String },
+
+    /// Update a runtime GameObject enabled state by id
+    SetGameObjectEnabled { object_id: u32, enabled: bool },
+
     /// Update a runtime GameObject rotation by id
     SetGameObjectRotation { object_id: u32, rotation: f32 },
 
@@ -25,6 +32,24 @@ pub enum EngineCommand {
 
     /// Update a runtime GameObject mesh fill color by id
     SetGameObjectMeshFillColor { object_id: u32, color: Option<Color> },
+
+    /// Parent a child object under another object
+    AddChild { parent_id: u32, child_id: u32 },
+
+    /// Detach an object from its current parent
+    DetachChild { child_id: u32 },
+
+    /// Add a component to an existing runtime object
+    AddComponent {
+        object_id: u32,
+        component: Box<dyn ComponentTrait>,
+    },
+
+    /// Remove the first component matching a name from a runtime object
+    RemoveComponentByName { object_id: u32, name: String },
+
+    /// Remove a component by id from a runtime object
+    RemoveComponentById { object_id: u32, component_id: u32 },
 
     /// Update the active camera world position
     SetCameraPosition { position: Vec2 },

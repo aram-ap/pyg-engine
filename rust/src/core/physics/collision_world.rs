@@ -5,6 +5,7 @@ use super::aabb_tree::AABBTree;
 use super::collider::ColliderComponent;
 use super::events::{CollisionEvent, CollisionEventType};
 use super::sat::SAT;
+use crate::core::component::ComponentTrait;
 use crate::core::object_manager::ObjectManager;
 use std::collections::HashSet;
 
@@ -69,6 +70,10 @@ impl CollisionWorld {
                 _ => continue,
             };
 
+            if !obj_a.is_enabled() || !obj_b.is_enabled() {
+                continue;
+            }
+
             let (collider_a, collider_b) = match (
                 obj_a.get_component::<ColliderComponent>(),
                 obj_b.get_component::<ColliderComponent>(),
@@ -76,6 +81,10 @@ impl CollisionWorld {
                 (Some(a), Some(b)) => (a, b),
                 _ => continue,
             };
+
+            if !collider_a.is_effectively_enabled() || !collider_b.is_effectively_enabled() {
+                continue;
+            }
 
             // Check layer filtering
             if !collider_a.should_collide_with(&collider_b) {
@@ -137,7 +146,13 @@ impl CollisionWorld {
 
         for &object_id in all_objects {
             if let Some(obj) = object_manager.get_object_by_id(object_id) {
-                if let Some(collider) = obj.get_component::<ColliderComponent>() {
+                if !obj.is_enabled() {
+                    continue;
+                }
+
+                if let Some(collider) = obj.get_component::<ColliderComponent>()
+                    && collider.is_effectively_enabled()
+                {
                     tracked_objects.insert(object_id);
 
                     let aabb = collider.compute_aabb(
@@ -173,7 +188,13 @@ impl CollisionWorld {
 
         for &object_id in &all_objects {
             if let Some(obj) = object_manager.get_object_by_id(object_id) {
-                if let Some(collider) = obj.get_component::<ColliderComponent>() {
+                if !obj.is_enabled() {
+                    continue;
+                }
+
+                if let Some(collider) = obj.get_component::<ColliderComponent>()
+                    && collider.is_effectively_enabled()
+                {
                     let aabb = collider.compute_aabb(
                         obj.position(),
                         obj.rotation(),

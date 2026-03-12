@@ -103,6 +103,10 @@ class Button:
         self._game_object = None
         self._engine_handle = None
         self._user_callback = on_click
+        self._children: list[object] = []
+        self._parent = None
+        self._object_id = None
+        self._enabled = enabled
 
         self._component.set_enabled(enabled)
         self._component.set_depth(depth)
@@ -345,6 +349,9 @@ class Panel:
         """
         self._component = PanelComponent(x, y, width, height)
         self._game_object = None
+        self._children: list[object] = []
+        self._parent = None
+        self._object_id = None
         self._component.set_depth(depth)
 
     def add_to_engine(self, engine) -> int:
@@ -455,6 +462,20 @@ class Panel:
         """
         self._component.set_border(width, r, g, b, a)
 
+    def add_child(self, child):
+        """Add a child UI element under this panel."""
+        self._children.append(child)
+        child._parent = self
+        if self._game_object is not None and getattr(child, "_game_object", None) is not None:
+            self._game_object.add_child(child._game_object)
+        return child
+
+    def add_children(self, children):
+        """Add multiple child UI elements under this panel."""
+        for child in children:
+            self.add_child(child)
+        return list(children)
+
 
 class Label:
     """
@@ -540,6 +561,8 @@ class Label:
         self._game_object = None
         self._engine = None
         self._object_id = None
+        self._children: list[object] = []
+        self._parent = None
         self._component.set_align(align)
         self._component.set_depth(depth)
 
