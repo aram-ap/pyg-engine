@@ -8,6 +8,19 @@ PyG Engine combines the ease of use of Python with the raw performance and safet
 
 > **NOTE:** This project is currently in **Alpha**. Features are under active development.
 
+## Table of Contents
+
+- [Key Features](#rocket-key-features)
+- [Documentation](#books-documentation)
+- [Gallery](#eyes-gallary)
+- [Installation](#package-installation)
+- [Quick Start](#zap-quick-start)
+- [Architecture & Roadmap](#wrench-architecture--roadmap)
+- [Examples](#open_file_folder-examples)
+- [Benchmarks](#bar_chart-benchmarks)
+- [Development & Testing](#hammer_and_wrench-development--testing)
+- [License](#-license)
+
 ## :rocket: Key Features
 
 *   **Modern Rendering**: Powered by **wgpu** for cross-platform, high-performance graphics.
