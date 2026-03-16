@@ -151,6 +151,7 @@ width, height = engine.measure_text(
     font_family="inter",
     font_weight="bold",
 )
+
 engine.draw_text(
     "Italic caption",
     32,
@@ -262,6 +263,7 @@ raises `RuntimeError`.
 ## :wrench: Architecture & Roadmap
 
 ### Current Capabilities
+- **GPU Rendering**: Built-in GPU rendering. Supports Vulkan, DX11, DX12, Metal, OpenGL.
 - **Window Management**: Resizable windows, VSync control, Fullscreen support.
 - **2D Rendering**:
     - **Primitives**: Shape-first immediate drawing using pixel coordinates.
